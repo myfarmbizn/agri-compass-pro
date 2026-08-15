@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>作付けの決定｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+<style>
+  /* ---- このページ専用の小さな追加（共通CSSは変更しない） ---- */
+  .plan-card { display: flex; flex-direction: column; }
+  .plan-card .plan-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+  .plan-card .plan-dot { width: 11px; height: 11px; border-radius: 4px; flex: 0 0 11px; }
+  .plan-card .plan-title { font-size: 15px; font-weight: 750; }
+  .plan-card .plan-total { margin-top: auto; padding-top: 12px; border-top: 1px dashed var(--hairline-strong); }
+  .plan-card .plan-total .t-income { font-size: 23px; font-weight: 800; letter-spacing: -.01em; }
+  .plan-card .plan-total .t-income small { font-size: 12px; font-weight: 600; color: var(--ink-3); margin-left: 4px; }
+  .crow { border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 13px 14px 11px; background: var(--inset); margin-bottom: 11px; }
+  .crow .crow-head { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .crow .crow-head select { flex: 1; padding: 8px 30px 8px 11px; font-size: 13.5px; }
+  .crow .row-del { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--hairline); background: transparent; color: var(--ink-3); cursor: pointer; font-size: 13px; line-height: 1; }
+  .crow .row-del:hover { color: var(--critical); border-color: rgba(224,82,82,.45); }
+  .crow .field { margin-bottom: 8px; }
+  .crow .crow-out { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-3); }
+  .crow .crow-out b { font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .crow details { margin-top: 9px; }
+  .crow details summary { cursor: pointer; font-size: 12px; color: var(--ink-3); font-weight: 650; list-style: none; }
+  .crow details summary::before { content: "▸ "; }
+  .crow details[open] summary::before { content: "▾ "; }
+  .crow details .d-body { margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 420px) { .crow details .d-body { grid-template-columns: 1fr; } }
+  .crow details .d-body .field { margin-bottom: 0; }
+  .flag { font-size: 10.5px; font-weight: 700; color: var(--warn); margin-left: 4px; }
+  .flag.jisseki { color: var(--accent); }
+  .flag.calc { color: var(--ink-3); }
+  /* 入金月の12マス（押してオン・オフ。品目マスタへ書き戻す） */
+  .im-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 9px; }
+  .im-line .im-lbl { font-size: 11px; font-weight: 650; color: var(--ink-3); white-space: nowrap; }
+  .im-grid { display: inline-flex; gap: 3px; flex-wrap: wrap; }
+  .im-cell { width: 24px; height: 21px; border: 1px solid var(--hairline); border-radius: 5px; background: transparent; color: var(--ink-4); font-family: var(--font); font-size: 10px; line-height: 1; padding: 0; cursor: pointer; }
+  .im-cell:hover:not(:disabled) { border-color: var(--accent); color: var(--ink-2); }
+  .im-cell.on { background: rgba(20,211,162,.18); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .im-cell.kari { background: rgba(20,211,162,.07); border-style: dashed; border-color: rgba(20,211,162,.45); color: var(--ink-3); font-weight: 650; }
+  .im-cell:disabled { cursor: default; opacity: .75; }
+  .add-row { width: 100%; border: 1px dashed var(--hairline-strong); background: transparent; color: var(--ink-3); border-radius: var(--r-md); padding: 10px; cursor: pointer; font-family: var(--font); font-size: 12.5px; font-weight: 650; }
+  .add-row:hover { color: var(--accent); border-color: rgba(20,211,162,.5); }
+  .ctrl-bar { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .ctrl-bar .lbl { font-size: 12.5px; font-weight: 650; color: var(--ink-2); }
+  #dtlHeat summary { cursor: pointer; font-size: 12.5px; color: var(--ink-3); font-weight: 650; }
+  @media print {
+    .no-print { display: none !important; }
+    .viz svg text { fill: #333 !important; }
+    .viz .legend .lg { color: #333; }
+    .crow, .advice { background: #fff; border-color: #ccc; }
+    .src { color: #555; }
+    .plan-card .t-income, .kpi .k-value, .crow .crow-out b { color: #111; }
+    /* 印刷監査（2026-07-19）: 見出しの飾り文字が透明のまま印刷されて欠けるのを防ぐ */
+    .page-head h1 .grad-text { background: none; -webkit-text-fill-color: #111; color: #111; }
+    /* 紙には操作類を出さない（保存後の行き先ボタン・折りたたみ・つまみ） */
+    .next-hint, .fromq-band, #dtlHeat { display: none !important; }
+    input[type="range"] { display: none !important; }
+    /* 表示アニメーションの初期状態（透明）で印刷されないようにする */
+    .fade-up { animation: none !important; opacity: 1 !important; transform: none !important; }
+  }
+</style>
+</head>
+<body>
+<main class="shell">
+
+  <div class="page-head fade-up">
+    <div class="eyebrow">NEXT CROP</div>
+    <h1>作付けの<span class="grad-text">決定</span></h1>
+    <p class="lede" id="ledeText">いまの作付けと別の案（A案・B案）を並べて、年間所得と月別の労働時間を比較します。決めた計画は資金繰りカレンダーに引き継がれます。</p>
+  </div>
+
+  <!-- このページの説明 -->
+  <div class="card fade-up d1">
+    <div class="grid c3">
+      <div>
+        <div class="small" style="color:var(--accent); font-weight:700; margin-bottom:6px">できること</div>
+        <div class="small muted" style="line-height:1.7" id="canDoText">3つの案の所得の比較、月別の労働時間と家族労働の上限の確認、A4での印刷ができます。</div>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent); font-weight:700; margin-bottom:6px">使う場面</div>
+        <div class="small muted" style="line-height:1.7">次の作付けを決める時期に使うことを想定しています。</div>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent); font-weight:700; margin-bottom:6px">他のページとのつながり</div>
+        <div class="small muted" style="line-height:1.7">実績の診断で保存した実績があれば単価に自動で反映します。「この計画で決める」で保存すると、資金繰りカレンダーが入金月を自動で読み込みます。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 3案の設計 ============ -->
+  <div class="sec-title fade-up d1 no-print">
+    <h2>3つの案をつくる</h2>
+    <span class="hint">品目と面積を動かすと、下の結果が即座に変わります</span>
+  </div>
+  <div id="planBadgeHost" class="no-print"></div>
+  <div class="grid c3 fade-up d2 no-print" id="planWrap"></div>
+  <div id="cropAddHost" class="no-print"></div>
+  <p class="src no-print" id="srcCrops"></p>
+
+  <!-- ============ 結果 ============ -->
+  <div class="sec-title fade-up d3">
+    <h2>見比べる</h2>
+    <span class="hint">どれにするかは、この数字を見てご自身で決めてください</span>
+  </div>
+
+  <div class="grid c3 fade-up d3" id="kpiRow"></div>
+
+  <!-- 出力A: 年間所得比較 -->
+  <div class="card mt16 fade-up d4">
+    <div class="flex between wrap">
+      <div>
+        <h3>年間所得の比較</h3>
+        <div class="sub">所得 ＝ 想定売上 −（売上 × 経費率）。手取りに近い金額です。</div>
+      </div>
+      <div class="seg no-print" id="segYear">
+        <button class="on" data-v="normal">通常年</button>
+        <button data-v="both">不作の年も並べる（仮）</button>
+      </div>
+    </div>
+    <div class="viz" id="chartA"></div>
+    <p class="src" id="srcYearBad">不作の年 ＝ 台風1回直撃を想定し、各品目の売上を「台風減収（仮・各行で編集可）」の分だけ減らした年。経費は掛かった後という想定で減らしていません。</p>
+  </div>
+
+  <!-- 案の中身セレクタ -->
+  <div class="ctrl-bar mt24 no-print">
+    <span class="lbl">中身を見る案:</span>
+    <div class="seg" id="segView">
+      <button class="on" data-v="0">現状</button>
+      <button data-v="1">A案</button>
+      <button data-v="2">B案</button>
+    </div>
+  </div>
+
+  <!-- 出力B: 月別労働 -->
+  <div class="card fade-up">
+    <h3>月別の労働時間 <span class="muted small" id="laborPlanName"></span></h3>
+    <div class="sub">品目ごとの年間労働時間を、植え付け月と収穫月に均等にならした仮の計算です。実際に忙しい時期（防除・調製など）は品目によってずれます。</div>
+    <div class="grid c2 no-print mb16">
+      <div class="field">
+        <label>家族労働力（人）<span class="val" id="valFam"></span></label>
+        <input type="range" id="inFam" min="1" max="6" step="1">
+        <div class="note">プロフィールの値を初期値にしています（この画面での変更は保存されません）</div>
+      </div>
+      <div class="field">
+        <label>1人が月に出せる時間（仮）<span class="val" id="valCap"></span></label>
+        <input type="range" id="inCap" min="40" max="280" step="10">
+        <div class="note">編集前提の初期値です。ご自身の働き方に合わせて動かしてください</div>
+      </div>
+    </div>
+    <div class="viz" id="chartB"></div>
+    <div id="warnB" class="mt16"></div>
+  </div>
+
+  <!-- 出力C: 台風期の在圃額（沖縄のみ表示。他地域は災害への備えページへ誘導の1行に置き換える） -->
+  <div class="card mt16 fade-up" id="cardZaiho">
+    <h3>台風時期（7〜10月）に残っている収穫前の売上</h3>
+    <div class="sub">在圃額（＝収穫前の作物の想定売上）は、7〜10月の各時点で、まだ収穫が終わっていない品目の想定売上を合計した金額です（ピークの月の値）。この金額が大きい案ほど、台風で失うおそれのある売上が多く残っています。</div>
+    <div class="viz" id="chartC"></div>
+    <p class="src">植え付け直後も想定売上の全額を在圃として数え、果樹は収穫の6か月前から在圃と数える簡便な計算です（実際より重めに出る場面があります）。<span id="kibiZaihoNote">さとうきびは在圃額が大きくても倒伏で全滅しにくい性質があり、その差は上の「不作の年」の比較に現れます。</span></p>
+  </div>
+
+  <!-- 出力D: 収入が立つ月 -->
+  <div class="card mt16 fade-up">
+    <h3>入金がある月 <span class="muted small" id="heatPlanName"></span></h3>
+    <div class="seg no-print mb16" id="segIncome">
+      <button data-v="0">現状</button>
+      <button data-v="1">A案</button>
+      <button data-v="2">B案</button>
+      <button data-v="all">3案を並べる</button>
+    </div>
+    <div class="sub">品目ごとの想定売上を入金月に均等配分した月別の金額です。棒の上の数字はその月の入金の合計です。入金の月が未登録の品目は、収穫の月に入金があるとみなします（仮）。各行の入金月のマスを押すと直せます（直した月は品目マスタに保存され、全ページで使われます）。</div>
+    <div class="viz" id="chartD"></div>
+    <details class="mt16" id="dtlHeat">
+      <summary>品目別のこまかい内訳を見る（開く）</summary>
+      <div class="viz" id="chartDHeat"></div>
+    </details>
+  </div>
+
+  <!-- まとめ表 -->
+  <div class="card mt16 fade-up">
+    <h3>数字のまとめ</h3>
+    <div class="sub">3案を同じ項目で並べた表です。印刷して相談時の資料に使えます。</div>
+    <div class="tbl-wrap"><table class="tbl" id="tblSummary"></table></div>
+  </div>
+
+  <!-- ============ 決める ============ -->
+  <div class="sec-title fade-up">
+    <h2>計画を決める</h2>
+    <span class="hint">決めた案は資金繰りカレンダーが読み込みます</span>
+  </div>
+  <div class="card fade-up">
+    <div class="grid c2">
+      <div class="no-print">
+        <div class="field">
+          <label>どの案で決めるか</label>
+          <div class="seg" id="segSave">
+            <button class="on" data-v="0">現状</button>
+            <button data-v="1">A案</button>
+            <button data-v="2">B案</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>計画の名前</label>
+          <input type="text" id="inPlanName" placeholder="例: 来期の作付け（10月版）">
+        </div>
+        <div class="flex wrap">
+          <button class="btn primary" id="btnSave">この計画で決める</button>
+          <button class="btn ghost" id="btnPrint">A4で印刷する（相談に持っていく紙）</button>
+        </div>
+        <p class="small muted">ここで押すのは今日の仮決めです。A案・B案はこのページに残り、あとで何度でも決め直せます。まず1案で先まで進み、資金繰りを見てから戻って比べるのが近道です。</p>
+        <p class="src" id="saveMsg"></p>
+      </div>
+      <div>
+        <div id="savedInfo" class="advice info" style="display:none">
+          <div class="a-icon">🗂</div>
+          <div>
+            <div class="a-title">前回決めた案</div>
+            <div class="a-body" id="savedBody"></div>
+          </div>
+        </div>
+        <div class="advice info">
+          <div class="a-icon">💡</div>
+          <div>
+            <div class="a-title">この画面を使う場面</div>
+            <div class="a-body">次の作付けを決める時期に、家族・普及員・JAとの相談材料として使うことを想定しています。数字はすべて編集できます。自分の実感と違う数字は直してから比較してください。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/charts.js"></script>
+<script>
+CORE.renderTopbar("sakutsuke", "../");
+document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+(function () {
+  "use strict";
+
+  var store = CORE.store, fmt = CORE.fmt;
+  /* 台風関連の表示は沖縄のときだけ。他地域の災害の確認は「災害への備え」ページに任せる */
+  var IS_OKINAWA = CORE.REGION === "okinawa";
+  var PLAN_META = [
+    { key: "genjo", label: "現状", color: "#7e8b98" },
+    { key: "anA", label: "A案", color: "var(--s1)" },
+    { key: "anB", label: "B案", color: "var(--s3)" }
+  ];
+  var TYPHOON_MONTHS = [7, 8, 9, 10];
+
+  /* ============================================================
+     品目レジストリ（DATA.CROPS ＋ さとうきびを DATA.KIBI から合成）
+     数値はすべて data_okinawa.js の値から実行時に組み立てる
+     ============================================================ */
+  var REG = [];
+  DATA.CROPS.forEach(function (c) {
+    var isHon = !!c.yieldHon10a; // 小ギクは本数×円/本
+    var yieldObj = isHon ? c.yieldHon10a : c.yieldKg10a;
+    var priceObj = isHon ? c.priceYenHon : c.priceYenKg;
+    var costRateObj = c.costRate;
+    var crFlag = "";
+    if (!costRateObj && c.cost10a && yieldObj && priceObj) {
+      // 小ギク: 経営費(円/10a) ÷ 粗収益(円/10a) から経費率を実行時算出
+      var cr = c.cost10a.v / (yieldObj.v * priceObj.v);
+      costRateObj = { v: Math.round(cr * 100) / 100, src: c.cost10a.src, calc: true, old: !!c.cost10a.old };
+      crFlag = "経費率は経営費（" + DATA.srcLine(c.cost10a) + "）からの計算値";
+    }
+    REG.push({
+      id: c.id, name: c.name, cat: c.cat,
+      unitY: isHon ? "本/10a" : "kg/10a", unitP: isHon ? "円/本" : "円/kg",
+      yieldObj: yieldObj, priceObj: priceObj, costRateObj: costRateObj,
+      laborObj: c.laborH10a || { v: 0, kari: true },
+      months: c.months, typhoonExp: c.typhoonExp,
+      crNote: crFlag
+    });
+  });
+  // さとうきび（分蜜糖）: さとうきびデータのある地域（沖縄）だけ1行で扱えるようにする
+  if (DATA.KIBI) (function () {
+    var K = DATA.KIBI;
+    var y = K.yield.r5.kei;                                  // 5,020kg/10a（R5・県計）
+    var pYenKg = K.tedori.totalYenT.v / 1000;                // トン当たり手取り→円/kg
+    var sales10a = y.v * pYenKg;
+    var keihi10a = K.seisanhi.buzaihi.v + K.seisanhi.koyoRodo.v; // 物財費＋雇用労働費
+    REG.push({
+      id: "kibi", name: "さとうきび（分蜜糖）", cat: "さとうきび",
+      unitY: "kg/10a", unitP: "円/kg",
+      yieldObj: y,
+      priceObj: { v: Math.round(pYenKg * 10) / 10, src: K.tedori.totalYenT.src, calc: true,
+        note: "トン当たり手取り（取引価格＋交付金）÷1,000。交付金の対象要件を満たさない場合は受け取れません" },
+      costRateObj: { v: Math.round(keihi10a / sales10a * 100) / 100, src: "S9", calc: true,
+        note: "（物財費＋雇用労働費）÷粗収益の計算値。家族労働費は含めていません" },
+      laborObj: K.seisanhi.laborH,                            // 36.56h/10a
+      months: { plant: [7, 8, 9], harvest: [1, 2, 3], income: [1, 2, 3] },
+      typhoonExp: 0.1, typhoonKari: true,
+      crNote: "ここでは夏植・春植・株出しを均した1行の簡易版として扱います"
+    });
+  })();
+  function regById(id) {
+    for (var i = 0; i < REG.length; i++) if (REG[i].id === id) return REG[i];
+    return REG[0];
+  }
+
+  /* ============================================================
+     入金月の直接修正（正は品目マスタ cropCustom への書き戻し。
+     形式は hinmoku.html と同じ: 収録品目は overrides[品目id].months.income、
+     追加品目は custom 配列側の months.income を更新する。ページ独自の保存はしない）
+     ============================================================ */
+  var cc = store.load("cropCustom", null);
+  if (!cc || typeof cc !== "object" || Array.isArray(cc)) cc = {};
+  if (!cc.overrides || typeof cc.overrides !== "object" || Array.isArray(cc.overrides)) cc.overrides = {};
+  if (!Array.isArray(cc.custom)) cc.custom = [];
+
+  /* いまの実効の入金月。income 未登録なら収穫の月とみなし、収穫も未登録なら12か月均等（いずれも仮） */
+  function effIncome(c) {
+    var im = (c.months && c.months.income) ? c.months.income.slice() : [];
+    if (im.length) return { arr: im, kind: "master" };
+    var hv = (c.months && c.months.harvest) ? c.months.harvest.slice() : [];
+    if (hv.length) return { arr: hv, kind: "harvest" };
+    return { arr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], kind: "even" };
+  }
+  /* さとうきびは品目マスタ外（DATA.KIBIからの合成行）のため書き戻し先がなく、編集対象外 */
+  function canEditIncome(id) {
+    for (var i = 0; i < DATA.CROPS.length; i++) if (DATA.CROPS[i].id === id) return true;
+    return false;
+  }
+  function writeIncomeMonths(cropId, arr) {
+    arr = arr.slice().sort(function (a, b) { return a - b; });
+    var base = null;
+    for (var i = 0; i < DATA.CROPS.length; i++) if (DATA.CROPS[i].id === cropId) { base = DATA.CROPS[i]; break; }
+    if (!base || !arr.length) return false;
+    if (base.custom) {
+      var entry = null;
+      cc.custom.forEach(function (e) { if (e && e.id === cropId) entry = e; });
+      if (!entry) return false;
+      if (!entry.months) entry.months = { plant: [], harvest: [], income: [] };
+      entry.months.income = arr.slice();
+    } else {
+      var ov = cc.overrides[cropId] || {};
+      ov.months = Object.assign({}, ov.months || {}, { income: arr.slice() });
+      cc.overrides[cropId] = ov;
+    }
+    if (!store.save("cropCustom", cc)) return false;
+    /* メモリ上の品目データも更新して即時再計算に反映（REGは同じmonthsを参照している） */
+    if (!base.months) base.months = { plant: [], harvest: [], income: [] };
+    base.months.income = arr.slice();
+    return true;
+  }
+
+  /* ---------- 労働力の人別入力（laborForce・実績の診断で登録） ----------
+     月あたり時間 = 週の日数 × 1日の時間 × 4.33。働く月にだけ足す */
+  var empHoursM = null;
+  (function () {
+    var lf = store.load("laborForce", null);
+    if (!lf || !Array.isArray(lf.workers) || !lf.workers.length) return;
+    var arr = new Array(12).fill(0);
+    var any = false;
+    lf.workers.forEach(function (w) {
+      if (!w) return;
+      var per = (parseFloat(w.daysPerWeek) || 0) * (parseFloat(w.hoursPerDay) || 0) * 4.33;
+      if (!(per > 0)) return;
+      (w.months || []).forEach(function (m) {
+        if (m >= 1 && m <= 12) { arr[m - 1] += per; any = true; }
+      });
+    });
+    if (any) empHoursM = arr;
+  })();
+
+  /* ---------- 実績の診断（annual）の実績を拾う ---------- */
+  var jisseki = {}; // cropId -> {price, laborH10a, year}
+  var jissekiItems = []; // 実績で入力した品目の構成 [{cropId, area(a)}]（現状案の初期値に使う）
+  (function () {
+    var annual = store.load("annual", null);
+    if (!annual) return;
+    var years = Object.keys(annual).filter(function (k) { return annual[k] && annual[k].items; });
+    if (!years.length) return;
+    years.sort();
+    var yr = years[years.length - 1];
+    (annual[yr].items || []).forEach(function (it) {
+      var c = regById(it.cropId);
+      var valid = c && c.id === it.cropId;
+      /* 現状案の初期値は「実績で入力した品目・面積」。売上0でも品目として拾う（面積があれば） */
+      if (valid && it.area10a > 0) jissekiItems.push({ cropId: it.cropId, area: Math.round(it.area10a * 10) });
+      /* 実績の売上は現行形式 sales（円）。旧形式 sales円 も読めるようにして互換を保つ
+         （現行の実績の診断は sales で保存するため、旧名だけを読むと連携が切れる） */
+      var itSales = (it.sales != null) ? it.sales : it["sales円"];
+      if (!it.cropId || !(itSales > 0) || !(it.area10a > 0)) return;
+      if (!valid || !c.yieldObj || !(c.yieldObj.v > 0)) return;
+      var rec = { year: yr, price: Math.round(itSales / it.area10a / c.yieldObj.v) };
+      if (it.laborH > 0) rec.laborH10a = Math.round(it.laborH / it.area10a * 10) / 10;
+      jisseki[it.cropId] = rec;
+    });
+  })();
+
+  /* ---------- 状態 ---------- */
+  var profile = CORE.getProfile();
+  function makeItem(cropId, area_a) {
+    var c = regById(cropId);
+    var it = {
+      cropId: c.id,
+      area: area_a != null ? area_a : 10,       // 単位: a（10a=1反）
+      yieldV: c.yieldObj ? c.yieldObj.v : 0,
+      priceV: c.priceObj ? c.priceObj.v : 0,
+      costRate: c.costRateObj ? c.costRateObj.v : 0.5,
+      typhoonExp: c.typhoonExp != null ? c.typhoonExp : 0.4,
+      laborH10a: c.laborObj ? c.laborObj.v : 0,
+      jisseki: false
+    };
+    var j = jisseki[c.id];
+    if (j) {
+      it.priceV = j.price;
+      if (j.laborH10a != null) it.laborH10a = j.laborH10a;
+      it.jisseki = true;
+      it.jissekiYear = j.year;
+    }
+    return it;
+  }
+  function defaultPlans() {
+    var base;
+    if (profile.crops && profile.crops.length) {
+      base = profile.crops.map(function (pc) {
+        return makeItem(pc.cropId, Math.min(Math.round(pc.area10a * 10), 300));
+      }).filter(function (x) { return !!x; });
+    } else if (jissekiItems.length) {
+      // 実績の診断で入力した品目・面積を「現状」の初期値にする（最初に入力した品目と連動）
+      base = jissekiItems.map(function (x) {
+        return makeItem(x.cropId, Math.min(x.area, 300));
+      }).filter(function (x) { return !!x; });
+    } else if (DATA.KIBI) {
+      base = [makeItem("kibi", 80)];
+    } else {
+      // さとうきびの無い地域: 品目一覧の先頭（県の収録品目）を初期の1行にする
+      base = [makeItem(REG[0].id, 60)];
+    }
+    var a = base.map(function (it) { return Object.assign({}, it); });
+    var b = base.map(function (it) { return Object.assign({}, it); });
+    if ((!profile.crops || !profile.crops.length) && !jissekiItems.length) {
+      // 初期デモ: A案とB案に別の品目を1つずつ足す（面積・品目は編集前提の初期値）
+      if (DATA.KIBI) {
+        a[0].area = 60; a.push(makeItem("goya_roji", 20));
+        b[0].area = 60; b.push(makeItem("kabocha", 20));
+      } else {
+        a[0].area = 60; if (REG[1]) a.push(makeItem(REG[1].id, 20));
+        b[0].area = 60; if (REG[2]) b.push(makeItem(REG[2].id, 20));
+      }
+    }
+    return [
+      { items: base },
+      { items: a },
+      { items: b }
+    ];
+  }
+
+  var draft = store.load("sakutsukeDraft", null);
+  var state = {
+    plans: (draft && draft.plans && draft.plans.length === 3) ? draft.plans : defaultPlans(),
+    fam: (draft && draft.fam) || profile.laborFamily || 2,
+    cap: (draft && draft.cap) || 160,
+    view: (draft && draft.view) || 0,
+    yearMode: (draft && draft.yearMode) || "normal",
+    saveSel: 1,
+    incomeAll: false   // 「入金がある月」カードのタブ。既定は単案表示（保存対象外）
+  };
+  // 復元データの品目IDが消えていた場合の防御
+  state.plans.forEach(function (p) {
+    p.items = p.items.filter(function (it) { return regById(it.cropId).id === it.cropId; });
+    if (!p.items.length) p.items.push(makeItem(REG[0].id, 10));
+  });
+  /* 実績の診断で保存し直した実績を、復元した下書きにも反映する
+     （実績由来の行と、単価が収録値のままの行だけ上書きし、手で直した単価は守る） */
+  state.plans.forEach(function (p) {
+    p.items.forEach(function (it) {
+      var j = jisseki[it.cropId];
+      if (!j) return;
+      var c = regById(it.cropId);
+      var masterPrice = c.priceObj ? c.priceObj.v : 0;
+      if (it.jisseki || it.priceV === masterPrice) {
+        it.priceV = j.price;
+        if (j.laborH10a != null) it.laborH10a = j.laborH10a;
+        it.jisseki = true;
+        it.jissekiYear = j.year;
+      }
+    });
+  });
+  if (!IS_OKINAWA) state.yearMode = "normal";  // 「不作の年（台風1回直撃・仮）」の比較は沖縄のみ
+
+  function persist() {
+    // 実操作の前は保存しない（開いただけで下書きが固定され、実績の反映が止まるのを防ぐ）
+    if (CORE.userActed && !CORE.userActed()) return;
+    // DOM参照（_els/_incEl）を含めず、素のデータだけ保存する
+    var plans = state.plans.map(function (p) {
+      return { items: p.items.map(function (it) {
+        return { cropId: it.cropId, area: it.area, yieldV: it.yieldV, priceV: it.priceV,
+          costRate: it.costRate, typhoonExp: it.typhoonExp, laborH10a: it.laborH10a,
+          jisseki: it.jisseki, jissekiYear: it.jissekiYear };
+      }) };
+    });
+    store.save("sakutsukeDraft", { plans: plans, fam: state.fam, cap: state.cap, view: state.view, yearMode: state.yearMode });
+  }
+
+  /* ============================================================
+     計算
+     ============================================================ */
+  function itemCalc(it) {
+    var c = regById(it.cropId);
+    var area10 = it.area / 10;
+    var sales = area10 * it.yieldV * it.priceV;
+    var cost = sales * it.costRate;
+    var income = sales - cost;
+    var incomeBad = sales * (1 - it.typhoonExp) - cost;
+    var laborTotal = area10 * (it.laborH10a || 0);
+    // 月別労働: 植付月∪収穫月に均等按分（仮の姿）
+    var active = {};
+    (c.months.plant || []).forEach(function (m) { active[m] = 1; });
+    (c.months.harvest || []).forEach(function (m) { active[m] = 1; });
+    var actArr = Object.keys(active).map(Number);
+    if (!actArr.length) actArr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    var laborM = new Array(12).fill(0);
+    actArr.forEach(function (m) { laborM[m - 1] += laborTotal / actArr.length; });
+    // 月別入金: 実効の入金月に均等按分（income未登録は収穫月とみなし、作期が未収録の品目は12か月均等・いずれも仮）
+    var incM = new Array(12).fill(0);
+    var im = effIncome(c).arr;
+    im.forEach(function (m) { incM[m - 1] += sales / im.length; });
+    return { c: c, sales: sales, cost: cost, income: income, incomeBad: incomeBad,
+      laborTotal: laborTotal, laborM: laborM, incM: incM, area10: area10 };
+  }
+
+  // 在圃額: 月mの時点で「植え付いていて、まだ収穫していない分」の想定売上
+  function exposureShare(c, m) {
+    var plant = c.months.plant || [];
+    var harvest = c.months.harvest || [];
+    if (!harvest.length) return 0;
+    // 収穫月の連なりの始まり・終わり（年またぎ対応: 前月/翌月が収穫月でない所が端）
+    var inSet = {};
+    harvest.forEach(function (h) { inSet[h] = 1; });
+    var firstH = harvest[0], lastH = harvest[harvest.length - 1];
+    harvest.forEach(function (h) {
+      if (!inSet[((h + 10) % 12) + 1]) firstH = h;
+      if (!inSet[(h % 12) + 1]) lastH = h;
+    });
+    // 起点: 植える品目は植付月、樹園地は収穫の6か月前から在圃とみなす
+    var start = plant.length ? plant[0] : ((firstH + 5) % 12) + 1;
+    function pos(x) { return (x - start + 12) % 12; }
+    if (pos(m) > pos(lastH)) return 0;              // まだ植わっていない/収穫済み
+    var later = harvest.filter(function (h) { return pos(h) >= pos(m); }).length;
+    return later / harvest.length;
+  }
+
+  function planCalc(p) {
+    var r = { sales: 0, cost: 0, income: 0, incomeBad: 0, laborTotal: 0, area10: 0,
+      laborM: new Array(12).fill(0), incM: new Array(12).fill(0), items: [] };
+    p.items.forEach(function (it) {
+      var ic = itemCalc(it);
+      r.items.push(ic);
+      r.sales += ic.sales; r.cost += ic.cost; r.income += ic.income; r.incomeBad += ic.incomeBad;
+      r.laborTotal += ic.laborTotal; r.area10 += ic.area10;
+      for (var i = 0; i < 12; i++) { r.laborM[i] += ic.laborM[i]; r.incM[i] += ic.incM[i]; }
+    });
+    var peak = 0, peakM = 7;
+    TYPHOON_MONTHS.forEach(function (m) {
+      var z = 0;
+      p.items.forEach(function (it, i) { z += r.items[i].sales * exposureShare(r.items[i].c, m); });
+      if (z > peak) { peak = z; peakM = m; }
+    });
+    r.zaiho = peak; r.zaihoM = peakM;
+    return r;
+  }
+
+  /* ============================================================
+     編集エリアの描画
+     ============================================================ */
+  var planWrap = document.getElementById("planWrap");
+
+  function cropOptions(sel) {
+    var cats = [];
+    REG.forEach(function (c) { if (cats.indexOf(c.cat) < 0) cats.push(c.cat); });
+    return cats.map(function (cat) {
+      var opts = REG.filter(function (c) { return c.cat === cat; }).map(function (c) {
+        return '<option value="' + c.id + '"' + (c.id === sel ? " selected" : "") + ">" + c.name + "</option>";
+      }).join("");
+      return '<optgroup label="' + cat + '">' + opts + "</optgroup>";
+    }).join("");
+  }
+
+  function flagsOf(obj) {
+    var f = DATA.flagLabel(obj);
+    return f ? '<span class="flag">' + f + "</span>" : "";
+  }
+
+  function buildRow(pi, ii) {
+    var it = state.plans[pi].items[ii];
+    var c = regById(it.cropId);
+    var row = document.createElement("div");
+    row.className = "crow";
+    var srcY = DATA.srcLine(c.yieldObj) || "";
+    var srcP = DATA.srcLine(c.priceObj) || "";
+    var badges = "";
+    if (it.jisseki) badges += '<span class="flag jisseki">実績' + (it.jissekiYear ? "（" + it.jissekiYear + "年）" : "") + "</span>";
+    /* 入金月の12マス。押した月は品目マスタ（cropCustom）に保存され、全ページで使われる */
+    var eff = effIncome(c);
+    var imEditable = canEditIncome(c.id);
+    var imCells = "";
+    for (var im = 1; im <= 12; im++) {
+      var on = eff.arr.indexOf(im) >= 0;
+      imCells += '<button type="button" class="im-cell' + (on ? (eff.kind === "master" ? " on" : " kari") : "") +
+        '" data-im="' + im + '"' + (imEditable ? "" : " disabled") +
+        ' title="' + (imEditable ? "押すと" + im + "月の入金のオン・オフが切り替わります（品目マスタに保存）" : "この品目の入金月はここでは変えられません") + '">' + im + "</button>";
+    }
+    var imLabel = '<span class="im-lbl">入金月</span>';
+    if (!imEditable) imLabel += '<span class="flag calc">（製糖代金の時期・固定）</span>';
+    else if (eff.kind === "harvest") imLabel += '<span class="flag">（仮・収穫の月とみなし。押すと実登録）</span>';
+    else if (eff.kind === "even") imLabel += '<span class="flag">（仮・12か月均等。押すと実登録）</span>';
+    row.innerHTML =
+      '<div class="crow-head">' +
+        "<select>" + cropOptions(it.cropId) + "</select>" +
+        '<button class="row-del" title="この品目を外す">✕</button>' +
+      "</div>" +
+      '<div class="field">' +
+        '<label>面積 <span class="val v-area"></span></label>' +
+        '<input type="range" class="in-area" min="0" max="' + Math.max(100, it.area) + '" step="1" value="' + it.area + '">' +
+      "</div>" +
+      '<div class="im-line">' + imLabel + '<div class="im-grid">' + imCells + "</div></div>" +
+      '<div class="crow-out">所得 <b class="v-inc"></b>' + badges + "</div>" +
+      "<details><summary>数字を直す（収量・単価・経費率" + (IS_OKINAWA ? "・台風減収" : "") + "）</summary>" +
+        '<div class="d-body">' +
+          '<div class="field"><label>収量（' + c.unitY + "）" + flagsOf(c.yieldObj) + "</label>" +
+            '<input type="number" class="in-yield" min="0" step="1" value="' + it.yieldV + '"></div>' +
+          '<div class="field"><label>単価（' + c.unitP + "）" + flagsOf(c.priceObj) + "</label>" +
+            '<input type="number" class="in-price" min="0" step="1" value="' + it.priceV + '"></div>' +
+          '<div class="field"><label>経費率（%）' + flagsOf(c.costRateObj) + "</label>" +
+            '<input type="number" class="in-cr" min="0" max="100" step="1" value="' + Math.round(it.costRate * 100) + '"></div>' +
+          (IS_OKINAWA
+            ? '<div class="field"><label>台風減収（%）<span class="flag">（仮）</span></label>' +
+              '<input type="number" class="in-ty" min="0" max="100" step="5" value="' + Math.round(it.typhoonExp * 100) + '"></div>'
+            : "") +
+        "</div>" +
+        '<p class="src">' +
+          (srcY ? "収量: " + srcY + "<br>" : "") +
+          (srcP ? "単価: " + srcP + "<br>" : "") +
+          (it.jisseki ? "実績: 実績の診断の" + (it.jissekiYear || "") + "年の売上実績から換算した単価（実績売上÷面積÷既定収量の計算値）です。<br>" : "") +
+          (c.crNote ? c.crNote + "<br>" : "") +
+          "労働時間: " + (DATA.srcLine(c.laborObj) || "―（要確認）") +
+        "</p>" +
+      "</details>";
+
+    var areaIn = row.querySelector(".in-area");
+    var areaVal = row.querySelector(".v-area");
+    function paintArea() { areaVal.textContent = it.area + "a（" + (it.area / 10) + "×10a）"; }
+    paintArea();
+    CORE.bindRange(areaIn, function (v) { it.area = v; paintArea(); update(); });
+
+    row.querySelector("select").addEventListener("change", function () {
+      var keep = it.area;
+      state.plans[pi].items[ii] = makeItem(this.value, keep);
+      renderPlans(); update();
+    });
+    row.querySelector(".row-del").addEventListener("click", function () {
+      state.plans[pi].items.splice(ii, 1);
+      if (!state.plans[pi].items.length) state.plans[pi].items.push(makeItem(REG[0].id, 10));
+      renderPlans(); update();
+    });
+    function bindNum(cls, fn) {
+      row.querySelector(cls).addEventListener("input", function () {
+        var v = parseFloat(this.value);
+        if (!isNaN(v)) { fn(v); update(); }
+      });
+    }
+    bindNum(".in-yield", function (v) { it.yieldV = v; });
+    bindNum(".in-price", function (v) { it.priceV = v; });
+    bindNum(".in-cr", function (v) { it.costRate = Math.min(1, Math.max(0, v / 100)); });
+    if (IS_OKINAWA) bindNum(".in-ty", function (v) { it.typhoonExp = Math.min(1, Math.max(0, v / 100)); });
+
+    /* 入金月のオン・オフ。押した時点の実効値（仮を含む）を出発点に、その月だけ切り替えて実登録する */
+    if (imEditable) row.querySelectorAll(".im-cell").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var m = +b.dataset.im;
+        var cur = effIncome(c).arr;
+        var idx = cur.indexOf(m);
+        if (idx >= 0) {
+          if (cur.length <= 1) return;   // 入金月は1か月以上残す
+          cur.splice(idx, 1);
+        } else {
+          cur.push(m);
+        }
+        if (writeIncomeMonths(c.id, cur)) { renderPlans(); update(); }
+      });
+    });
+
+    it._incEl = row.querySelector(".v-inc");
+    return row;
+  }
+
+  function renderPlans() {
+    planWrap.innerHTML = "";
+    PLAN_META.forEach(function (meta, pi) {
+      var card = document.createElement("div");
+      card.className = "card plan-card";
+      var head = document.createElement("div");
+      head.className = "plan-head";
+      head.innerHTML = '<span class="plan-dot" style="background:' + meta.color + '"></span>' +
+        '<span class="plan-title">' + meta.label + "</span>" +
+        '<span class="muted small p-area" style="margin-left:auto"></span>';
+      card.appendChild(head);
+      state.plans[pi].items.forEach(function (_, ii) { card.appendChild(buildRow(pi, ii)); });
+      var add = document.createElement("button");
+      add.className = "add-row";
+      add.textContent = "＋ 品目を足す";
+      add.addEventListener("click", function () {
+        state.plans[pi].items.push(makeItem(REG[0].id, 10));
+        renderPlans(); update();
+      });
+      card.appendChild(add);
+      var total = document.createElement("div");
+      total.className = "plan-total";
+      total.innerHTML = '<div class="small muted">この案の年間所得</div>' +
+        '<div class="t-income" style="color:' + meta.color + '"><span class="p-inc"></span><small>／年</small></div>' +
+        '<div class="small muted p-sub"></div>';
+      card.appendChild(total);
+      state.plans[pi]._els = {
+        area: head.querySelector(".p-area"),
+        inc: total.querySelector(".p-inc"),
+        sub: total.querySelector(".p-sub")
+      };
+      planWrap.appendChild(card);
+    });
+  }
+
+  /* ============================================================
+     結果の描画
+     ============================================================ */
+  var firstRender = true;
+  var kpiRow = document.getElementById("kpiRow");
+  var MONTH_LABELS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+
+  function cropColor(cropId) {
+    var idx = 0;
+    for (var i = 0; i < REG.length; i++) if (REG[i].id === cropId) { idx = i; break; }
+    return VIZ.SERIES[idx % 8];
+  }
+
+  function update() {
+    var calcs = state.plans.map(planCalc);
+
+    // 編集カード側の数字
+    state.plans.forEach(function (p, pi) {
+      var r = calcs[pi];
+      p.items.forEach(function (it, ii) {
+        if (it._incEl) it._incEl.textContent = fmt.manUnit(r.items[ii].income);
+      });
+      if (p._els) {
+        p._els.area.textContent = "計 " + Math.round(r.area10 * 10) + "a";
+        if (firstRender) CORE.countUp(p._els.inc, r.income, fmt.man);
+        else p._els.inc.textContent = fmt.man(r.income);
+        p._els.sub.textContent = "売上 " + fmt.manUnit(r.sales) + "・経費 " + fmt.manUnit(r.cost) +
+          "・労働 " + fmt.num(r.laborTotal) + "時間";
+      }
+    });
+
+    // KPI 3枚（A/B案は現状との差額を併記）
+    kpiRow.innerHTML = "";
+    calcs.forEach(function (r, pi) {
+      var d = r.income - calcs[0].income;
+      var deltaHtml = "";
+      if (pi > 0) {
+        var cls = d > 0 ? "up" : d < 0 ? "down" : "flat";
+        var arrow = d > 0 ? "▲" : d < 0 ? "▼" : "―";
+        deltaHtml = '<div class="k-delta ' + cls + '">' + arrow + " 現状より " + fmt.signMan(d) + "</div>";
+      } else {
+        deltaHtml = '<div class="k-delta flat">比較の基準</div>';
+      }
+      var badHtml = state.yearMode === "both"
+        ? '<div class="k-delta flat">不作の年（仮）: ' + fmt.manUnit(r.incomeBad) + "</div>" : "";
+      var div = document.createElement("div");
+      div.className = "kpi" + (pi === 0 ? "" : " hero");
+      div.innerHTML = '<div class="k-label" style="color:' + PLAN_META[pi].color + '">' + PLAN_META[pi].label + " の年間所得</div>" +
+        '<div class="k-value">' + fmt.man(r.income) + "<small>円</small></div>" + deltaHtml + badHtml;
+      kpiRow.appendChild(div);
+    });
+
+    // 出力A: 年間所得比較
+    var seriesA = [{ name: "通常年の所得", values: calcs.map(function (r) { return r.income; }), color: "var(--s2)" }];
+    if (state.yearMode === "both") {
+      seriesA.push({ name: "不作の年の所得（台風1回直撃・仮）", values: calcs.map(function (r) { return r.incomeBad; }), color: "var(--s6)" });
+    }
+    VIZ.barChart(document.getElementById("chartA"), {
+      labels: PLAN_META.map(function (m) { return m.label; }),
+      series: seriesA, fmt: fmt.man, direct: true, h: 280
+    });
+
+    // 出力B: 月別労働（選択中の案）
+    var vi = state.view;
+    var rv = calcs[vi];
+    document.getElementById("laborPlanName").textContent = "— " + PLAN_META[vi].label;
+    /* 上限線: 家族の上限（人数×月時間）に、laborForce（実績の診断で登録した従業員・アルバイト）の
+       その月に働く時間を足した月別の線。laborForce が無ければ従来どおり家族のみの一定線 */
+    var famLimit = state.fam * state.cap;
+    var capM = [];
+    for (var mi = 0; mi < 12; mi++) capM.push(famLimit + (empHoursM ? empHoursM[mi] : 0));
+    var laborSeries = state.plans[vi].items.map(function (it, ii) {
+      return { name: regById(it.cropId).name, values: rv.items[ii].laborM.map(function (v) { return Math.round(v); }), color: cropColor(it.cropId) };
+    });
+    VIZ.stackedBar(document.getElementById("chartB"), {
+      labels: MONTH_LABELS, series: laborSeries,
+      line: empHoursM
+        ? { name: "使える労働力の上限（家族＋従業員・仮）", values: capM.map(function (v) { return Math.round(v); }) }
+        : { name: "家族労働の上限（" + state.fam + "人×" + state.cap + "h）", values: new Array(12).fill(famLimit) },
+      fmt: function (v) { return fmt.num(v) + "h"; }, h: 300
+    });
+    var overM = [];
+    rv.laborM.forEach(function (v, i) { if (v > capM[i]) overM.push({ m: i + 1, v: v, cap: capM[i] }); });
+    var warnB = document.getElementById("warnB");
+    var capDesc = empHoursM
+      ? "家族" + state.fam + "人×月" + state.cap + "時間に、その月に働く従業員・アルバイトの時間（週の日数×1日の時間×4.33の計算値・仮）を足した月別の上限"
+      : "家族" + state.fam + "人×月" + state.cap + "時間＝" + fmt.num(famLimit) + "時間の上限";
+    if (overM.length) {
+      var names = overM.map(function (o) { return o.m + "月"; }).join("・");
+      var worst = overM.reduce(function (a, o) { return (o.v - o.cap) > (a.v - a.cap) ? o : a; }, overM[0]);
+      warnB.innerHTML = '<div class="advice serious"><div class="a-icon">⚠️</div><div>' +
+        '<div class="a-title">この計画は' + names + "に使える労働力の上限を超えます</div>" +
+        '<div class="a-body">' + capDesc + "で見ています。いちばん超え幅が大きい" + worst.m + "月は、上限<b>" +
+        fmt.num(Math.round(worst.cap)) + "時間</b>に対して<b>" + fmt.num(Math.round(worst.v)) + "時間</b>です。" +
+        (empHoursM ? "働く月や時間を見直すか、" : "雇うか、") + "面積を減らすか、収穫がずれる品目に替えるかの判断材料にしてください。</div></div></div>";
+    } else {
+      warnB.innerHTML = '<div class="advice good"><div class="a-icon">✅</div><div>' +
+        '<div class="a-title">使える労働力の範囲に収まっています</div>' +
+        '<div class="a-body">全12か月とも、' + capDesc + "を下回るためです。按分は仮の計算なので、実際の繁忙期の重なりはご自身の感覚で確かめてください。</div></div></div>";
+    }
+
+    // 出力C: 在圃額の帯比較（沖縄のみ。他地域はカードごと誘導文に置き換え済み）
+    if (IS_OKINAWA) {
+      VIZ.hbar(document.getElementById("chartC"), {
+        rows: calcs.map(function (r, pi) {
+          return { label: PLAN_META[pi].label + "（ピーク" + r.zaihoM + "月）", value: Math.round(r.zaiho), color: PLAN_META[pi].color, note: "在圃額" };
+        }),
+        fmt: fmt.manUnit, padL: 150
+      });
+    }
+
+    // 出力D: 入金がある月（主表示は品目別の積み上げ棒。「3案を並べる」は月別合計のグループ棒）
+    var chartD = document.getElementById("chartD");
+    var seen = {};
+    var itemNames = state.plans[vi].items.map(function (it) {
+      var n = regById(it.cropId).name;
+      seen[n] = (seen[n] || 0) + 1;
+      return seen[n] > 1 ? n + "（" + seen[n] + "）" : n;
+    });
+    if (state.incomeAll) {
+      document.getElementById("heatPlanName").textContent = "— 3案の月別合計";
+      VIZ.barChart(chartD, {
+        labels: MONTH_LABELS,
+        series: PLAN_META.map(function (m, pi) {
+          return { name: m.label, values: calcs[pi].incM.map(function (v) { return Math.round(v); }), color: m.color };
+        }),
+        fmt: fmt.man, direct: true, h: 300
+      });
+    } else {
+      document.getElementById("heatPlanName").textContent = "— " + PLAN_META[vi].label;
+      VIZ.stackedBar(chartD, {
+        labels: MONTH_LABELS,
+        series: state.plans[vi].items.map(function (it, ii) {
+          return { name: itemNames[ii], values: rv.items[ii].incM.map(function (v) { return Math.round(v); }), color: cropColor(it.cropId) };
+        }),
+        fmt: fmt.man, totals: true, segLabels: true, h: 300
+      });
+    }
+    // 品目×月のこまかい内訳（折りたたみ・選択中の案）
+    VIZ.heatmap(document.getElementById("chartDHeat"), {
+      rows: itemNames, cols: MONTH_LABELS,
+      values: state.plans[vi].items.map(function (it, ii) {
+        return rv.items[ii].incM.map(function (v) { return v > 0 ? Math.round(v) : null; });
+      }),
+      fmt: fmt.man, padL: 150
+    });
+
+    // まとめ表
+    var tbl = document.getElementById("tblSummary");
+    var head = "<tr><th>項目</th>" + PLAN_META.map(function (m) {
+      return '<th class="num" style="color:' + m.color + '">' + m.label + "</th>";
+    }).join("") + "</tr>";
+    function tr(label, get, cls) {
+      return "<tr><td>" + label + "</td>" + calcs.map(function (r) {
+        return '<td class="num' + (cls ? " " + cls : "") + '">' + get(r) + "</td>";
+      }).join("") + "</tr>";
+    }
+    tbl.innerHTML = head +
+      tr("品目と面積", function (r) {
+        return r.items.map(function (ic) { return ic.c.name + " " + Math.round(ic.area10 * 10) + "a"; }).join("、");
+      }) +
+      tr("面積計", function (r) { return Math.round(r.area10 * 10) + "a"; }) +
+      tr("想定売上", function (r) { return fmt.manUnit(r.sales); }) +
+      tr("経費", function (r) { return fmt.manUnit(r.cost); }) +
+      tr("年間所得", function (r) { return fmt.manUnit(r.income); }, "pos") +
+      (IS_OKINAWA ? tr("不作の年の所得（台風1回直撃・仮）", function (r) { return fmt.manUnit(r.incomeBad); }) : "") +
+      tr("10a当たり所得", function (r) { return r.area10 > 0 ? fmt.manUnit(r.income / r.area10) : "―"; }) +
+      tr("年間労働時間（仮の按分）", function (r) { return fmt.num(r.laborTotal) + "h"; }) +
+      tr("時給換算", function (r) { return r.laborTotal > 0 ? fmt.yen(r.income / r.laborTotal) : "―（労働時間なし）"; }) +
+      (IS_OKINAWA ? tr("台風時期の在圃額（ピーク）", function (r) { return fmt.manUnit(r.zaiho); }) : "");
+
+    persist();
+    firstRender = false;
+  }
+
+  /* ============================================================
+     操作類
+     ============================================================ */
+  var inFam = document.getElementById("inFam"), inCap = document.getElementById("inCap");
+  inFam.value = state.fam; inCap.value = state.cap;
+  function paintFamCap() {
+    document.getElementById("valFam").textContent = state.fam + "人";
+    document.getElementById("valCap").textContent = state.cap + "時間/月";
+  }
+  paintFamCap();
+  CORE.bindRange(inFam, function (v) { state.fam = v; paintFamCap(); update(); });
+  CORE.bindRange(inCap, function (v) { state.cap = v; paintFamCap(); update(); });
+
+  function setSegOn(id, v) {
+    var seg = document.getElementById(id);
+    seg.querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.v === String(v));
+    });
+  }
+
+  CORE.bindSeg(document.getElementById("segYear"), function (v) { state.yearMode = v; update(); });
+  // 「中身を見る案」と「入金がある月」カード内タブは双方向で同期する
+  CORE.bindSeg(document.getElementById("segView"), function (v) {
+    state.view = +v;
+    state.incomeAll = false;
+    setSegOn("segIncome", v);
+    update();
+  });
+  CORE.bindSeg(document.getElementById("segIncome"), function (v) {
+    if (v === "all") {
+      state.incomeAll = true;
+    } else {
+      state.incomeAll = false;
+      state.view = +v;
+      setSegOn("segView", v);
+    }
+    update();
+  });
+  CORE.bindSeg(document.getElementById("segSave"), function (v) { state.saveSel = +v; });
+
+  // segの初期選択を状態に合わせる
+  setSegOn("segYear", state.yearMode);
+  setSegOn("segView", state.view);
+  setSegOn("segIncome", state.view);
+  setSegOn("segSave", state.saveSel);
+
+  // 保存（plan スキーマ）と前回保存の表示
+  function showSaved() {
+    var saved = store.load("plan", null);
+    var box = document.getElementById("savedInfo");
+    if (saved && saved.items) {
+      box.style.display = "";
+      var names = saved.items.map(function (it) {
+        return regById(it.cropId).name + " " + Math.round(it.area10a * 10) + "a";
+      }).join("、");
+      document.getElementById("savedBody").innerHTML =
+        "<b>" + (saved.name || "（名前なし）") + "</b><br>" + names +
+        '<br><span class="muted">保存: ' + (saved.savedAt ? new Date(saved.savedAt).toLocaleString("ja-JP") : "―") + "</span>";
+    } else {
+      box.style.display = "none";
+    }
+  }
+  /* 橋渡し: 決めた案の品目・面積をシミュレーター（simPlan）に写して移動する。
+     items の行の形は simulator.html の makeItem と同じ（curve は持たせず、
+     シミュレーター側が読み込み時に既定の立ち上がりを補う）。自動同期はしない。 */
+  function sendToSimulator() {
+    var pi = state.saveSel;
+    var items = state.plans[pi].items.map(function (it) {
+      return { cropId: it.cropId, area: it.area, yieldV: it.yieldV, priceV: it.priceV,
+        costRate: it.costRate, laborH10a: it.laborH10a, typhoonExp: it.typhoonExp };
+    });
+    var sp = store.load("simPlan", null);
+    if (sp && sp.items && sp.items.length) {
+      if (!window.confirm("シミュレーターに保存済みの計画の品目・面積を、この案で置き換えます。よいですか？")) return;
+      sp.items = items;
+    } else {
+      // 新規作成: simulator.html の defaultState と同じ既定値に、この案の品目・面積を載せる
+      sp = {
+        years: 5, famPeople: 2, famHours: 160,
+        livingMan: 20, cashStartMan: 300, targetMan: 300,
+        items: items, invests: [],
+        loan: { amountMan: 0, ratePct: 2.0, termY: 10, graceY: 3 },
+        hojo: { amountMan: 0, year: 1 },
+        fixedMan: 30, fixedMemo: ""
+      };
+    }
+    if (store.save("simPlan", sp)) {
+      location.href = "simulator.html";
+    } else {
+      window.alert("保存できませんでした。ブラウザの保存領域を確認してください。");
+    }
+  }
+
+  document.getElementById("btnSave").addEventListener("click", function () {
+    var pi = state.saveSel;
+    var name = document.getElementById("inPlanName").value.trim() || (PLAN_META[pi].label + "（作付け計画の比較で作成）");
+    var plan = {
+      name: name,
+      items: state.plans[pi].items.map(function (it) {
+        return { cropId: it.cropId, area10a: it.area / 10, yieldKg10a: it.yieldV, priceYenKg: it.priceV, costRate: it.costRate };
+      }),
+      savedAt: new Date().toISOString()
+    };
+    var ok = store.save("plan", plan);
+    if (ok) {
+      document.getElementById("saveMsg").textContent = "";
+      CORE.nextHint(this, [
+        { label: "→ 資金繰りカレンダーで、入金のある月を確かめる", href: "shikin.html", page: "shikin" },
+        { label: "→ この案をシミュレーターに読み込む", onclick: sendToSimulator, page: "simulator" },
+        { label: "→ A4で印刷する（相談に持っていく紙）", onclick: function () { window.print(); } }
+      ], "第一候補として保存しました。ほかの案もこの端末に残り、いつでも決め直せます");
+    } else {
+      document.getElementById("saveMsg").textContent = "保存できませんでした。ブラウザの保存領域を確認してください。";
+    }
+    showSaved();
+  });
+  document.getElementById("btnPrint").addEventListener("click", function () { window.print(); });
+
+  // 品目マスタの出典まとめ（編集エリアの下）
+  (function () {
+    var lines = [];
+    var seenSrc = {};
+    REG.forEach(function (c) {
+      [c.yieldObj, c.priceObj, c.costRateObj, c.laborObj].forEach(function (o) {
+        if (o && o.src && !seenSrc[o.src] && DATA.SOURCES[o.src]) {
+          seenSrc[o.src] = 1;
+          lines.push(DATA.SOURCES[o.src].name + "（" + DATA.SOURCES[o.src].year + "）");
+        }
+      });
+    });
+    document.getElementById("srcCrops").textContent =
+      "既定値の出典: " + lines.join("／") + "。（仮）（計算値）（古い調査値）の印がある数字は目安です。各行の「数字を直す」から自分の値に直せます。各行の入金月のマスは押して直せます（直した月は品目マスタに保存され、全ページで使われます）。";
+  })();
+
+  /* さとうきびデータの無い地域では、さとうきび前提の注記を出さない */
+  if (!DATA.KIBI) {
+    var kz = document.getElementById("kibiZaihoNote");
+    if (kz) kz.style.display = "none";
+  }
+
+  /* ---------- 台風関連の表示の出し分け（沖縄のみ） ---------- */
+  if (IS_OKINAWA) {
+    document.getElementById("ledeText").textContent =
+      "いまの作付けと別の案（A案・B案）を並べて、年間所得・月別の労働時間・台風時期の危険度を比較します。決めた計画は資金繰りカレンダーに引き継がれます。";
+    document.getElementById("canDoText").textContent =
+      "3つの案の所得の比較、月別の労働時間と家族労働の上限の確認、台風時期（7〜10月）に収穫前の作物がいくら残っているかの確認、A4での印刷ができます。";
+  } else {
+    // 「不作の年」切替と台風関連の注記は出さず、災害の確認は災害への備えページに任せる
+    var segY = document.getElementById("segYear");
+    if (segY) segY.style.display = "none";
+    var srcBad = document.getElementById("srcYearBad");
+    if (srcBad) srcBad.style.display = "none";
+    document.getElementById("cardZaiho").innerHTML =
+      '<p class="sub" style="margin:0">災害（台風・大雪・長雨・霜など）で失うおそれのある売上の確認は、「災害への備え」のページで行えます。' +
+      '<a href="taifu.html" style="font-weight:700">→ 災害への備えを開く</a></p>';
+  }
+
+  /* ---------- 出所バッジ: 現状案がはじめの3問の品目と一致しているとき ---------- */
+  (function () {
+    var host = document.getElementById("planBadgeHost");
+    if (!host || !profile.crops || !profile.crops.length) return;
+    var pIds = profile.crops.map(function (c) { return c.cropId; }).sort().join(",");
+    var gIds = state.plans[0].items.map(function (it) { return it.cropId; }).sort().join(",");
+    if (pIds === gIds) {
+      CORE.sourceBadge(host, "「現状」の品目と面積は、はじめの3問から反映しています",
+        [{ label: "→ 3問を直す", href: "../index.html" }]);
+    }
+  })();
+
+  /* ---------- 品目追加への誘導 ---------- */
+  CORE.cropAddLink(document.getElementById("cropAddHost"), "sakutsuke");
+
+  renderPlans();
+  showSaved();
+  update();
+})();
+</script>
+</body>
+</html>

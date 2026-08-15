@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>投資・雇用の採算計算｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+</head>
+<body>
+<main class="shell">
+
+  <div class="page-head fade-up">
+    <div class="eyebrow">INVEST &amp; HIRE</div>
+    <h1>投資・雇用の<span class="grad-text">採算計算</span></h1>
+    <p class="lede">機械・ハウスの購入や雇用の前に、何年で回収できるか・回収前に台風で壊れる危険・必要な追加売上を計算します。買うか見送るかの結論は出しません。数字を並べて判断するためのページです。</p>
+  </div>
+
+  <div class="card fade-up d1" style="padding:16px 20px">
+    <div class="grid c3">
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">できること</div>
+        <p class="small muted">設備投資の回収年数（補助あり・なし）、回収前に台風で全損する確率の目安、雇用に必要な追加売上と面積の計算、ハウス2案の総費用比較、判断メモの保存。</p>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">使う場面</div>
+        <p class="small muted">見積書を受け取ったとき、人を雇うかどうか考えるとき。</p>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">他のページとのつながり</div>
+        <p class="small muted">実績の診断の実績があれば所得率に使います。借入の返済額は資金繰りカレンダーに書き込めます。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex wrap mb16 fade-up d1">
+    <div class="seg" id="tab-seg">
+      <button data-v="setsubi" class="on">設備投資</button>
+      <button data-v="koyo">雇用</button>
+      <button data-v="house">ハウス比較</button>
+    </div>
+    <span class="muted small">設備投資・雇用・ハウス比較の3つの計算。どれも結論は出さず、差額と根拠を並べます。</span>
+  </div>
+
+  <!-- ============================================================
+       タブ1: 設備投資
+       ============================================================ -->
+  <section id="tab-setsubi" class="fade-up d2">
+    <div class="grid c2">
+      <div class="card">
+        <h3>1. 投資の内容</h3>
+        <div class="sub">見積書の金額と、その機械・設備で年間いくら利益が増えるかを入れる。初期値は編集前提の例。</div>
+
+        <div class="field">
+          <label>見積額（税込で入力） <span class="val" id="s-est-v"></span></label>
+          <div class="input-unit"><input type="number" id="s-est" value="3000000" min="0" step="10000"><span class="u">円</span></div>
+        </div>
+
+        <div class="field">
+          <label>補助率 <span class="val" id="s-hojo-v"></span></label>
+          <input type="range" id="s-hojo" min="0" max="66.7" step="0.1" value="50">
+          <div class="flex mt8">
+            <div class="seg" id="s-hojo-seg">
+              <button data-v="0">補助なし</button>
+              <button data-v="50" class="on">1/2</button>
+              <button data-v="66.7">2/3</button>
+            </div>
+          </div>
+          <div class="note">補助が付くかどうか・率がいくつかは事業ごとに違う。公募要領・市町村の担当窓口で確認してから確定する。</div>
+        </div>
+
+        <div class="field">
+          <label>この投資で年間に増える利益（増える売上−増える経費） <span class="val" id="s-gain-v"></span></label>
+          <div class="input-unit"><input type="number" id="s-gain" value="600000" min="0" step="10000"><span class="u">円/年</span></div>
+          <div class="note">ここがいちばん甘くなりやすい。「時間が浮く」は浮いた時間で何を作るかまで決めて金額にする。</div>
+        </div>
+
+        <div class="field">
+          <label>置き場所・施設のタイプ（台風の被害率の初期値に使う）</label>
+          <select id="s-ftype">
+            <option value="roji">露地に置く・野ざらしに近い</option>
+            <option value="pipe" selected>パイプハウスの中・普通の格納</option>
+            <option value="hiraburi">平張施設の中</option>
+            <option value="taiko">頑丈な建屋・耐候性ハウスの中</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>台風1個あたりの全損・大破の確率 <span class="val provisional" id="s-p-flag"></span></label>
+          <div class="input-unit"><input type="number" id="s-p" value="0.3" min="0" max="1" step="0.05"><span class="u">0〜1</span></div>
+          <div class="note" id="s-p-src"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex between">
+          <h3>2. 何年で元が取れるか</h3>
+          <button class="btn ghost sm no-print" onclick="window.print()">印刷して持っていく</button>
+        </div>
+        <div class="sub">回収年数 = 自己負担 ÷ 年間に増える利益。補助あり・なしを並べて出す。</div>
+
+        <div class="grid c2">
+          <div class="kpi hero">
+            <div class="k-label">自己負担（補助あり）</div>
+            <div class="k-value" id="s-self"></div>
+            <div class="k-delta flat" id="s-self-sub"></div>
+          </div>
+          <div class="kpi">
+            <div class="k-label">回収年数（補助あり）</div>
+            <div class="k-value" id="s-payA"></div>
+            <div class="k-delta flat" id="s-payN-sub"></div>
+          </div>
+        </div>
+
+        <div class="viz mt16" id="s-chart"></div>
+        <p class="src">白い横線＝自己負担のライン。積み上がる利益の線が横線を越える年が「元が取れる年」。</p>
+
+        <div class="advice warn mt16">
+          <div class="a-icon">🌀</div>
+          <div>
+            <div class="a-title">台風リスク（参考の目安）</div>
+            <div class="a-body" id="s-taifu-text"></div>
+          </div>
+        </div>
+        <p class="src">計算式: 回収が終わる前に1回以上全損する確率 = 1−(1−p)<sup>回収年数</sup>。pは上の入力欄の値（仮・編集前提）。実際の壊れ方は据え付け方・立地で大きく変わるので、この数字で決めず「壊れたらどうするか」を考える材料にする。</p>
+      </div>
+    </div>
+
+    <div class="card mt16">
+      <h3>3. 借りて買うなら — 月々いくら返すか</h3>
+      <div class="sub">返済月額を計算して「資金繰りカレンダー」に書き込めます。資金が不足する月に返済が重なっていないかは、資金繰りカレンダーで確認してください。</div>
+      <div class="grid c4">
+        <div class="field">
+          <label>借入額</label>
+          <div class="input-unit"><input type="number" id="s-loan" value="1500000" min="0" step="10000"><span class="u">円</span></div>
+          <button class="btn ghost sm mt8 no-print" id="s-loan-sync">自己負担額を入れる</button>
+        </div>
+        <div class="field">
+          <label>年利 <span class="val" id="s-rate-v"></span></label>
+          <input type="range" id="s-rate" min="0" max="5" step="0.1" value="1.5">
+          <div class="note">実際の利率は融資制度・金融機関で確認する。</div>
+        </div>
+        <div class="field">
+          <label>返済期間 <span class="val" id="s-years-v"></span></label>
+          <input type="range" id="s-years" min="1" max="20" step="1" value="7">
+        </div>
+        <div class="kpi">
+          <div class="k-label">返済月額（元利均等）</div>
+          <div class="k-value" id="s-monthly"></div>
+          <div class="k-delta flat" id="s-loan-total"></div>
+        </div>
+      </div>
+      <div class="flex wrap">
+        <button class="btn primary sm no-print" id="s-to-cashflow">資金繰りカレンダーに書き込む</button>
+        <span class="small muted" id="s-to-cashflow-msg"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       タブ2: 雇用
+       ============================================================ -->
+  <section id="tab-koyo" class="hide fade-up d2">
+    <div class="grid c2">
+      <div class="card">
+        <h3>1. 雇う条件</h3>
+        <div class="sub">払う時給と時間を入れる。給与の上に乗る事業主の負担分（保険料など）も忘れずに足す。</div>
+
+        <div class="field">
+          <label>時給（実際に払う額を入れる） <span class="val" id="k-jikyu-v"></span></label>
+          <div class="input-unit"><input type="number" id="k-jikyu" value="1000" min="0" step="10"><span class="u">円</span></div>
+          <div class="note">初期値は編集前提の例。最低賃金は毎年変わるので労働局・ハローワークの最新額を確認する。</div>
+        </div>
+        <div class="field">
+          <label>月に働いてもらう時間 <span class="val" id="k-hours-v"></span></label>
+          <input type="range" id="k-hours" min="10" max="200" step="5" value="80">
+        </div>
+        <div class="field">
+          <label>年間の勤務月数 <span class="val" id="k-months-v"></span></label>
+          <input type="range" id="k-months" min="1" max="12" step="1" value="6">
+        </div>
+        <div class="field">
+          <label>事業主負担率（給与に上乗せでかかる分） <span class="val provisional">（仮）</span></label>
+          <div class="input-unit"><input type="number" id="k-futan" value="0.15" min="0" max="0.5" step="0.01"><span class="u">0〜0.5</span></div>
+          <div class="note">仮定値（出典なし・要確認）。労災・雇用保険・社会保険の有無など雇い方で変わる。市町村・社会保険労務士・JAの労務窓口で確認する。</div>
+        </div>
+
+        <div class="field mt16">
+          <label>自分の所得率（所得 ÷ 売上） <span class="val" id="k-rate-flag"></span></label>
+          <div class="input-unit"><input type="number" id="k-shotoku" value="0.3" min="0.01" max="1" step="0.01"><span class="u">0〜1</span></div>
+          <div class="note" id="k-shotoku-note">仮定値（要確認）。実績の診断を先にやると、自分の実績値がここに入る。</div>
+        </div>
+        <div class="field">
+          <label>面積を広げるなら何を作るか（追加面積の逆算に使う）</label>
+          <select id="k-crop"></select>
+          <div class="note" id="k-crop-note"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex between">
+          <h3>2. 引き合う条件はどこか</h3>
+          <button class="btn ghost sm no-print" onclick="window.print()">印刷して持っていく</button>
+        </div>
+        <div class="sub">人件費そのものより「その人件費を取り返すのに必要な追加売上」で見る。</div>
+
+        <div class="grid c2">
+          <div class="kpi hero">
+            <div class="k-label">年間人件費（負担分込み）</div>
+            <div class="k-value" id="k-cost"></div>
+            <div class="k-delta flat" id="k-cost-sub"></div>
+          </div>
+          <div class="kpi">
+            <div class="k-label">取り返すのに必要な追加売上</div>
+            <div class="k-value" id="k-needsales"></div>
+            <div class="k-delta flat" id="k-needsales-sub"></div>
+          </div>
+        </div>
+
+        <div class="viz mt16" id="k-chart"></div>
+
+        <div class="advice info mt16">
+          <div class="a-icon">📐</div>
+          <div>
+            <div class="a-title">面積でいうと</div>
+            <div class="a-body" id="k-area-text"></div>
+          </div>
+        </div>
+        <div class="advice mt8" id="k-jikyu-advice">
+          <div class="a-icon">⚖️</div>
+          <div>
+            <div class="a-title">自分の時給と比べる</div>
+            <div class="a-body" id="k-jikyu-text"></div>
+          </div>
+        </div>
+        <p class="src">考え方: 上の「必要な追加売上」は、経営全体の所得率で年間人件費を割り戻した全体の目安です。下の面積換算は、選んだ品目そのものの利益率（売上×（1−経費率））で年間人件費を賄うのに要る作付けを出します（経営全体の率と対象品目を混ぜません）。雇った人の働きがこの利益増につながる見込みがあるか、が判断の中心で、人件費の絶対額では決まりません。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       タブ3: ハウス比較
+       ============================================================ -->
+  <section id="tab-house" class="hide fade-up d2">
+    <div class="grid c2">
+      <div class="card">
+        <h3>1. 2つの構え方</h3>
+        <div class="sub">A案「頑丈で高いハウス」と、B案「安いハウス＋園芸施設共済」。建て方の違いを、期間全体でかかるお金に直して比べる。</div>
+
+        <div class="grid c2">
+          <div class="field">
+            <label>ハウス面積 <span class="val" id="h-area-v"></span></label>
+            <input type="range" id="h-area" min="100" max="3000" step="50" value="1000">
+          </div>
+          <div class="field">
+            <label>比べる期間 <span class="val" id="h-nen-v"></span></label>
+            <input type="range" id="h-nen" min="5" max="30" step="1" value="15">
+          </div>
+        </div>
+
+        <h3 class="mt16">A案: 頑丈で高いハウス（共済なし想定）</h3>
+        <div class="grid c2">
+          <div class="field">
+            <label>建設単価 <span class="val" id="h-unitA-flag"></span></label>
+            <div class="input-unit"><input type="number" id="h-unitA" value="12700" min="0" step="100"><span class="u">円/㎡</span></div>
+            <div class="note" id="h-unitA-src"></div>
+          </div>
+          <div class="field">
+            <label>台風1個あたり全損確率 <span class="val provisional">（仮）</span></label>
+            <div class="input-unit"><input type="number" id="h-pA" value="0.1" min="0" max="1" step="0.05"><span class="u">0〜1</span></div>
+            <div class="note" id="h-pA-src"></div>
+          </div>
+        </div>
+
+        <h3 class="mt16">B案: 安いハウス＋園芸施設共済</h3>
+        <div class="grid c2">
+          <div class="field">
+            <label>建設単価 <span class="val provisional">（仮）</span></label>
+            <div class="input-unit"><input type="number" id="h-unitB" value="5000" min="0" step="100"><span class="u">円/㎡</span></div>
+            <div class="note">仮定値（出典なし・要確認）。実際の見積額に置き換える。</div>
+          </div>
+          <div class="field">
+            <label>台風1個あたり全損確率 <span class="val provisional">（仮）</span></label>
+            <div class="input-unit"><input type="number" id="h-pB" value="0.3" min="0" max="1" step="0.05"><span class="u">0〜1</span></div>
+            <div class="note" id="h-pB-src"></div>
+          </div>
+          <div class="field">
+            <label>共済掛金（年額） <span class="val provisional">（仮）</span></label>
+            <div class="input-unit"><input type="number" id="h-kakekin" value="50000" min="0" step="1000"><span class="u">円/年</span></div>
+            <div class="note">仮定値（出典なし・要確認）。実際の掛金はNOSAI（農業共済組合）の見積りで確認する。</div>
+          </div>
+          <div class="field">
+            <label>付保割合（共済で戻る割合） <span class="val" id="h-fuho-v"></span></label>
+            <input type="range" id="h-fuho" min="0.4" max="1" step="0.05" value="0.8">
+            <div class="note" id="h-fuho-src"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex between">
+          <h3>2. 期間全体でかかるお金</h3>
+          <button class="btn ghost sm no-print" onclick="window.print()">印刷して持っていく</button>
+        </div>
+        <div class="sub">建設費＋掛金の累計＋壊れたときの建て直し自己負担（期待値の目安）を積み上げて比べる。</div>
+
+        <div class="grid c2">
+          <div class="kpi">
+            <div class="k-label">A案 合計（目安）</div>
+            <div class="k-value" id="h-totalA"></div>
+            <div class="k-delta flat" id="h-probA"></div>
+          </div>
+          <div class="kpi">
+            <div class="k-label">B案 合計（目安）</div>
+            <div class="k-value" id="h-totalB"></div>
+            <div class="k-delta flat" id="h-probB"></div>
+          </div>
+        </div>
+
+        <div class="viz mt16" id="h-chart"></div>
+
+        <div class="advice info mt16">
+          <div class="a-icon">🏠</div>
+          <div>
+            <div class="a-title">読み方</div>
+            <div class="a-body" id="h-yomikata"></div>
+          </div>
+        </div>
+        <p class="src">建て直し費の期待値 = 建設費 ×（1−共済で戻る割合）× 全損確率 × 年数、の粗い目安。共済金の支払要件・時期、壊れている間の収入が途絶える損はこの計算に入っていない。全損確率（仮）は自分の島・畑の経験で必ず上書きする。</p>
+        <p class="src" id="h-kyosai-src"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       判断メモ（共通）
+       ============================================================ -->
+  <div class="card mt24 fade-up d3">
+    <h3>判断メモ — 「こういう前提なら成立」を言葉で残す</h3>
+    <div class="sub">決めた前提・見送りの条件を1〜2行で書いて保存しておくと、あとから見返せます。いまの入力値も一緒に保存されます。</div>
+    <div class="grid c2">
+      <div>
+        <div class="field">
+          <label>タイトル</label>
+          <input type="text" id="m-title" placeholder="例: 中古トラクター 300万の件">
+        </div>
+        <div class="field">
+          <label>前提と結論のメモ</label>
+          <textarea id="m-verdict" rows="3" placeholder="例: 単価450円/kg以上・台風全損1回までなら成立。2年続けて増益が出なければ次の更新は見送る。"></textarea>
+        </div>
+        <div class="flex wrap">
+          <button class="btn primary sm no-print" id="m-save">この判断を保存</button>
+          <span class="small muted" id="m-msg"></span>
+        </div>
+      </div>
+      <div>
+        <div class="k-label small muted mb8">保存した判断</div>
+        <div id="m-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/charts.js"></script>
+<script>
+(function () {
+  "use strict";
+  CORE.renderTopbar("toushi", "../");
+  document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = CORE.fmt;
+  var num = function (id) { var v = parseFloat($(id).value); return isNaN(v) ? 0 : v; };
+
+  /* ---------- タブ切替 ---------- */
+  var TABS = { setsubi: "tab-setsubi", koyo: "tab-koyo", house: "tab-house" };
+  var activeTab = "setsubi";
+  CORE.bindSeg($("tab-seg"), function (v) {
+    activeTab = v;
+    Object.keys(TABS).forEach(function (k) {
+      $(TABS[k]).classList.toggle("hide", k !== v);
+    });
+    recalc();
+  });
+
+  /* ---------- 台風被害率の初期値（仮・DATA由来） ---------- */
+  var DMG = DATA.TYPHOON.damageRateDefaults;
+  var dmgSrcText = "初期値はツール側の仮定値" + DATA.flagLabel(DMG.pipe) + "。公的な被害率データは弱いので、自分の畑・島の経験で必ず上書きする。";
+  $("s-p-src").textContent = dmgSrcText;
+  $("h-pA-src").textContent = "初期値は耐候性ハウス想定の仮定値" + DATA.flagLabel(DMG.taiko) + "。";
+  $("h-pB-src").textContent = "初期値はパイプハウス想定の仮定値" + DATA.flagLabel(DMG.pipe) + "。";
+  $("s-p-flag").textContent = DATA.flagLabel(DMG.pipe);
+
+  /* ============================================================
+     タブ1: 設備投資
+     ============================================================ */
+  function calcSetsubi() {
+    var est = num("s-est");
+    var hojo = num("s-hojo") / 100;           // 0〜0.667
+    var gain = num("s-gain");
+    var p = Math.min(1, Math.max(0, num("s-p")));
+
+    $("s-est-v").textContent = fmt.manUnit(est);
+    $("s-hojo-v").textContent = (hojo * 100).toFixed(1) + "%";
+    $("s-gain-v").textContent = fmt.manUnit(gain) + "/年";
+
+    var self = est * (1 - hojo);
+    $("s-self").textContent = fmt.manUnit(self);
+    $("s-self-sub").textContent = "補助なしなら全額 " + fmt.manUnit(est);
+
+    if (gain <= 0) {
+      $("s-payA").textContent = "―（要確認）";
+      $("s-payN-sub").textContent = "年間に増える利益が0円だと回収できない";
+      $("s-taifu-text").textContent = "年間に増える利益を入れると、回収前に全損する確率の目安が出ます。";
+      $("s-chart").innerHTML = "";
+      return;
+    }
+
+    var payA = self / gain;    // 補助あり
+    var payN = est / gain;     // 補助なし
+    $("s-payA").textContent = payA.toFixed(1) + "年";
+    $("s-payN-sub").textContent = "補助なしなら " + payN.toFixed(1) + "年";
+
+    // 回収完了前に1回以上全損する確率 = 1−(1−p)^年数
+    var probA = 1 - Math.pow(1 - p, payA);
+    var probN = 1 - Math.pow(1 - p, payN);
+    $("s-taifu-text").innerHTML =
+      "全損・大破の確率を年 " + p.toFixed(2) + "（仮）とすると、回収が終わる前に1回以上やられる確率は " +
+      "補助ありで約 <b>" + (probA * 100).toFixed(0) + "%</b>（" + payA.toFixed(1) + "年）、" +
+      "補助なしで約 <b>" + (probN * 100).toFixed(0) + "%</b>（" + payN.toFixed(1) + "年）。" +
+      "回収が長いほど、途中で壊れる確率は上がる。固定の仕方・置き場所・保険の掛け方をセットで考える材料にする。";
+
+    // 累積利益 vs 自己負担ライン
+    var yMax = Math.min(30, Math.max(6, Math.ceil(payN) + 2));
+    var labels = [], cum = [], lineSelf = [], lineFull = [];
+    for (var i = 0; i <= yMax; i++) {
+      labels.push(i + "年");
+      cum.push(gain * i);
+      lineSelf.push(self);
+      lineFull.push(est);
+    }
+    VIZ.lineChart($("s-chart"), {
+      labels: labels,
+      series: [
+        { name: "積み上がる利益", values: cum, color: "var(--s2)" },
+        { name: "自己負担（補助あり）", values: lineSelf, color: "var(--s3)" },
+        { name: "全額（補助なし）", values: lineFull, color: "var(--s6)" }
+      ],
+      fmt: fmt.man, h: 260, area: false
+    });
+  }
+
+  // 補助率のクイックボタン
+  CORE.bindSeg($("s-hojo-seg"), function (v) {
+    var el = $("s-hojo");
+    el.value = v;
+    el.dispatchEvent(new Event("input"));
+  });
+
+  /* ---------- 借入返済 ---------- */
+  function calcLoan() {
+    var P = num("s-loan");
+    var r = num("s-rate") / 100 / 12;
+    var years = num("s-years");
+    var n = Math.max(1, Math.round(years * 12));
+    $("s-rate-v").textContent = num("s-rate").toFixed(1) + "%";
+    $("s-years-v").textContent = years + "年";
+    var m = r > 0 ? P * r / (1 - Math.pow(1 + r, -n)) : P / n;
+    $("s-monthly").textContent = fmt.manUnit(m);
+    $("s-loan-total").textContent = "総返済 " + fmt.manUnit(m * n) + "（利息 " + fmt.manUnit(m * n - P) + "）";
+    return { monthly: Math.round(m), months: n, principal: P };
+  }
+
+  $("s-loan-sync").addEventListener("click", function () {
+    var est = num("s-est"), hojo = num("s-hojo") / 100;
+    $("s-loan").value = Math.round(est * (1 - hojo));
+    recalc();
+  });
+
+  $("s-to-cashflow").addEventListener("click", function () {
+    var ln = calcLoan();
+    if (ln.monthly <= 0) { $("s-to-cashflow-msg").textContent = "借入額が0円です。"; return; }
+    var cf = CORE.store.load("cashflow", null) || { startMonth: null, cashStart: null, living: null, bigPays: [], loans: [] };
+    if (!Array.isArray(cf.loans)) cf.loans = [];
+    var title = $("m-title").value.trim() || "設備投資の借入";
+    cf.loans.push({ label: title, monthly: ln.monthly, months: ln.months, from: "toushi", savedAt: new Date().toISOString() });
+    var ok = CORE.store.save("cashflow", cf);
+    $("s-to-cashflow-msg").textContent = ok
+      ? "書き込みました（月額 " + fmt.manUnit(ln.monthly) + "）。資金繰りカレンダーで資金が不足する月と重ならないか確認してください。"
+      : "保存に失敗しました（要確認）。";
+    if (ok) {
+      CORE.nextHint($("s-to-cashflow"), [
+        { label: "→ 資金繰りカレンダーで、返済を入れた後の残高を見る", href: "shikin.html", page: "shikin" }
+      ], "返済額を資金繰りカレンダーに書き込みました");
+    }
+  });
+
+  /* ============================================================
+     タブ2: 雇用
+     ============================================================ */
+
+  // 品目セレクト（DATA.CROPSから。10a当たり売上の目安 = 単収×単価）
+  function cropRev10a(c) {
+    if (c.yieldKg10a && c.priceYenKg) return { v: c.yieldKg10a.v * c.priceYenKg.v, a: c.yieldKg10a, b: c.priceYenKg };
+    if (c.yieldHon10a && c.priceYenHon) return { v: c.yieldHon10a.v * c.priceYenHon.v, a: c.yieldHon10a, b: c.priceYenHon };
+    return null;
+  }
+  (function buildCropSelect() {
+    var sel = $("k-crop");
+    DATA.CROPS.forEach(function (c) {
+      if (!cropRev10a(c)) return;
+      var op = document.createElement("option");
+      op.value = c.id; op.textContent = c.name;
+      sel.appendChild(op);
+    });
+    sel.value = "goya_sokusei";
+  })();
+
+  // annual（実績の診断）から所得率・自分の時給を拾う（無ければ仮のまま）
+  var OWN = (function () {
+    var annual = CORE.store.load("annual", null);
+    if (!annual) return null;
+    var years = Object.keys(annual).sort();
+    if (!years.length) return null;
+    var y = years[years.length - 1];
+    var d = annual[y];
+    if (!d || !Array.isArray(d.items)) return null;
+    var sales = 0;
+    d.items.forEach(function (it) { sales += Number(it.sales != null ? it.sales : it["sales円"]) || 0; });
+    var exp = 0;
+    if (d.expenses) Object.keys(d.expenses).forEach(function (k) { exp += Number(d.expenses[k]) || 0; });
+    if (sales <= 0) return null;
+    var income = sales - exp;
+    var laborH = Number(d.laborTotalH) || 0;
+    return { year: y, sales: sales, income: income, rate: income / sales, jikyu: laborH > 0 ? income / laborH : null };
+  })();
+
+  if (OWN && OWN.rate > 0) {
+    $("k-shotoku").value = (Math.round(OWN.rate * 100) / 100).toFixed(2);
+    $("k-rate-flag").innerHTML = '<span class="badge good">実績 ' + OWN.year + '</span>';
+    $("k-shotoku-note").textContent = "実績の診断の " + OWN.year + " 年データから計算した実績値（所得 ÷ 売上）。手で直してもよい。";
+  } else {
+    $("k-rate-flag").innerHTML = '<span class="provisional">（仮）</span>';
+  }
+
+  function calcKoyo() {
+    var jikyu = num("k-jikyu");
+    var hours = num("k-hours");
+    var months = num("k-months");
+    var futan = Math.max(0, num("k-futan"));
+    var rate = Math.max(0.01, num("k-shotoku"));
+
+    $("k-jikyu-v").textContent = fmt.yen(jikyu);
+    $("k-hours-v").textContent = hours + "時間/月";
+    $("k-months-v").textContent = months + "か月";
+
+    var wage = jikyu * hours * months;          // 賃金そのもの
+    var extra = wage * futan;                   // 事業主の上乗せ分
+    var total = wage + extra;                   // 年間人件費
+    var needSales = total / rate;               // 必要な追加売上
+
+    $("k-cost").textContent = fmt.manUnit(total);
+    $("k-cost-sub").textContent = "賃金 " + fmt.manUnit(wage) + " ＋ 上乗せ分 " + fmt.manUnit(extra) + "（率" + futan.toFixed(2) + "・仮）";
+    $("k-needsales").textContent = fmt.manUnit(needSales);
+    $("k-needsales-sub").textContent = "経営全体の所得率 " + (rate * 100).toFixed(0) + "% で割り戻した全体の目安（品目ごとの必要面積は下の換算を参照）";
+
+    VIZ.hbar($("k-chart"), {
+      rows: [
+        { label: "賃金", value: wage, color: "var(--s1)" },
+        { label: "事業主の上乗せ分", value: extra, color: "var(--s3)" },
+        { label: "年間人件費 計", value: total, color: "var(--s5)" },
+        { label: "必要な追加売上", value: needSales, color: "var(--s2)" }
+      ],
+      fmt: fmt.man, padL: 150
+    });
+
+    // 追加面積の逆算
+    var crop = DATA.CROPS.find(function (c) { return c.id === $("k-crop").value; });
+    var rev = crop ? cropRev10a(crop) : null;
+    if (rev && rev.v > 0) {
+      var lab = DATA.flagLabel(rev.a) + DATA.flagLabel(rev.b);
+      // 面積は経営全体の所得率でなく、この品目そのものの利益率で出す（経営全体の率と対象品目を混ぜない）
+      var cr = crop.costRate ? crop.costRate.v : (crop.cost10a && rev.v > 0 ? crop.cost10a.v / rev.v : null);
+      $("k-crop-note").textContent = "この品目の10a当たり売上の目安: " + fmt.manUnit(rev.v) + "（単収×単価" + (lab || "") + "）。出典: " + DATA.srcLine(rev.b);
+      if (cr != null && cr >= 0 && cr < 1) {
+        var margin10a = rev.v * (1 - cr);              // 10a当たりの利益（売上×（1−経費率））
+        var addArea10 = total / margin10a;             // 追加人件費 ÷ 10a当たり利益
+        $("k-area-text").innerHTML =
+          "「" + crop.name + "」の10a当たりの利益はおよそ <b>" + fmt.manUnit(margin10a) + "</b>（売上×（1−経費率" + cr.toFixed(2) + "））。" +
+          "年間人件費 " + fmt.manUnit(total) + " をこの品目の利益で賄うには、およそ <b>" + (addArea10 * 10).toFixed(1) + "a</b> の作付け上乗せが要る計算です。" +
+          "その面積を実際に増やせるか（畑・水・自分の段取り）を先に確認してください。経費率は経営費全体÷粗収益で、変動費だけを分けた限界利益ではありません（追加の固定費や機械は別途要ります）。単収・単価・経費率は県平均や仮の目安なので、自分の実績があればそちらで読み替えてください。";
+      } else {
+        $("k-area-text").textContent = "この品目は経費率のデータがないため、必要な作付け面積は出せません（自分の実績値を入れてください）。";
+      }
+    } else {
+      $("k-crop-note").textContent = "";
+      $("k-area-text").textContent = "品目を選ぶと、必要な追加売上を面積に換算します。";
+    }
+
+    // 自分の時給との比較
+    var costPerHour = hours * months > 0 ? total / (hours * months) : 0;
+    if (OWN && OWN.jikyu != null) {
+      var diff = OWN.jikyu - costPerHour;
+      $("k-jikyu-text").innerHTML =
+        "実績の診断（" + OWN.year + "年）のあなたの時給換算は <b>" + fmt.yen(OWN.jikyu) + "</b>。" +
+        "雇う人1時間の実費（上乗せ込み）は <b>" + fmt.yen(costPerHour) + "</b> で、差は " + fmt.yen(Math.abs(diff)) +
+        (diff >= 0
+          ? "。自分の時給の方が高いあいだは、自分は単価の高い仕事に回り、手のかかる作業を任せる形が数字上は成り立ちやすい。"
+          : "。雇う実費の方が高い。任せる仕事がその実費以上の売上を生むか、個別に確かめてから決める。");
+    } else {
+      $("k-jikyu-text").textContent =
+        "実績の診断のデータがまだありません。先に「実績の診断」で去年の数字を入れると、自分の時給換算とここで比べられます。雇う人1時間の実費（上乗せ込み）は " + fmt.yen(costPerHour) + "。";
+    }
+  }
+
+  /* ============================================================
+     タブ3: ハウス比較
+     ============================================================ */
+  var FAC = DATA.FACILITY;
+  $("h-unitA").value = FAC.kyokaPipe.vHigh;
+  $("h-unitA-flag").textContent = DATA.flagLabel(FAC.kyokaPipe);
+  $("h-unitA-src").textContent = "初期値は強化型パイプハウス " + fmt.num(FAC.kyokaPipe.vLow) + "〜" + fmt.num(FAC.kyokaPipe.vHigh) + "円/㎡の上限側。出典: " + DATA.srcLine(FAC.kyokaPipe) + "。国庫補助事業の総事業費ベースで、農家負担はこの一部。実際の見積に置き換える。";
+  $("h-pA").value = DMG.taiko.v;
+  $("h-pB").value = DMG.pipe.v;
+  $("h-fuho-src").textContent = "園芸施設共済: " + DATA.INSURANCE.engeiKyosai.fuho + "。出典: " + (DATA.SOURCES[DATA.INSURANCE.engeiKyosai.src] ? DATA.SOURCES[DATA.INSURANCE.engeiKyosai.src].name : "");
+  $("h-kyosai-src").textContent = "園芸施設共済の掛金は " + DATA.INSURANCE.engeiKyosai.kokko + "。掛金率は" + DATA.INSURANCE.engeiKyosai.premiumNote + "。最終確認先: " + DATA.INSURANCE.contact;
+
+  function calcHouse() {
+    var area = num("h-area");
+    var N = num("h-nen");
+    var unitA = num("h-unitA"), pA = Math.min(1, Math.max(0, num("h-pA")));
+    var unitB = num("h-unitB"), pB = Math.min(1, Math.max(0, num("h-pB")));
+    var kakekin = num("h-kakekin");
+    var fuho = num("h-fuho");
+
+    $("h-area-v").textContent = fmt.num(area) + "㎡（約" + (area / 100).toFixed(1) + "a）";
+    $("h-nen-v").textContent = N + "年";
+    $("h-fuho-v").textContent = (fuho * 100).toFixed(0) + "%";
+
+    var buildA = unitA * area;
+    var buildB = unitB * area;
+    // 建て直し自己負担の期待値（粗い目安）: 建設費×(1−戻る割合)×p×年数。A案は共済なし想定＝全額自己負担
+    var rebuildA = buildA * 1.0 * pA * N;
+    var rebuildB = buildB * (1 - fuho) * pB * N;
+    var premB = kakekin * N;
+    var totalA = buildA + rebuildA;
+    var totalB = buildB + premB + rebuildB;
+
+    var probA = 1 - Math.pow(1 - pA, N);
+    var probB = 1 - Math.pow(1 - pB, N);
+
+    $("h-totalA").textContent = fmt.manUnit(totalA);
+    $("h-probA").textContent = N + "年で1回以上全損する確率 約" + (probA * 100).toFixed(0) + "%（仮の被害率で）";
+    $("h-totalB").textContent = fmt.manUnit(totalB);
+    $("h-probB").textContent = "同 約" + (probB * 100).toFixed(0) + "%（仮の被害率で）";
+
+    VIZ.stackedBar($("h-chart"), {
+      labels: ["A案 頑丈で高い", "B案 安い＋共済"],
+      series: [
+        { name: "建設費", values: [buildA, buildB], color: "var(--s1)" },
+        { name: "共済掛金の累計", values: [0, premB], color: "var(--s3)" },
+        { name: "建て直し自己負担（期待値の目安）", values: [rebuildA, rebuildB], color: "var(--s6)" }
+      ],
+      fmt: fmt.man, h: 280
+    });
+
+    var diff = totalA - totalB;
+    var cheaper = diff > 0 ? "B案（安い＋共済）" : "A案（頑丈で高い）";
+    $("h-yomikata").innerHTML =
+      "この前提だと " + N + "年合計で <b>" + cheaper + "</b> が約 <b>" + fmt.manUnit(Math.abs(diff)) + "</b> 軽い。" +
+      "ただし分かれ目は全損確率の置き方で、被害率（仮）を動かすと結論はすぐ入れ替わる。" +
+      "A案は「壊れにくいが最初が重い」、B案は「最初は軽いが、壊れた年の作は失う（共済は施設の再建費が主で、育てていた作物の売上までは戻らない）」。" +
+      "お金以外のこの差も含めて、自分の島の台風の当たり方で決める。";
+  }
+
+  /* ============================================================
+     判断メモ
+     ============================================================ */
+  var MEMO_KEY = "toushiMemo";
+  var INPUT_IDS = [
+    "s-est", "s-hojo", "s-gain", "s-ftype", "s-p", "s-loan", "s-rate", "s-years",
+    "k-jikyu", "k-hours", "k-months", "k-futan", "k-shotoku", "k-crop",
+    "h-area", "h-nen", "h-unitA", "h-pA", "h-unitB", "h-pB", "h-kakekin", "h-fuho"
+  ];
+  function snapshot() {
+    var o = { tab: activeTab };
+    INPUT_IDS.forEach(function (id) { o[id] = $(id).value; });
+    return o;
+  }
+  function restore(inputs) {
+    if (!inputs) return;
+    INPUT_IDS.forEach(function (id) {
+      if (inputs[id] == null) return;
+      var el = $(id);
+      el.value = inputs[id];
+      if (el.type === "range") el.dispatchEvent(new Event("input"));
+    });
+    recalc();
+  }
+  function renderMemos() {
+    var list = CORE.store.load(MEMO_KEY, []) || [];
+    var box = $("m-list");
+    if (!list.length) {
+      box.innerHTML = '<p class="small muted">まだ保存がありません。最初の1件を残すと、次に検討するとき前回の前提を見返せます。</p>';
+      return;
+    }
+    box.innerHTML = "";
+    list.slice().reverse().forEach(function (m, ri) {
+      var i = list.length - 1 - ri;
+      var d = document.createElement("div");
+      d.className = "advice";
+      var date = (m.date || "").slice(0, 10);
+      d.innerHTML =
+        '<div class="a-icon">📝</div><div style="flex:1">' +
+        '<div class="a-title"></div><div class="a-body"></div>' +
+        '<div class="flex mt8 no-print">' +
+        '<button class="btn ghost sm" data-act="load" data-i="' + i + '">この時の入力に戻す</button>' +
+        '<button class="btn ghost sm" data-act="del" data-i="' + i + '">削除</button></div></div>';
+      d.querySelector(".a-title").textContent = (m.title || "無題") + "（" + date + "）";
+      d.querySelector(".a-body").textContent = m.verdict || "";
+      box.appendChild(d);
+    });
+    box.querySelectorAll("button[data-act]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var list2 = CORE.store.load(MEMO_KEY, []) || [];
+        var i = +b.dataset.i;
+        if (b.dataset.act === "del") {
+          list2.splice(i, 1);
+          CORE.store.save(MEMO_KEY, list2);
+          renderMemos();
+        } else if (list2[i]) {
+          restore(list2[i].inputs);
+          $("m-title").value = list2[i].title || "";
+          $("m-verdict").value = list2[i].verdict || "";
+          $("m-msg").textContent = "入力を「" + (list2[i].title || "無題") + "」の保存時点に戻しました。";
+        }
+      });
+    });
+  }
+  $("m-save").addEventListener("click", function () {
+    var title = $("m-title").value.trim();
+    var verdict = $("m-verdict").value.trim();
+    if (!title && !verdict) { $("m-msg").textContent = "タイトルかメモのどちらかを書いてから保存してください。"; return; }
+    var list = CORE.store.load(MEMO_KEY, []) || [];
+    list.push({ date: new Date().toISOString(), title: title, inputs: snapshot(), verdict: verdict });
+    var ok = CORE.store.save(MEMO_KEY, list);
+    $("m-msg").textContent = ok ? "保存しました（" + list.length + "件）。" : "保存に失敗しました（要確認）。";
+    renderMemos();
+  });
+
+  /* ============================================================
+     再計算とイベント配線
+     ============================================================ */
+  function recalc() {
+    calcSetsubi();
+    calcLoan();
+    calcKoyo();
+    calcHouse();
+  }
+
+  // 施設タイプ→被害率初期値の連動（手入力で上書き可能）
+  $("s-ftype").addEventListener("change", function () {
+    var d = DMG[$("s-ftype").value];
+    if (d) { $("s-p").value = d.v; }
+    recalc();
+  });
+
+  // スライダーは bindRange（塗り＋onChange）、それ以外は input/change
+  ["s-hojo", "s-rate", "s-years", "k-hours", "k-months", "h-area", "h-nen", "h-fuho"].forEach(function (id) {
+    CORE.bindRange($(id), recalc);
+  });
+  ["s-est", "s-gain", "s-p", "s-loan",
+   "k-jikyu", "k-futan", "k-shotoku",
+   "h-unitA", "h-pA", "h-unitB", "h-pB", "h-kakekin"].forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+  });
+  $("k-crop").addEventListener("change", recalc);
+
+  renderMemos();
+  recalc();
+})();
+</script>
+</body>
+</html>

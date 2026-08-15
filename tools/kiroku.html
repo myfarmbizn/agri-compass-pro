@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>記録を入れる｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+<style>
+/* ---------- 送れるものの見本（画像を置かず、HTMLとCSSだけで描く） ---------- */
+.mihon-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 920px) { .mihon-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 620px) { .mihon-grid { grid-template-columns: 1fr; } }
+.mh { border: 1px solid var(--hairline); border-radius: 14px; background: var(--card); padding: 14px; }
+.mh h3 { font-size: 13.5px; font-weight: 750; margin: 0 0 4px; }
+.mh .mh-note { font-size: 12px; color: var(--ink-3); line-height: 1.75; margin: 10px 0 0; }
+.mh-e { border-radius: 10px; overflow: hidden; }
+
+/* 写真らしく見せる台紙と紙 */
+.mh-dai { background: var(--wash); padding: 14px 10px; display: grid; place-items: center; }
+.mh-kami {
+  background: var(--card); border: 1px solid var(--hairline-strong);
+  box-shadow: 0 6px 16px -9px rgba(23,33,28,.55); padding: 10px 12px; width: 100%;
+}
+.mh-kami.katamuki { transform: rotate(-1.6deg); }
+.mh-kami.katamuki2 { transform: rotate(1.2deg); }
+.mh-te { font-family: "Segoe Script", "Bradley Hand", "Yu Gothic", cursive; font-size: 12px; color: var(--ink); }
+.mh-te .r { display: flex; gap: 8px; padding: 5px 2px; border-bottom: 1px solid var(--hairline); }
+.mh-te .r:last-child { border-bottom: none; }
+.mh-te .r i { font-style: normal; flex: 0 0 30px; color: var(--ink-2); }
+.mh-te .r b { font-weight: 400; flex: 1; }
+.mh-te .r s { text-decoration: none; flex: 0 0 62px; text-align: right; }
+.mh-midashi { font-size: 11px; font-weight: 750; color: var(--ink-2); border-bottom: 1.5px solid var(--hairline-strong); padding-bottom: 5px; margin-bottom: 4px; display: flex; justify-content: space-between; gap: 8px; }
+.mh-den { font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.mh-den .r { display: flex; gap: 6px; padding: 4px 0; border-bottom: 1px dotted var(--hairline-strong); }
+.mh-den .r:last-child { border-bottom: none; font-weight: 750; }
+.mh-den .r span:first-child { flex: 1; }
+.mh-den .r span { flex: 0 0 46px; text-align: right; }
+
+/* CSVの見本（等幅で中身をそのまま見せる） */
+.mh-csv {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
+  font-size: 11px; line-height: 1.85; color: var(--ink-2);
+  background: var(--inset); border: 1px solid var(--hairline); border-radius: 8px;
+  padding: 10px 12px; margin: 0 0 4px; overflow-x: auto; white-space: pre;
+}
+.mh-csv b { color: var(--accent); font-weight: 750; }
+.mh-csv-na { font-size: 11px; color: var(--ink-4); margin: 0 0 4px; }
+
+/* 表計算の見本 */
+.mh-hyou { width: 100%; border-collapse: collapse; font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.mh-hyou td, .mh-hyou th { border: 1px solid var(--hairline); padding: 4px 5px; color: var(--ink-2); white-space: nowrap; }
+.mh-hyou th { background: var(--wash); color: var(--ink-3); font-weight: 750; text-align: center; }
+.mh-hyou td.gyou { background: var(--wash); color: var(--ink-4); text-align: center; width: 18px; }
+.mh-hyou tr.atama td { font-weight: 750; color: var(--ink); }
+
+/* 決算書・申告書の見本 */
+.mh-pdf { border: 1px solid var(--hairline-strong); background: var(--card); }
+.mh-pdf .obi { background: var(--wash); font-size: 10.5px; font-weight: 750; color: var(--ink-2); padding: 6px 8px; border-bottom: 1px solid var(--hairline-strong); }
+.mh-pdf .r { display: flex; align-items: center; gap: 8px; font-size: 11px; padding: 5px 8px; border-bottom: 1px solid var(--hairline); color: var(--ink-2); }
+.mh-pdf .r:last-child { border-bottom: none; }
+.mh-pdf .r span { flex: 1; }
+.mh-pdf .r em { font-style: normal; font-variant-numeric: tabular-nums; border: 1px solid var(--hairline-strong); border-radius: 4px; padding: 2px 7px; background: var(--surface); min-width: 78px; text-align: right; }
+
+/* ---------- ファイルを落とす所 ---------- */
+.otosu {
+  border: 2px dashed var(--hairline-strong); border-radius: 14px; background: var(--inset);
+  padding: 26px 18px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.otosu:hover, .otosu.ue { border-color: var(--accent); background: var(--accent-softer); }
+.otosu .dai { font-size: 14.5px; font-weight: 750; color: var(--ink); }
+.otosu .ko { font-size: 12px; color: var(--ink-3); margin-top: 6px; line-height: 1.75; }
+
+/* ---------- 進み具合 ---------- */
+.shinko { background: var(--inset); border: 1px solid var(--hairline); border-radius: 12px; padding: 14px 16px; }
+.shinko .mizo { height: 8px; border-radius: 99px; background: var(--wash-strong); overflow: hidden; margin-top: 9px; }
+.shinko .bou { height: 100%; width: 0%; background: var(--accent); border-radius: 99px; transition: width .25s; }
+.shinko .ji { font-size: 12.5px; font-weight: 700; color: var(--ink-2); }
+
+/* 列が多い表は、電話の幅で1文字ずつ折り返さないよう最小の幅を持たせ、箱の中で横に送る */
+#recTbl { min-width: 660px; }
+#mikomi table.tbl { min-width: 620px; }
+
+.kesu { opacity: .42; text-decoration: line-through; }
+.riyuu { font-size: 11.5px; color: var(--ink-3); line-height: 1.7; }
+.mh-warn { font-size: 11px; color: var(--ink-4); margin-top: 8px; }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="page-head fade-up">
+    <div class="eyebrow">RECORDS</div>
+    <h1>記録を<span class="grad-text">入れる</span></h1>
+    <p class="lede">手元にある出荷伝票・ノートの写真・記録ツールの書き出し・決算書を、そのまま送ってください。AIが読み取った内容をあなたが確かめて確定すると、単価が県の平均値からあなた自身の数字に変わります。</p>
+  </div>
+
+  <!-- このページの説明（3列。core.js が自動で畳む） -->
+  <div class="card fade-up d1" style="padding:16px 20px">
+    <div class="grid c3">
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">できること</div>
+        <p class="small muted">手元の記録（写真・CSV・表計算・PDF）をそのまま送り、日付・品目・数量・金額を読み取る。読み取った記録を1行ずつ確かめて確定する。品目ごとの単価を自分の数字にする。</p>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">使う場面</div>
+        <p class="small muted">県平均の単価が自分の実感と合わないとき。伝票やノートは残っているが、表に打ち直す手間をかけたくないとき。融資や補助の窓口で単価の根拠を聞かれるとき。</p>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">他のページとのつながり</div>
+        <p class="small muted">ここで確定した単価は、品目と単価のページに「記録から」の札つきで入ります。作付けの決定・経営シミュレーター・資金繰り・計画書の計算は、その値で動きます。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="advice info mt16 fade-up d2">
+    <div class="a-icon">💾</div>
+    <div>
+      <div class="a-title">送ったファイルの扱いと、保存先</div>
+      <div class="a-body">送ったファイルは読み取りのためだけにAIへ渡され、読み取った結果はこの端末のブラウザ（localStorage）にだけ保存されます。ほかの人からは見えません。ブラウザの閲覧データを削除すると消えます。<b>AIが読み取った内容は、あなたが確かめて「確定する」を押すまで、どこにも保存されません。</b></div>
+    </div>
+  </div>
+
+  <div id="msg"></div>
+
+  <!-- ============ 1. 何を送れるか（見本） ============ -->
+  <div class="sec-title fade-up d2"><h2>送れるもの</h2><span class="hint">下の5種類はどれもそのまま送れます。きれいに整えなくて構いません</span></div>
+  <div class="card fade-up d2">
+    <div class="mihon-grid">
+
+      <!-- 見本1: 手書きのノートの写真 -->
+      <div class="mh">
+        <h3>① 手書きのノートの写真</h3>
+        <div class="mh-e mh-dai">
+          <div class="mh-kami katamuki">
+            <div class="mh-te">
+              <div class="r"><i>7/12</i><b>ゴーヤー 収穫</b><s>38kg</s></div>
+              <div class="r"><i>7/14</i><b>ゴーヤー 出荷</b><s>40kg</s></div>
+              <div class="r"><i>7/14</i><b>　　入金</b><s>20,600</s></div>
+              <div class="r"><i>7/15</i><b>オクラ 収穫</b><s>12kg</s></div>
+              <div class="r"><i>7/18</i><b>肥料 仕入</b><s>8,400</s></div>
+            </div>
+          </div>
+        </div>
+        <p class="mh-note">日付・品目・作業・量が並んでいれば読み取れます。線がゆがんでいても、行が飛んでいても構いません。1ページずつスマートフォンで撮ってください。</p>
+      </div>
+
+      <!-- 見本2: 出荷伝票・精算書の写真 -->
+      <div class="mh">
+        <h3>② 出荷伝票・精算書の写真</h3>
+        <div class="mh-e mh-dai">
+          <div class="mh-kami katamuki2">
+            <div class="mh-midashi"><span>◯◯青果　出荷精算書</span><span>2025年7月分</span></div>
+            <div class="mh-den">
+              <div class="r"><span>品名</span><span>数量</span><span>単価</span><span>金額</span></div>
+              <div class="r"><span>ゴーヤー</span><span>55</span><span>512</span><span>28,160</span></div>
+              <div class="r"><span>オクラ</span><span>18</span><span>730</span><span>13,140</span></div>
+              <div class="r"><span>合計</span><span>73</span><span>―</span><span>41,300</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="mh-note">JA・市場・直売所・出荷組合のどの様式でも構いません。数量と金額の両方が入っている伝票が、単価の計算にいちばん効きます。</p>
+      </div>
+
+      <!-- 見本3: 記録ツールから書き出したCSV -->
+      <div class="mh">
+        <h3>③ 記録ツールから書き出したCSV</h3>
+        <div class="mh-e" style="border:none">
+          <p class="mh-csv-na">見本その1（日本語の列名）</p>
+<pre class="mh-csv"><b>出荷日,品目,数量,単価,金額</b>
+2025-06-14,ゴーヤー,42,498,20916
+2025-07-03,ゴーヤー,55,512,28160
+2025-07-21,オクラ,18,730,13140</pre>
+          <p class="mh-csv-na">見本その2（別の列名。これでも読めます）</p>
+<pre class="mh-csv"><b>date,item_name,qty_kg,price,sales</b>
+2025/6/14,ゴーヤー,42,498,20916
+2025/7/3,ゴーヤー,55,512,28160
+2025/7/21,オクラ,18,730,13140</pre>
+        </div>
+        <p class="mh-note">列の名前はばらばらで構いません。上の2つは列名が違うだけで中身は同じで、どちらもそのまま送れます。列を並べ替えたり、名前を付け直したりする必要はありません。</p>
+      </div>
+
+      <!-- 見本4: 表計算のファイル -->
+      <div class="mh">
+        <h3>④ 表計算のファイル</h3>
+        <div class="mh-e" style="padding:10px;background:var(--inset);border:1px solid var(--hairline)">
+          <table class="mh-hyou">
+            <tr><th></th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th></tr>
+            <tr class="atama"><td class="gyou">1</td><td>日付</td><td>品目</td><td>数量</td><td>単価</td><td>金額</td></tr>
+            <tr><td class="gyou">2</td><td>2025/6/14</td><td>ゴーヤー</td><td>42</td><td>498</td><td>20,916</td></tr>
+            <tr><td class="gyou">3</td><td>2025/7/3</td><td>ゴーヤー</td><td>55</td><td>512</td><td>28,160</td></tr>
+            <tr><td class="gyou">4</td><td>2025/7/21</td><td>オクラ</td><td>18</td><td>730</td><td>13,140</td></tr>
+          </table>
+        </div>
+        <p class="mh-note">Excelやスプレッドシートのファイル（.xlsx・.xls）、またはCSVに書き出したものを送ってください。シートが複数あっても構いません。</p>
+      </div>
+
+      <!-- 見本5: 決算書・確定申告書のPDF -->
+      <div class="mh">
+        <h3>⑤ 決算書・確定申告書のPDF</h3>
+        <div class="mh-e mh-dai">
+          <div class="mh-pdf" style="width:100%">
+            <div class="obi">令和◯年分　収支内訳書（農業所得用）</div>
+            <div class="r"><span>売上（収入）金額</span><em>8,420,000</em></div>
+            <div class="r"><span>種苗費</span><em>312,000</em></div>
+            <div class="r"><span>肥料費</span><em>486,000</em></div>
+            <div class="r"><span>減価償却費</span><em>934,000</em></div>
+            <div class="r"><span>所得金額</span><em>2,180,000</em></div>
+          </div>
+        </div>
+        <p class="mh-note">青色申告決算書・収支内訳書のPDFや、その写真でも構いません。年ごとの売上と経費が入っているので、実績の診断のページで使う数字の下地になります。</p>
+      </div>
+
+    </div>
+    <p class="mh-warn">上の5つは画面用に描いた見本です。数字は説明のために置いたもので、実在の伝票や統計ではありません。</p>
+  </div>
+
+  <!-- ============ 2. ファイルを選んで送る ============ -->
+  <div class="sec-title fade-up d3"><h2>ファイルを送る</h2><span class="hint">何枚でも、種類が混ざっていても構いません</span></div>
+  <div class="card fade-up d3">
+    <div class="otosu" id="otosu">
+      <div class="dai">ここにファイルを落とすか、押して選んでください</div>
+      <div class="ko">写真（JPEG・PNG）／ PDF ／ CSV・テキスト ／ 表計算（.xlsx・.xls）<br>スマートフォンなら、その場で撮った写真をそのまま選べます</div>
+    </div>
+    <input type="file" id="fileIn" multiple class="hide"
+           accept=".csv,.tsv,.txt,.pdf,.xlsx,.xls,.xlsm,image/*,text/csv,application/pdf">
+
+    <div class="tbl-wrap mt16 hide" id="listWrap">
+      <table class="tbl" id="listTbl">
+        <thead><tr><th>ファイル名</th><th class="num">大きさ</th><th>種類</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="muted small mt8" id="listEmpty">まだファイルを選んでいません。</p>
+
+    <div id="sendErr"></div>
+
+    <div class="flex wrap mt16">
+      <button class="btn primary" id="btnSend" disabled>送って読み取る</button>
+      <button class="btn ghost sm hide" id="btnClear">選んだファイルを全部外す</button>
+    </div>
+
+    <div class="shinko mt16 hide" id="shinko">
+      <div class="ji" id="shinkoJi">読み取っています…</div>
+      <div class="mizo"><div class="bou" id="shinkoBou"></div></div>
+    </div>
+  </div>
+
+  <!-- ============ 3. 読み取った結果を確かめる ============ -->
+  <div class="sec-title fade-up hide" id="kekkaTitle"><h2>読み取った結果</h2><span class="hint">読み違いがあれば、その行を外してください</span></div>
+  <div class="card hide" id="kekkaCard">
+    <div id="kekkaShirase"></div>
+    <div class="tbl-wrap hide" id="recWrap">
+      <table class="tbl" id="recTbl">
+        <thead><tr>
+          <th>日付</th><th>品目</th><th>種類</th><th class="num">数量</th><th>単位</th><th class="num">金額</th><th>どのファイルから</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="muted small mt8" id="recCount"></p>
+
+    <!-- 確定するとどうなるか（先に見せる） -->
+    <div id="mikomi"></div>
+
+    <div id="kakuteiErr"></div>
+    <div class="flex wrap mt16">
+      <button class="btn primary" id="btnKakutei">この内容で確定する</button>
+      <button class="btn ghost sm" id="btnYarinaoshi">やり直す（この結果を捨てる）</button>
+    </div>
+  </div>
+
+  <!-- ============ 4. 確定したあとの結果 ============ -->
+  <div class="sec-title fade-up hide" id="atoTitle"><h2>確定した内容</h2><span class="hint">この端末に保存しました</span></div>
+  <div class="card hide" id="atoCard"><div id="atoNaka"></div></div>
+
+  <!-- ============ 5. 設定 ============ -->
+  <details class="mt24" id="setDetails">
+    <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--ink-2);padding:10px 0">AIの受け口の設定（事務局・詳しい方向け）</summary>
+    <div class="card mt8">
+      <div id="setJoutai"></div>
+      <div class="grid c2 mt8">
+        <div class="field">
+          <label>受け口のURL</label>
+          <input type="text" id="setUrl" placeholder="https://…/ai" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>合言葉（8文字）</label>
+          <input type="text" id="setAi" maxlength="8" placeholder="8文字" autocomplete="off">
+        </div>
+      </div>
+      <div id="setErr"></div>
+      <div class="flex wrap mt8">
+        <button class="btn primary sm" id="btnSetSave">この設定を保存する</button>
+        <button class="btn ghost sm" id="btnSetClear">設定を消す</button>
+      </div>
+      <p class="src mt8">受け口とは、この画面が読み取りを頼む先です。設定はこの端末のブラウザにだけ保存され、ほかの人には渡りません。</p>
+    </div>
+  </details>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/ai.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script>
+CORE.renderTopbar("kiroku", "../");
+document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (m) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m];
+    });
+  }
+  function errBox(el, errors, title) {
+    el.innerHTML = (errors && errors.length)
+      ? '<div class="advice critical mt8"><div class="a-icon">！</div><div><div class="a-title">' +
+        esc(title || "進めていません") + '</div><div class="a-body">' + errors.map(esc).join("<br>") + "</div></div></div>"
+      : "";
+  }
+
+  /* ============================================================
+     A. 選んだファイル
+     ============================================================ */
+  var erabu = [];   // File の配列
+
+  function ookisa(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+    return (n / 1024 / 1024).toFixed(1) + " MB";
+  }
+  function shuruiMei(f) {
+    var n = String(f.name || "").toLowerCase();
+    if (/\.csv$/.test(n)) return "CSV";
+    if (/\.tsv$/.test(n)) return "TSV";
+    if (/\.txt$/.test(n)) return "テキスト";
+    if (/\.(xlsx|xls|xlsm)$/.test(n)) return "表計算";
+    if (/\.pdf$/.test(n)) return "PDF";
+    if (/\.(jpe?g|png|heic|heif|webp|gif|bmp)$/.test(n)) return "写真";
+    return f.type || "そのほか";
+  }
+  function mojiFile(f) {
+    var n = String(f.name || "").toLowerCase();
+    return /\.(csv|tsv|txt)$/.test(n) || /^text\//.test(String(f.type || ""));
+  }
+
+  function renderList() {
+    var tb = $("listTbl").querySelector("tbody");
+    if (!erabu.length) {
+      $("listWrap").classList.add("hide");
+      $("listEmpty").classList.remove("hide");
+      $("btnClear").classList.add("hide");
+      $("btnSend").disabled = true;
+      return;
+    }
+    $("listWrap").classList.remove("hide");
+    $("listEmpty").classList.add("hide");
+    $("btnClear").classList.remove("hide");
+    $("btnSend").disabled = false;
+    tb.innerHTML = erabu.map(function (f, i) {
+      return "<tr><td>" + esc(f.name) + "</td>" +
+        '<td class="num">' + esc(ookisa(f.size)) + "</td>" +
+        "<td>" + esc(shuruiMei(f)) + "</td>" +
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-hazusu="' + i + '">外す</button></td></tr>';
+    }).join("");
+    tb.querySelectorAll("[data-hazusu]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        erabu.splice(parseInt(b.dataset.hazusu, 10), 1);
+        renderList();
+      });
+    });
+    var ookii = erabu.filter(function (f) { return f.size > 10 * 1024 * 1024; });
+    errBox($("sendErr"), ookii.length
+      ? ["大きいファイルが" + ookii.length + "件あります（1件10MB超）。読み取りに時間がかかるか、送れないことがあります。写真は撮り直すか、縮小してから送ってください。"]
+      : [], "確かめてください");
+    if (ookii.length) {
+      $("sendErr").querySelector(".advice").className = "advice warn mt8";
+    }
+  }
+
+  function tsuika(list) {
+    for (var i = 0; i < list.length; i++) {
+      var f = list[i];
+      var aru = erabu.some(function (x) { return x.name === f.name && x.size === f.size && x.lastModified === f.lastModified; });
+      if (!aru) erabu.push(f);
+    }
+    renderList();
+  }
+
+  $("otosu").addEventListener("click", function () { $("fileIn").click(); });
+  $("fileIn").addEventListener("change", function () {
+    tsuika($("fileIn").files);
+    $("fileIn").value = "";
+  });
+  ["dragenter", "dragover"].forEach(function (ev) {
+    $("otosu").addEventListener(ev, function (e) { e.preventDefault(); $("otosu").classList.add("ue"); });
+  });
+  ["dragleave", "drop"].forEach(function (ev) {
+    $("otosu").addEventListener(ev, function (e) { e.preventDefault(); $("otosu").classList.remove("ue"); });
+  });
+  $("otosu").addEventListener("drop", function (e) {
+    if (e.dataTransfer && e.dataTransfer.files) tsuika(e.dataTransfer.files);
+  });
+  $("btnClear").addEventListener("click", function () { erabu = []; renderList(); });
+
+  /* ============================================================
+     B. 送る（ai.js の口を呼ぶ）
+     ============================================================ */
+  function susumu(pct, ji) {
+    $("shinko").classList.remove("hide");
+    $("shinkoBou").style.width = Math.max(0, Math.min(100, pct)) + "%";
+    $("shinkoJi").textContent = ji;
+  }
+  function susumuOwari() { $("shinko").classList.add("hide"); $("shinkoBou").style.width = "0%"; }
+
+  /* ファイルを MFK_AI.yomitori に渡す並びへ写す。
+     文字のファイルは moji に中身、写真・PDFは data に base64（dataURLの本体だけ） */
+  function fileWoUtsusu(f) {
+    return new Promise(function (kaiketsu, kyohi) {
+      var r = new FileReader();
+      r.onerror = function () { kyohi(new Error("「" + f.name + "」を読み込めませんでした。")); };
+      if (mojiFile(f)) {
+        r.onload = function () {
+          kaiketsu({ namae: f.name, shurui: f.type || "text/csv", moji: String(r.result), data: null });
+        };
+        r.readAsText(f);
+      } else {
+        r.onload = function () {
+          var s = String(r.result || "");
+          var i = s.indexOf(",");
+          kaiketsu({ namae: f.name, shurui: f.type || "application/octet-stream", moji: null, data: i > -1 ? s.slice(i + 1) : "" });
+        };
+        r.readAsDataURL(f);
+      }
+    });
+  }
+
+  function zenbuUtsusu(fs) {
+    var sunda = 0;
+    return Promise.all(fs.map(function (f) {
+      return fileWoUtsusu(f).then(function (o) {
+        sunda++;
+        susumu(10 + (sunda / fs.length) * 50, "ファイルを読み込んでいます（" + sunda + "／" + fs.length + "件）");
+        return o;
+      });
+    }));
+  }
+
+  $("btnSend").addEventListener("click", function () {
+    if (!erabu.length) { errBox($("sendErr"), ["送るファイルがありません。"]); return; }
+    errBox($("sendErr"), []);
+    $("btnSend").disabled = true;
+    susumu(6, "ファイルを読み込んでいます（0／" + erabu.length + "件）");
+    var okutta = erabu.slice();
+    zenbuUtsusu(okutta).then(function (arr) {
+      susumu(70, window.MFK_AI.tsunagatteiru()
+        ? "AIに送っています。写真やPDFは時間がかかることがあります…"
+        : "読み取りを頼んでいます…");
+      return window.MFK_AI.yomitori(arr);
+    }).then(function (res) {
+      susumu(100, "読み取りが終わりました");
+      setTimeout(susumuOwari, 400);
+      $("btnSend").disabled = false;
+      kekkaWoDasu(res || {});
+    }).catch(function (e) {
+      susumuOwari();
+      $("btnSend").disabled = false;
+      errBox($("sendErr"), [String(e && e.message ? e.message : e)], "読み取りを頼めませんでした");
+    });
+  });
+
+  /* ============================================================
+     C. 読み取った結果（本人が確かめる）
+     ============================================================ */
+  var gyou = [];        // {r: 記録, nokosu: true/false}
+  var kekka = null;     // ai.js が返したもの
+  var erabiCrop = {};   // 品目名 → 選んだ品目ID（同じ名前が複数あるとき）
+  var kakuteiZumi = false;
+
+  function kekkaWoDasu(res) {
+    kekka = res;
+    gyou = (res.records || []).map(function (r) { return { r: r, nokosu: true }; });
+    erabiCrop = {};
+    kakuteiZumi = false;
+    $("btnKakutei").disabled = false;
+    $("btnKakutei").textContent = "この内容で確定する";
+    $("atoTitle").classList.add("hide");
+    $("atoCard").classList.add("hide");
+    $("kekkaTitle").classList.remove("hide");
+    $("kekkaCard").classList.remove("hide");
+    errBox($("kakuteiErr"), []);
+
+    var w = [];
+    if (res.mihon) {
+      w.push('<div class="advice warn"><div class="a-icon">！</div><div>' +
+        '<div class="a-title">AIの受け口がまだ設定されていないため、見本の受け答えです</div>' +
+        '<div class="a-body">' + esc(res.shirase || "") +
+        ' これは本物の読み取り結果ではありません。下の「AIの受け口の設定」で受け口を入れると、送ったファイルをAIが実際に読み取ります。</div></div></div>');
+    } else if (res.shirase) {
+      w.push('<div class="advice info"><div class="a-icon">ⓘ</div><div><div class="a-body">' + esc(res.shirase) + "</div></div></div>");
+    }
+    if (res.shippai) {
+      w.push('<div class="advice critical"><div class="a-icon">！</div><div><div class="a-title">読み取りに失敗しました</div>' +
+        '<div class="a-body">' + esc(res.shippai) + "</div></div></div>");
+    }
+    $("kekkaShirase").innerHTML = w.join("");
+
+    renderRec();
+    $("kekkaCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function renderRec() {
+    var tb = $("recTbl").querySelector("tbody");
+    if (!gyou.length) {
+      $("recWrap").classList.add("hide");
+      $("recCount").textContent = "読み取れた記録はありません。";
+      $("mikomi").innerHTML = "";
+      $("btnKakutei").disabled = true;
+      return;
+    }
+    $("recWrap").classList.remove("hide");
+    tb.innerHTML = gyou.map(function (g, i) {
+      var r = g.r;
+      return '<tr class="' + (g.nokosu ? "" : "kesu") + '">' +
+        "<td>" + esc(r.hizuke) + "</td>" +
+        "<td>" + esc(r.hinmoku || "―") + "</td>" +
+        "<td>" + esc(r.shurui) + "</td>" +
+        '<td class="num">' + (r.suryo == null ? "―" : esc(CORE.fmt.num(r.suryo, 1))) + "</td>" +
+        "<td>" + esc(r.tani || "―") + "</td>" +
+        '<td class="num">' + (r.kingaku == null ? "―" : esc(CORE.fmt.num(r.kingaku))) + "</td>" +
+        '<td class="small muted">' + esc(r.moto || "―") + "</td>" +
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-kirikae="' + i + '">' +
+        (g.nokosu ? "外す" : "戻す") + "</button></td></tr>";
+    }).join("");
+    tb.querySelectorAll("[data-kirikae]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (kakuteiZumi) return;
+        var i = parseInt(b.dataset.kirikae, 10);
+        gyou[i].nokosu = !gyou[i].nokosu;
+        renderRec();
+      });
+    });
+    var nokori = gyou.filter(function (g) { return g.nokosu; }).length;
+    $("recCount").textContent = "読み取り " + gyou.length + "件のうち、" + nokori + "件を残しています。" +
+      (nokori < gyou.length ? "外した" + (gyou.length - nokori) + "件は確定しても保存されません。" : "");
+    $("btnKakutei").disabled = kakuteiZumi || nokori === 0;
+    renderMikomi();
+  }
+
+  /* ---------- 品目名を品目IDに当てる ---------- */
+  function seiki(s) {
+    s = String(s == null ? "" : s);
+    try { s = s.normalize("NFKC"); } catch (e) {}
+    return s.replace(/[\s　]/g, "").toLowerCase();
+  }
+  function moto(s) { return seiki(s).replace(/[（(][^）)]*[）)]/g, ""); }
+
+  function ateru(na) {
+    var all = (window.DATA && DATA.CROPS) || [];
+    var n = seiki(na);
+    if (!n) return {};
+    var hit = all.filter(function (c) { return seiki(c.name) === n; });
+    if (hit.length === 1) return { crop: hit[0] };
+    if (hit.length > 1) return { kouho: hit };
+    var nb = moto(na);
+    if (!nb) return {};
+    hit = all.filter(function (c) { return moto(c.name) === nb; });
+    if (hit.length === 1) return { crop: hit[0] };
+    if (hit.length > 1) return { kouho: hit };
+    hit = all.filter(function (c) {
+      var cb = moto(c.name);
+      return cb && (cb.indexOf(nb) > -1 || nb.indexOf(cb) > -1);
+    });
+    if (hit.length === 1) return { crop: hit[0] };
+    if (hit.length > 1) return { kouho: hit };
+    return {};
+  }
+  function cropDe(id) {
+    var all = (window.DATA && DATA.CROPS) || [];
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+    return null;
+  }
+  function cropTani(c) { return c && c.yieldHon10a ? "本" : "kg"; }
+  function priceKey(c) { return c && c.yieldHon10a ? "priceYenHon" : "priceYenKg"; }
+  function taniNorm(t) {
+    var s = seiki(t);
+    if (!s) return "";
+    if (/^(kg|キロ|きろ|キログラム|kgs)$/.test(s)) return "kg";
+    if (/^(本|ほん|ホン)$/.test(s)) return "本";
+    return s;
+  }
+
+  /* ---------- 品目ごとの単価を数える ----------
+     単価 = 販売・出荷の記録の 金額の合計 ÷ 数量の合計（件数では割らない） */
+  function shuukei(recs) {
+    var map = {};
+    recs.forEach(function (r) {
+      if (r.shurui !== "販売" && r.shurui !== "出荷") return;
+      var na = String(r.hinmoku || "").trim();
+      if (!na) return;
+      if (!(Number(r.suryo) > 0)) return;
+      if (r.kingaku == null || !isFinite(Number(r.kingaku))) return;
+      (map[na] = map[na] || []).push(r);
+    });
+    return Object.keys(map).map(function (na) {
+      var rs = map[na];
+      var su = 0, kin = 0, tsuki = {}, nen = 0, tanis = {};
+      rs.forEach(function (r) {
+        su += Number(r.suryo);
+        kin += Number(r.kingaku);
+        tsuki[String(r.hizuke).slice(0, 7)] = 1;
+        var y = parseInt(String(r.hizuke).slice(0, 4), 10);
+        if (isFinite(y) && y > nen) nen = y;
+        var t = taniNorm(r.tani);
+        if (t) tanis[t] = 1;
+      });
+      var tl = Object.keys(tanis);
+      var tani = tl.length === 1 ? tl[0] : (tl.length === 0 ? "" : null);
+      var o = {
+        na: na, mai: rs.length, su: su, kin: kin,
+        tsukiKazu: Object.keys(tsuki).length, nen: nen, tani: tani,
+        tanka: su > 0 ? Math.round((kin / su) * 10) / 10 : null,
+      };
+      var ate = ateru(na);
+      o.kouho = ate.kouho || null;
+      o.crop = ate.crop || (o.kouho && erabiCrop[na] ? cropDe(erabiCrop[na]) : null);
+
+      o.riyuu = [];
+      if (!o.crop) {
+        o.riyuu.push(o.kouho
+          ? "同じ名前の品目が一覧に複数あります。どれかを選んでください。"
+          : "一覧に無い品目です。品目と単価のページで追加すると、次からは当てられます。");
+      } else if (o.crop.custom) {
+        o.riyuu.push("自分で追加した品目には、記録からの上書きが反映されません。品目と単価のページで直してください。");
+      }
+      if (o.mai < 3) o.riyuu.push("記録が3件に足りません（" + o.mai + "件）。");
+      if (o.tsukiKazu < 2) o.riyuu.push("同じ月の記録だけです（2か月以上にまたがっている必要があります）。");
+      if (tani === null) o.riyuu.push("単位がそろっていません（" + tl.join("・") + "）。");
+      else if (tani === "") o.riyuu.push("単位が読み取れていません。");
+      else if (o.crop && !o.crop.custom && cropTani(o.crop) !== tani) {
+        o.riyuu.push("単位が品目と違います（記録は" + tani + "、品目は" + cropTani(o.crop) + "）。");
+      }
+      if (!(o.tanka > 0)) o.riyuu.push("単価が計算できません。");
+      o.kaku = o.riyuu.length === 0;
+      return o;
+    }).sort(function (a, b) { return b.mai - a.mai; });
+  }
+
+  function imaNoAtai(c) {
+    if (!c) return "―";
+    var x = c[priceKey(c)];
+    if (!x || x.v == null || isNaN(x.v)) return "―（値なし）";
+    return esc(CORE.fmt.num(x.v)) + " 円/" + cropTani(c) +
+      '<span class="riyuu"> ' + esc(DATA.flagLabel(x)) + "</span>";
+  }
+
+  function renderMikomi() {
+    var nokori = gyou.filter(function (g) { return g.nokosu; }).map(function (g) { return g.r; });
+    var st = shuukei(nokori);
+    if (!st.length) {
+      $("mikomi").innerHTML = '<div class="advice info mt16"><div class="a-icon">ⓘ</div><div>' +
+        '<div class="a-title">単価を数えられる記録がありません</div>' +
+        '<div class="a-body">単価は「販売」または「出荷」の記録の、金額の合計÷数量の合計で数えます。' +
+        'いま残っている記録には、数量と金額の両方がそろった販売・出荷の記録がありません。' +
+        '確定すると、読み取った記録そのものはこの端末に保存されます。</div></div></div>';
+      return;
+    }
+    var h = ['<div class="sec-title mt24"><h2 style="font-size:17px">確定するとどうなるか</h2>' +
+      '<span class="hint">3件以上・2か月以上にまたがる品目だけを、自分の数字にします</span></div>'];
+    h.push('<div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+      "<th>記録の品目名</th><th class=\"num\">記録からの単価</th><th>使う記録</th><th>いまの値</th><th>どうなるか</th>" +
+      "</tr></thead><tbody>");
+    st.forEach(function (o, i) {
+      var meiran = esc(o.na);
+      if (!o.crop && o.kouho) {
+        meiran += '<div style="margin-top:6px"><select data-erabi="' + i + '" style="font-size:12px;padding:7px 10px">' +
+          '<option value="">選んでください</option>' +
+          o.kouho.map(function (c) {
+            return '<option value="' + esc(c.id) + '"' + (erabiCrop[o.na] === c.id ? " selected" : "") + ">" + esc(c.name) + "</option>";
+          }).join("") + "</select></div>";
+      } else if (o.crop) {
+        meiran += '<div class="riyuu">→ ' + esc(o.crop.name) + "</div>";
+      }
+      var doudan = o.kaku
+        ? '<span class="badge accent">自分の数字にする</span>'
+        : '<span class="badge neutral">参考（' + o.mai + "件）</span>";
+      h.push("<tr>" +
+        "<td>" + meiran + "</td>" +
+        '<td class="num">' + (o.tanka == null ? "―" : esc(CORE.fmt.num(o.tanka, 1)) + " 円/" + esc(o.tani || "?")) + "</td>" +
+        "<td>" + o.mai + "件・" + o.tsukiKazu + "か月<div class=\"riyuu\">金額 " +
+        esc(CORE.fmt.num(o.kin)) + "円 ÷ 数量 " + esc(CORE.fmt.num(o.su, 1)) + "</div></td>" +
+        "<td>" + imaNoAtai(o.crop) + "</td>" +
+        "<td>" + doudan + (o.riyuu.length ? '<div class="riyuu">' + o.riyuu.map(esc).join("<br>") + "</div>" : "") + "</td>" +
+        "</tr>");
+    });
+    h.push("</tbody></table></div>");
+    h.push('<p class="src mt8">「参考」の品目は書き込みません。県の平均などの元の値がそのまま使われます。' +
+      '記録が3件以上たまり、2か月以上にまたがったら、もう一度送れば自分の数字になります。' +
+      '<a href="hinmoku.html?back=kiroku">→ 品目を追加する・直す</a></p>');
+    $("mikomi").innerHTML = h.join("");
+    $("mikomi").querySelectorAll("[data-erabi]").forEach(function (s) {
+      s.addEventListener("change", function () {
+        var o = st[parseInt(s.dataset.erabi, 10)];
+        if (!o) return;
+        if (s.value) erabiCrop[o.na] = s.value;
+        else delete erabiCrop[o.na];
+        renderMikomi();
+      });
+    });
+  }
+
+  /* ============================================================
+     D. 確定（ここで初めて保存する）
+     ============================================================ */
+  $("btnYarinaoshi").addEventListener("click", function () {
+    if (!confirm("読み取った結果を捨てて、ファイルの選び直しに戻ります。よろしいですか？（すでに確定した内容は残ります）")) return;
+    gyou = []; kekka = null; erabiCrop = {}; kakuteiZumi = false;
+    $("kekkaTitle").classList.add("hide");
+    $("kekkaCard").classList.add("hide");
+    $("kekkaShirase").innerHTML = "";
+    $("mikomi").innerHTML = "";
+    erabu = [];
+    renderList();
+    $("otosu").scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  $("btnKakutei").addEventListener("click", function () {
+    if (kakuteiZumi) return;
+    var nokori = gyou.filter(function (g) { return g.nokosu; }).map(function (g) { return g.r; });
+    if (!nokori.length) { errBox($("kakuteiErr"), ["残っている記録がありません。外した行を戻すか、もう一度送ってください。"]); return; }
+    errBox($("kakuteiErr"), []);
+
+    /* (a) 読み取った記録そのものを保存する */
+    var ok = CORE.store.save("kiroku", {
+      kensu: nokori.length,
+      records: nokori,
+      okuttaAt: new Date().toISOString(),
+      mihon: !!(kekka && kekka.mihon),
+    });
+    if (!ok) {
+      errBox($("kakuteiErr"), ["保存できませんでした。ブラウザの保存領域がいっぱいか、保存が禁止されている可能性があります。"]);
+      return;
+    }
+
+    /* (b) 条件を満たした品目だけ、単価を cropCustom の overrides に足す。
+           既にある上書き（ほかの品目・ほかの値）は消さない。 */
+    var st = shuukei(nokori);
+    var cc = CORE.store.load("cropCustom", null);
+    if (!cc || typeof cc !== "object" || Array.isArray(cc)) cc = {};
+    if (!cc.overrides || typeof cc.overrides !== "object" || Array.isArray(cc.overrides)) cc.overrides = {};
+    if (!Array.isArray(cc.custom)) cc.custom = [];
+
+    var kaita = [];
+    st.forEach(function (o) {
+      if (!o.kaku || !o.crop) return;
+      var mae = cc.overrides[o.crop.id];
+      if (!mae || typeof mae !== "object" || Array.isArray(mae)) mae = {};
+      var atarashii = {};
+      Object.keys(mae).forEach(function (k) { atarashii[k] = mae[k]; });
+      atarashii[priceKey(o.crop)] = { v: o.tanka, kiroku: true, mai: o.mai, nen: o.nen };
+      cc.overrides[o.crop.id] = atarashii;
+      kaita.push(o);
+    });
+    var ccOk = true;
+    if (kaita.length) ccOk = CORE.store.save("cropCustom", cc);
+
+    kakuteiZumi = true;
+    $("btnKakutei").disabled = true;
+    $("btnKakutei").textContent = "確定しました";
+    renderRec();
+    $("btnKakutei").disabled = true;
+
+    /* 確定した内容を出す */
+    var h = [];
+    h.push('<div class="advice good"><div class="a-icon">✔</div><div>' +
+      '<div class="a-title">読み取った記録 ' + nokori.length + "件をこの端末に保存しました</div>" +
+      '<div class="a-body">' +
+      (kekka && kekka.mihon
+        ? "この内容は、AIの受け口が無いときの見本の受け答えです。本物の読み取り結果ではありません。"
+        : "内容はいつでも、もう一度ファイルを送って入れ替えられます。") +
+      "</div></div></div>");
+    if (!ccOk) {
+      h.push('<div class="advice critical"><div class="a-icon">！</div><div><div class="a-title">単価の書き込みに失敗しました</div>' +
+        '<div class="a-body">記録は保存しましたが、品目の単価は書き込めませんでした。ブラウザの保存領域を空けてから、もう一度確定してください。</div></div></div>');
+    } else if (kaita.length) {
+      h.push('<div class="tbl-wrap"><table class="tbl"><thead><tr><th>品目</th><th class="num">自分の数字にした単価</th><th>根拠</th></tr></thead><tbody>' +
+        kaita.map(function (o) {
+          return "<tr><td>" + esc(o.crop.name) + "</td>" +
+            '<td class="num">' + esc(CORE.fmt.num(o.tanka, 1)) + " 円/" + esc(cropTani(o.crop)) + "</td>" +
+            '<td class="small muted">自分の記録 ' + o.mai + "件（" + o.tsukiKazu + "か月・" + o.nen + "年）から機械が数えた値</td></tr>";
+        }).join("") + "</tbody></table></div>");
+      h.push('<p class="src mt8">これらの単価は、品目と単価のページに「記録から」の札つきで入り、作付けの決定・経営シミュレーター・資金繰り・計画書の計算に使われます。</p>');
+    } else {
+      h.push('<div class="advice info"><div class="a-icon">ⓘ</div><div><div class="a-title">単価を自分の数字にした品目はありません</div>' +
+        '<div class="a-body">3件以上・2か月以上にまたがるという条件に届いた品目がなかったため、単価は書き込んでいません。' +
+        "上の「確定するとどうなるか」に、品目ごとの理由が出ています。</div></div></div>");
+    }
+    $("atoNaka").innerHTML = h.join("");
+    $("atoTitle").classList.remove("hide");
+    $("atoCard").classList.remove("hide");
+
+    CORE.nextHint($("btnKakutei"), [
+      { label: "→ 品目と単価で、入った数字を確かめる", href: "hinmoku.html", page: "hinmoku" },
+      { label: "→ 実績の診断へ進む", href: "checkup.html", page: "checkup" },
+    ], "記録を確定しました");
+    $("atoCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  /* ============================================================
+     E. AIの受け口の設定
+     ============================================================ */
+  function setJoutai() {
+    var tsunagatte = window.MFK_AI.tsunagatteiru();
+    var s = window.MFK_AI.settei();
+    $("setJoutai").innerHTML = tsunagatte
+      ? '<div class="advice good"><div class="a-icon">✔</div><div><div class="a-title">受け口が設定されています</div>' +
+        '<div class="a-body">送り先: ' + esc(s.url) + "（合言葉は保存済み）。ファイルを送ると、この受け口のAIが読み取ります。</div></div></div>"
+      : '<div class="advice warn"><div class="a-icon">！</div><div><div class="a-title">まだ受け口がありません</div>' +
+        '<div class="a-body">設定すると本物のAIが読み取ります。設定するまでは、送っても見本の受け答えが返るだけで、読み取りは行われません。</div></div></div>';
+    if (s) { $("setUrl").value = s.url; $("setAi").value = s.aikotoba; }
+  }
+  $("btnSetSave").addEventListener("click", function () {
+    var u = $("setUrl").value.trim(), a = $("setAi").value.trim();
+    var errors = [];
+    if (!/^https:\/\/\S+$/.test(u)) errors.push("受け口のURLは https:// で始まる住所を入れてください。");
+    if (a.length !== 8) errors.push("合言葉は8文字で入れてください（いまは" + a.length + "文字）。");
+    errBox($("setErr"), errors, "保存していません");
+    if (errors.length) return;
+    window.MFK_AI.setteiWoKaku(u, a);
+    setJoutai();
+    errBox($("setErr"), []);
+    $("setJoutai").insertAdjacentHTML("beforeend",
+      '<p class="src">保存しました。この端末のブラウザにだけ残ります。</p>');
+  });
+  $("btnSetClear").addEventListener("click", function () {
+    if (!confirm("AIの受け口の設定を消します。以後は見本の受け答えに戻ります。よろしいですか？")) return;
+    window.MFK_AI.setteiWoKaku("", "");
+    $("setUrl").value = ""; $("setAi").value = "";
+    errBox($("setErr"), []);
+    setJoutai();
+  });
+
+  /* ---------- 初期表示 ---------- */
+  renderList();
+  setJoutai();
+
+  /* 前に確定した内容があれば、いまの状態として出す（保存の中身は書き換えない） */
+  (function () {
+    var k = CORE.store.load("kiroku", null);
+    if (!k || !k.kensu) return;
+    var d = k.okuttaAt ? new Date(k.okuttaAt) : null;
+    function pad(n) { return (n < 10 ? "0" : "") + n; }
+    var toki = d && !isNaN(d.getTime())
+      ? d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日 " + pad(d.getHours()) + ":" + pad(d.getMinutes())
+      : "";
+    $("msg").innerHTML = '<div class="advice info mt16"><div class="a-icon">📄</div><div>' +
+      '<div class="a-title">この端末には、確定済みの記録が ' + k.kensu + "件あります</div>" +
+      '<div class="a-body">' + (toki ? "確定した日時: " + esc(toki) + "。" : "") +
+      (k.mihon ? "これはAIの受け口が無いときの見本の受け答えを確定したもので、本物の読み取り結果ではありません。" : "") +
+      "新しいファイルを送って確定すると、この内容は入れ替わります。</div></div></div>";
+  })();
+})();
+</script>
+</body>
+</html>

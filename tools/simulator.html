@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>経営シミュレーター｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+<style>
+  /* ---- このページ専用の小さな追加（共通CSSは変更しない） ---- */
+  .crow { border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 13px 14px 11px; background: var(--inset); margin-bottom: 11px; }
+  .crow .crow-head { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .crow .crow-head select { flex: 1; padding: 8px 30px 8px 11px; font-size: 13.5px; }
+  .crow .row-del { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--hairline); background: transparent; color: var(--ink-3); cursor: pointer; font-size: 13px; line-height: 1; }
+  .crow .row-del:hover { color: var(--critical); border-color: rgba(224,82,82,.45); }
+  .crow .field { margin-bottom: 8px; }
+  .crow .crow-out { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-3); }
+  .crow .crow-out b { font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .crow details { margin-top: 9px; }
+  .crow details summary { cursor: pointer; font-size: 12px; color: var(--ink-3); font-weight: 650; list-style: none; }
+  .crow details summary::before { content: "▸ "; }
+  .crow details[open] summary::before { content: "▾ "; }
+  .crow details .d-body { margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 420px) { .crow details .d-body { grid-template-columns: 1fr; } }
+  .crow details .d-body .field { margin-bottom: 0; }
+  .flag { font-size: 10.5px; font-weight: 700; color: var(--warn); margin-left: 4px; }
+  .flag.calc { color: var(--ink-3); }
+  .flag.jibun { color: var(--accent); }
+  .add-row { width: 100%; border: 1px dashed var(--hairline-strong); background: transparent; color: var(--ink-3); border-radius: var(--r-md); padding: 10px; cursor: pointer; font-family: var(--font); font-size: 12.5px; font-weight: 650; }
+  .add-row:hover { color: var(--accent); border-color: rgba(20,211,162,.5); }
+  .curve-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; }
+  .curve-grid .cg { text-align: center; }
+  .curve-grid .cg .cg-l { font-size: 10.5px; color: var(--ink-4); margin-bottom: 3px; }
+  .curve-grid .cg input { padding: 6px 4px; font-size: 12.5px; text-align: center; }
+  .stepnav { display: flex; gap: 10px; margin-top: 16px; }
+  .print-only { display: none; }
+  @media print {
+    .no-print { display: none !important; }
+    .print-only { display: block; }
+    .viz svg text { fill: #333 !important; }
+    .viz .legend .lg { color: #333; }
+    .crow, .advice { background: #fff; border-color: #ccc; }
+    .src { color: #555; }
+    .kpi .k-value { color: #111; }
+    .card { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<main class="shell">
+
+  <div class="page-head fade-up">
+    <div class="eyebrow">PLAN SIMULATOR</div>
+    <h1>これからの計画を<span class="grad-text">通しで試算する</span></h1>
+    <p class="lede">「これから何を作るか」「この計画で食べていけるか」を、3〜10年の通しで試算します。新規就農の計画、新しい部門の追加、規模を変える検討に使ってください。</p>
+  </div>
+
+  <!-- このページの説明（3列） -->
+  <div class="card fade-up d1">
+    <div class="grid c3">
+      <div>
+        <div class="small" style="color:var(--accent); font-weight:700; margin-bottom:6px">できること</div>
+        <div class="small muted" style="line-height:1.7">作付けの構成・初期投資・借入・自分と家族への給与を入れて、年ごとの農業所得と年末資金の見通し、満作年の労働時間、目標に届く年、もしもの一括検証（6ケース）を出します。A4での印刷ができます。</div>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent); font-weight:700; margin-bottom:6px">使う場面</div>
+        <div class="small muted" style="line-height:1.7">就農計画をつくるとき、果樹など収入が立つまで時間のかかる品目を始めるとき、大きな投資や規模変更を考えるとき。</div>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent); font-weight:700; margin-bottom:6px">他のページとのつながり</div>
+        <div class="small muted" style="line-height:1.7">品目の数値は「品目と単価」のページで直した値・足した品目と共通です。いまの経営の実績（実績の診断・資金繰りカレンダー）とは独立して動きます。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 入力（4ステップ） ============ -->
+  <div class="sec-title fade-up d1 no-print">
+    <h2>計画をつくる</h2>
+    <span class="hint">どこから直しても、下の結果がすぐ変わります</span>
+  </div>
+
+  <!-- 入力（左）と、いまの結果（右）を並べる。入力を動かすと右の数字がその場で変わる。
+       画面が狭いときは1列になり、結果が入力の上に来る（先に結果を見せる） -->
+  <div class="sim-split">
+  <div class="sim-in">
+  <div class="steps fade-up d2 no-print" id="stepBar"></div>
+
+  <!-- ステップ1: 計画の骨格 -->
+  <div class="card fade-up d2 no-print" id="stp1">
+    <h3><span class="sec-no">1</span>計画の骨格</h3>
+    <div class="sub">年数と、計画の前提（家族の働き手・手元資金・目標）を決めます。</div>
+    <div class="grid c2">
+      <div>
+        <div class="field">
+          <label>計画の年数 <span class="val" id="vYears"></span></label>
+          <input type="range" id="inYears" min="3" max="10" step="1">
+        </div>
+        <div class="field">
+          <label>家族の働き手（人数） <span class="val" id="vFam"></span></label>
+          <input type="range" id="inFam" min="1" max="8" step="1">
+        </div>
+        <div class="field">
+          <label>1人あたり働ける時間（月） <span class="val" id="vFamH"></span></label>
+          <input type="range" id="inFamH" min="40" max="280" step="10">
+          <div class="note">満作年の労働時間の上限線に使います。</div>
+        </div>
+      </div>
+      <div>
+        <div class="field">
+          <label>手元の自己資金 <span class="val" id="vCash"></span></label>
+          <input type="range" id="inCash" min="0" max="2000" step="10">
+        </div>
+        <div class="field">
+          <label>目標とする年間の農業所得 <span class="val" id="vTarget"></span></label>
+          <input type="range" id="inTarget" min="50" max="1000" step="10">
+          <div class="note">「目標に届く年」の判定に使います。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ステップ2: 作付けの構成 -->
+  <div class="card fade-up d2 no-print hide" id="stp2">
+    <h3><span class="sec-no">2</span>作付けの構成</h3>
+    <div class="sub">品目と面積を決めます。品目ごとの「立ち上がり」は、その年に満作の何%まで収穫できるかの割合です（既定は仮の目安・行ごとに編集できます）。</div>
+    <div id="itemWrap"></div>
+    <button class="add-row" id="addItem">＋ 品目の行を足す</button>
+    <div id="cropAddHost"></div>
+    <p class="src" id="srcCrops"></p>
+  </div>
+
+  <!-- ステップ3: 初期投資と調達 -->
+  <div class="card fade-up d2 no-print hide" id="stp3">
+    <h3><span class="sec-no">3</span>初期投資と調達</h3>
+    <div class="sub">機械・ハウスなどの買い物と、そのお金の手当て（借入・補助金）を入れます。新品・中古は取得年に現金が出て、耐用年数で毎年の経費（減価償却）になります。リースは毎年のリース料が経費になります。</div>
+    <div id="investWrap"></div>
+    <button class="add-row" id="addInvest">＋ 投資の行を足す</button>
+
+    <div class="grid c2 mt16">
+      <div>
+        <h3 class="small" style="margin-bottom:8px">借入（1年目に入金・元利均等で返済）</h3>
+        <div class="field">
+          <label>借入額 <span class="val" id="vLoan"></span></label>
+          <input type="range" id="inLoan" min="0" max="5000" step="50">
+        </div>
+        <div class="grid c3">
+          <div class="field">
+            <label>年利（%）<span class="flag">（仮）</span></label>
+            <div class="input-unit"><input type="number" id="inRate" min="0" max="15" step="0.1"><span class="u">%</span></div>
+          </div>
+          <div class="field">
+            <label>返済年数</label>
+            <div class="input-unit"><input type="number" id="inTerm" min="1" max="30" step="1"><span class="u">年</span></div>
+          </div>
+          <div class="field">
+            <label>据置年数</label>
+            <div class="input-unit"><input type="number" id="inGrace" min="0" max="10" step="1"><span class="u">年</span></div>
+          </div>
+        </div>
+        <div class="note small muted">据置の間は利息だけを払い、元金の返済はその後に始まる計算です。実際の条件は金融機関・制度資金の窓口で確認してください。</div>
+      </div>
+      <div>
+        <h3 class="small" style="margin-bottom:8px">補助金<span class="flag">（仮）</span></h3>
+        <div class="grid c2">
+          <div class="field">
+            <label>見込み額</label>
+            <div class="input-unit"><input type="number" id="inHojo" min="0" step="10"><span class="u">万円</span></div>
+          </div>
+          <div class="field">
+            <label>入金する年</label>
+            <select id="inHojoYear"></select>
+          </div>
+        </div>
+        <div class="note small muted">採択されるかどうかは決まっていない前提で入れてください（0のままでも動きます）。金額・要件は窓口で確認が必要です。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ステップ4: 固定費と給与 -->
+  <div class="card fade-up d2 no-print hide" id="stp4">
+    <h3><span class="sec-no">4</span>固定費と自分・家族への給与</h3>
+    <div class="sub">作らなくても毎年かかる費用（地代・共済掛金・軽トラの維持など）と、経営から家計へ渡すお金（給与）を入れます。固定費は、名目を分けて管理したいものは下の行で、分けなくてよいものはまとめて1本で入れてください。どちらも毎年の経費として計算に入ります。</div>
+    <div class="field" style="max-width:420px">
+      <label>自分・家族への給与（家計へ渡すお金・月） <span class="val" id="vLiving"></span></label>
+      <input type="range" id="inLiving" min="5" max="60" step="1">
+      <div class="note">経営から家計へ渡すお金です。初期値は編集前提の例なので、ご自身の家計に合わせてください。毎年この12か月分を資金から差し引きます（経費には入れません）。</div>
+      <div class="note">個人事業では、自分と家族へのこの取り分は税務上の経費にできません（事業主貸。青色事業専従者給与は別制度）。確定申告の農業所得は「給与を払う前」の金額です。</div>
+    </div>
+    <h3 class="small" style="margin:16px 0 8px">固定費</h3>
+    <div class="tbl-wrap">
+      <table class="tbl" id="extraFixedTbl">
+        <thead><tr><th>名目</th><th class="num">年間の金額（万円）</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <button class="btn ghost sm mt8" id="addExtraFixed">その他の固定費を足す</button>
+    <div class="grid c2 mt16">
+      <div class="field">
+        <label>その他の固定経費（年額・まとめて1本）<span class="flag">（仮の初期値）</span></label>
+        <div class="input-unit"><input type="number" id="inFixed" min="0" step="5"><span class="u">万円</span></div>
+      </div>
+      <div class="field">
+        <label>内訳のメモ</label>
+        <input type="text" id="inFixedMemo" placeholder="例: 地代・共済掛金・軽トラ維持 など">
+      </div>
+    </div>
+    <p class="src">名目の行（最大5行）とまとめ欄は、合計して毎年の固定経費として所得と資金の計算に入ります。</p>
+    <p class="src">重複への注意: 品目の経費率（県の公表値）は、元の統計に固定費・減価償却を含んでいる場合があります。同じ費用をここの固定費や投資（減価償却）にも入れると二重に差し引かれます。迷ったら、品目の経費率は変動費中心とみなし、地代・共済など経営全体の費用だけをここに入れてください。</p>
+    <div class="stepnav">
+      <a class="btn primary sm" href="#kekkaShosai">結果のくわしい中身を見る</a>
+    </div>
+  </div>
+  </div><!-- /.sim-in -->
+
+  <!-- ============ いまの結果（入力の横に貼り付いて動く） ============ -->
+  <aside class="sim-out">
+    <div class="so-card">
+      <div class="so-head">
+        <span class="so-title">いまの計画の結果</span>
+        <button class="btn ghost sm no-print" id="btnPrint">印刷</button>
+      </div>
+      <div class="grid c3" id="kpiRow"></div>
+      <p class="so-note">税金・社会保険料・消費税・農外収入・在庫や売掛買掛の期ずれ・設備更新の積立は、この計算に入っていません。</p>
+      <a class="so-jump no-print" href="#kekkaShosai">くわしい中身を見る</a>
+    </div>
+  </aside>
+  </div><!-- /.sim-split -->
+
+  <div class="sec-title fade-up d3" id="kekkaShosai">
+    <h2>結果のくわしい中身</h2>
+    <span class="hint">どうするかは、この数字を見てご自身で決めてください</span>
+  </div>
+
+  <!-- この数字はこう見る（結果の読み方ガイド・3校フィードバック2026-07-31で追加） -->
+  <div class="card mt16 fade-up d3" style="border:1px solid var(--accent-line);background:#f7fbf8">
+    <h3>この数字はこう見る（見る順番）</h3>
+    <div class="sub">初めての人向けの着眼点です。判断の材料であって、答えではありません。</div>
+    <div id="howToRead"></div>
+  </div>
+
+  <!-- 計画の前提（印刷にも出る一覧） -->
+  <div class="card mt16 fade-up d4">
+    <h3>計画の前提（一覧）</h3>
+    <div class="sub">この表の数字がすべての計算の元です。実感と違う所は上の入力で直してください。</div>
+    <div class="tbl-wrap"><table class="tbl" id="assumpTbl"></table></div>
+    <p class="src" id="assumpSrc"></p>
+  </div>
+
+  <!-- 出力A: 年ごとの見通し -->
+  <div class="card mt16 fade-up d4">
+    <h3>年ごとの見通し</h3>
+    <div class="sub">農業所得（給与を払う前）と、自分・家族への給与・返済まで払った後に手元へ残るお金（年末資金）の動きです。</div>
+    <div class="tbl-wrap"><table class="tbl" id="yearTbl"></table></div>
+    <div class="viz mt16" id="chartCash"></div>
+    <div class="mt16" id="cashMsg"></div>
+    <p class="small muted mt8 no-print" style="line-height:1.85">
+      ここまでは年ごとの数字です。年で黒字でも、収穫前や大きな支払いが重なる月に手元のお金が一時的に足りなくなることがあります。月ごとの出入りは
+      <a href="shikin.html">資金繰り</a>のページで確かめられます（進み方の案内はこのページの一番下にあります）。
+    </p>
+    <details class="mt8">
+      <summary class="small muted" style="cursor:pointer">計算のしかた（式）</summary>
+      <div class="small muted mt8" style="line-height:1.9">
+        売上 ＝ Σ（面積(10a) × 単収 × 立ち上がり% × 単価）<br>
+        変動費 ＝ 当年の売上 × 経費率（満作の売上ではなく、その年の売上に掛けます）<br>
+        農業所得 ＝ 売上 − 変動費 − 固定費 − リース料 − 減価償却<br>
+        年末資金 ＝ 前年末資金 ＋ 農業所得 ＋ 減価償却（現金の出ない経費なので足し戻す） − 借入返済（元利） − 自分・家族への給与×12 ＋ 借入の入金（1年目） ＋ 補助金 − 初期投資の現金支出<br>
+        ※ 支払利息は所得の式に入れず、返済額（元利）として資金から引く簡便な計算です。税金・社会保険料・農外収入は含みません。自分・家族への給与も経費には入れず、資金から引きます（農業所得は「給与を払う前」、年末資金は「給与を払った後に手元へ残るお金」です）。
+      </div>
+    </details>
+  </div>
+
+  <!-- 出力C: 判定 -->
+  <div class="card mt16 fade-up d5">
+    <h3>目標に届くか</h3>
+    <div class="sub">目標とする年間の農業所得（ステップ1）との突き合わせです。</div>
+    <div id="judgeBox"></div>
+  </div>
+
+  <!-- 出力B: 満作年の月別労働 -->
+  <div class="card mt16 fade-up d5">
+    <h3>満作年の月別労働時間</h3>
+    <div class="sub">立ち上がりが100%になった年の姿です。植付月と収穫月に均等にならした仮の計算なので、実際の繁忙期の重なりはご自身の感覚で確かめてください。</div>
+    <div class="viz" id="chartLabor"></div>
+    <div class="mt16" id="laborMsg"></div>
+  </div>
+
+  <!-- 出力D: もしも一括検証 -->
+  <div class="card mt16 fade-up d6">
+    <h3>もしもの一括検証（6ケース）</h3>
+    <div class="sub">前提が悪い方に振れたとき、最終年の農業所得と資金の最低点がどう動くかを並べます。</div>
+    <div class="tbl-wrap"><table class="tbl" id="whatifTbl"></table></div>
+    <p class="src">各ケースの中身: ①全品目の売上−20%（単価や収量の下振れ。経費は基本ケースのまま減らしません＝下振れが利益に効きます） ②経費率×1.2 ③毎年台風1回（各品目の台風減収の割合（仮）だけ売上を減らす。経費は減らしません） ④借入の金利＋1%（借入がなければ基本と同じ） ⑤立ち上がりが全品目1年遅れ（1年目は0%）。起きる確率は計算に使っていません（裏付けになるデータがないためです）。幅の感触をつかむための決め打ちの比較です。</p>
+  </div>
+
+  <!-- 保存・書き出し -->
+  <div class="card mt16 fade-up d6 no-print">
+    <h3>保存と控え</h3>
+    <div class="sub">入力はこの端末のブラウザに自動保存されます。ブラウザのデータ削除で消えるため、JSONでの控えをおすすめします。</div>
+    <div class="flex wrap">
+      <button class="btn ghost sm" id="btnExport">JSONで書き出す</button>
+      <label class="btn ghost sm" style="cursor:pointer">JSONを読み込む<input type="file" id="fileImport" accept=".json" class="hide"></label>
+      <button class="btn ghost sm" id="btnReset">最初からやり直す</button>
+    </div>
+  </div>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/charts.js"></script>
+<script src="../assets/js/sim_engine.js"></script>
+<script>
+CORE.renderTopbar("simulator", "../");
+document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+/* 計算エンジンは assets/js/sim_engine.js に分離（純関数・DOMに触れない）。
+   計画書にまとめるページ（keikaku.html）と共用する。 */
+
+/* ============================================================
+   ここから画面（UI）
+   ============================================================ */
+(function () {
+  "use strict";
+  var fmt = CORE.fmt, store = CORE.store;
+  var REG = simBuildRegistry(DATA);
+  function regById(id) {
+    for (var i = 0; i < REG.length; i++) if (REG[i].id === id) return REG[i];
+    return null;
+  }
+
+  /* ---------- 状態 ---------- */
+  function makeItem(cropId, area) {
+    var c = regById(cropId) || REG[0];
+    return {
+      cropId: c.id, area: area != null ? area : 10,
+      yieldV: c.yieldObj ? c.yieldObj.v : 0,
+      priceV: c.priceObj ? c.priceObj.v : 0,
+      costRate: c.costRateObj ? c.costRateObj.v : 0.5,
+      laborH10a: c.laborObj ? c.laborObj.v : 0,
+      typhoonExp: c.typhoonExp != null ? c.typhoonExp : 0.4,
+      curve: simDefaultCurve(c), curveEdited: false
+    };
+  }
+  function defaultState() {
+    return {
+      years: 5, famPeople: 2, famHours: 160,
+      livingMan: 20, cashStartMan: 300, targetMan: 300,
+      items: [makeItem("kibi", 100), makeItem("goya_roji", 20)],
+      invests: [],
+      loan: { amountMan: 0, ratePct: 2.0, termY: 10, graceY: 3 },
+      hojo: { amountMan: 0, year: 1 },
+      fixedMan: 30, fixedMemo: "", extraExpenses: []
+    };
+  }
+  /* 月ラベルは初期化中の再計算（スライダー束縛の初回発火）でも使うため、ここで先に定義する */
+  var MONTH_LABELS = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+
+  var saved = store.load("simPlan", null);
+  var state = defaultState();
+  if (saved && saved.items && saved.items.length) {
+    state = Object.assign(state, saved);
+    state.loan = Object.assign({ amountMan: 0, ratePct: 2.0, termY: 10, graceY: 3 }, saved.loan || {});
+    state.hojo = Object.assign({ amountMan: 0, year: 1 }, saved.hojo || {});
+    // 復元データの品目IDが消えていた場合の防御
+    state.items = state.items.filter(function (it) { return !!regById(it.cropId); });
+    if (!state.items.length) state.items = [makeItem(REG[0].id, 10)];
+    state.items.forEach(function (it) {
+      if (!it.curve || it.curve.length !== 10) { it.curve = simDefaultCurve(regById(it.cropId)); it.curveEdited = false; }
+    });
+    state.invests = (state.invests || []).map(function (iv) {
+      return Object.assign({ label: "", amountMan: 0, year: 1, kind: "new", life: 7, leaseMan: 0, leaseYears: 5 }, iv);
+    });
+  }
+  /* その他の固定費（名目つき・年額）。旧データに無くても動く（後方互換） */
+  state.extraExpenses = (state.extraExpenses || []).slice(0, 5).map(function (x) {
+    var v = parseFloat(x && x.man);
+    return { label: (x && x.label) || "", man: isNaN(v) ? 0 : v };
+  });
+  function extraFixedTotal() {
+    var t = 0;
+    (state.extraExpenses || []).forEach(function (x) { var v = parseFloat(x.man); if (!isNaN(v)) t += v; });
+    return t;
+  }
+  /* 計算エンジン（sim_engine.js）には手を入れず、名目行の合計を固定費に合算した写しを渡す */
+  function stateForCalc() {
+    var extra = extraFixedTotal();
+    if (!extra) return state;
+    var s2 = Object.assign({}, state);
+    s2.fixedMan = (parseFloat(state.fixedMan) || 0) + extra;
+    return s2;
+  }
+  function persist() { store.save("simPlan", state); }
+
+  /* ---------- ステップ表示 ---------- */
+  var curStep = 1;
+  var STEP_NAMES = ["計画の骨格", "作付けの構成", "初期投資と調達", "固定費と給与"];
+  function renderSteps() {
+    var bar = document.getElementById("stepBar");
+    var html = "";
+    STEP_NAMES.forEach(function (nm, i) {
+      var n = i + 1;
+      var cls = n === curStep ? "st on" : (n < curStep ? "st done" : "st");
+      if (i > 0) html += '<span class="sep"></span>';
+      html += '<span class="' + cls + '" data-st="' + n + '" style="cursor:pointer"><span class="n">' + (n < curStep ? "✓" : n) + "</span>" + nm + "</span>";
+    });
+    bar.innerHTML = html;
+    bar.querySelectorAll(".st").forEach(function (el) {
+      el.addEventListener("click", function () { gotoStep(+el.dataset.st); });
+    });
+    /* AIC版（2026-08-04）: 1つずつ開くやり方をやめ、4つの節を縦に並べたまま出す。
+       右に貼り付いた結果を見ながら上から順に埋められるようにするため。
+       上の並びは目次として残し、押すとその節まで画面を送る。 */
+    for (var n = 1; n <= 4; n++) document.getElementById("stp" + n).classList.remove("hide");
+  }
+  function gotoStep(n) {
+    curStep = Math.max(1, Math.min(4, n));
+    renderSteps();
+    var el = document.getElementById("stp" + curStep);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  /* いま画面に見えている節を、上の目次に反映する（スクロールに追従する目次）。
+     節ごとの「次へ」を外した代わりに、どこを読んでいるかはここで示す */
+  (function spy() {
+    if (!("IntersectionObserver" in window)) return;
+    var io = new IntersectionObserver(function (entries) {
+      var best = null;
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        if (!best || e.boundingClientRect.top < best.boundingClientRect.top) best = e;
+      });
+      if (!best) return;
+      var n = parseInt(String(best.target.id).replace("stp", ""), 10);
+      if (n && n !== curStep) { curStep = n; renderSteps(); }
+    }, { rootMargin: "-15% 0px -65% 0px", threshold: 0 });
+    for (var n = 1; n <= 4; n++) {
+      var el = document.getElementById("stp" + n);
+      if (el) io.observe(el);
+    }
+  })();
+  document.querySelectorAll("[data-go]").forEach(function (b) {
+    b.addEventListener("click", function () { gotoStep(+b.dataset.go); });
+  });
+
+  /* ---------- ステップ1の入力 ---------- */
+  function bindSlider(id, valId, key, fmtFn, after) {
+    var el = document.getElementById(id), v = document.getElementById(valId);
+    el.value = state[key];
+    function show() { v.textContent = fmtFn(+el.value); }
+    CORE.bindRange(el, function (val) { state[key] = val; show(); recompute(after); });
+    show();
+    el.dispatchEvent(new Event("input"));
+    el.value = state[key];
+    el.dispatchEvent(new Event("input"));
+  }
+  bindSlider("inYears", "vYears", "years", function (v) { return v + "年"; }, "years");
+  bindSlider("inFam", "vFam", "famPeople", function (v) { return v + "人"; });
+  bindSlider("inFamH", "vFamH", "famHours", function (v) { return "月" + v + "時間"; });
+  bindSlider("inLiving", "vLiving", "livingMan", function (v) { return "月" + v + "万円"; });
+  bindSlider("inCash", "vCash", "cashStartMan", function (v) { return v + "万円"; });
+  bindSlider("inTarget", "vTarget", "targetMan", function (v) { return "年" + v + "万円"; });
+
+  /* ---------- ステップ2: 品目行 ---------- */
+  function cropOptions(sel) {
+    var cats = [];
+    REG.forEach(function (c) { if (cats.indexOf(c.cat) < 0) cats.push(c.cat); });
+    return cats.map(function (cat) {
+      var opts = REG.filter(function (c) { return c.cat === cat; }).map(function (c) {
+        return '<option value="' + c.id + '"' + (c.id === sel ? " selected" : "") + ">" + c.name + "</option>";
+      }).join("");
+      return '<optgroup label="' + cat + '">' + opts + "</optgroup>";
+    }).join("");
+  }
+  function flagsOf(obj) {
+    if (!obj) return "";
+    var t = DATA.flagLabel(obj);
+    if (!t) return "";
+    var cls = obj.jibun ? "flag jibun" : (obj.kari ? "flag" : "flag calc");
+    return '<span class="' + cls + '">' + t + "</span>";
+  }
+  function renderItems() {
+    var wrap = document.getElementById("itemWrap");
+    wrap.innerHTML = "";
+    state.items.forEach(function (it, idx) {
+      var c = regById(it.cropId);
+      var row = document.createElement("div");
+      row.className = "crow";
+      var curveCells = "";
+      for (var y = 0; y < state.years; y++) {
+        curveCells += '<div class="cg"><div class="cg-l">' + (y + 1) + '年目</div><input type="number" min="0" max="100" step="5" data-cy="' + y + '" value="' + (it.curve[y] || 0) + '"></div>';
+      }
+      row.innerHTML =
+        '<div class="crow-head">' +
+          '<select data-f="crop">' + cropOptions(it.cropId) + "</select>" +
+          '<button class="row-del" title="この行を消す">✕</button>' +
+        "</div>" +
+        '<div class="field"><label>面積 <span class="val" data-v="area">' + it.area + 'a</span></label>' +
+          '<input type="range" data-f="area" min="0" max="300" step="1" value="' + it.area + '"></div>' +
+        '<div class="crow-out"><span>この品目の満作年の所得</span><b data-v="inc"></b><span data-v="incNote"></span></div>' +
+        "<details><summary>単価・収量・経費率・立ち上がりを直す</summary>" +
+          '<div class="d-body">' +
+            '<div class="field"><label>単収（' + c.unitY + "）" + flagsOf(c.yieldObj) + "</label>" +
+              '<input type="number" data-f="yieldV" min="0" step="1" value="' + it.yieldV + '"></div>' +
+            '<div class="field"><label>単価（' + c.unitP + "）" + flagsOf(c.priceObj) + "</label>" +
+              '<input type="number" data-f="priceV" min="0" step="0.1" value="' + it.priceV + '"></div>' +
+            '<div class="field"><label>経費率（%）' + flagsOf(c.costRateObj) + "</label>" +
+              '<input type="number" data-f="costRatePct" min="0" max="100" step="1" value="' + Math.round(it.costRate * 100) + '"></div>' +
+            '<div class="field"><label>労働時間（h/10a）' + flagsOf(c.laborObj) + "</label>" +
+              '<input type="number" data-f="laborH10a" min="0" step="1" value="' + it.laborH10a + '"></div>' +
+            '<div class="field"><label>台風1回の減収（%）<span class="flag">（仮）</span></label>' +
+              '<input type="number" data-f="typhoonPct" min="0" max="100" step="5" value="' + Math.round(it.typhoonExp * 100) + '"></div>' +
+          "</div>" +
+          '<div class="mt8"><label class="small muted">立ち上がり（各年の収量割合%）<span class="flag">（仮・編集可）</span></label>' +
+            '<div class="curve-grid mt8" data-v="curve">' + curveCells + "</div>" +
+            '<button class="btn ghost sm mt8" data-f="curveReset">立ち上がりを既定に戻す</button></div>' +
+          '<p class="src" data-v="src"></p>' +
+        "</details>";
+      // 出典行
+      var srcTexts = [];
+      if (c.yieldObj) srcTexts.push("単収: " + (DATA.srcLine(c.yieldObj) || "―（要確認）"));
+      if (c.priceObj) srcTexts.push("単価: " + (DATA.srcLine(c.priceObj) || "―（要確認）"));
+      if (c.costRateObj) srcTexts.push("経費率: " + (DATA.srcLine(c.costRateObj) || "仮定値（出典なし・要確認）"));
+      if (c.priceObj && c.priceObj.note) srcTexts.push("注: " + c.priceObj.note);
+      if (c.costRateObj && c.costRateObj.note) srcTexts.push("注: " + c.costRateObj.note);
+      row.querySelector('[data-v="src"]').textContent = srcTexts.join(" ／ ");
+
+      // 行内バインド
+      row.querySelector('[data-f="crop"]').addEventListener("change", function (e) {
+        state.items[idx] = makeItem(e.target.value, it.area);
+        renderItems(); recompute();
+      });
+      row.querySelector(".row-del").addEventListener("click", function () {
+        state.items.splice(idx, 1);
+        if (!state.items.length) state.items.push(makeItem(REG[0].id, 10));
+        renderItems(); recompute();
+      });
+      var areaEl = row.querySelector('[data-f="area"]');
+      CORE.bindRange(areaEl, function (v) {
+        it.area = v;
+        row.querySelector('[data-v="area"]').textContent = v + "a";
+        recompute();
+      });
+      function num(f, fn) {
+        row.querySelector('[data-f="' + f + '"]').addEventListener("input", function (e) {
+          var v = +e.target.value;
+          if (isNaN(v) || v < 0) return;
+          fn(v); recompute();
+        });
+      }
+      num("yieldV", function (v) { it.yieldV = v; });
+      num("priceV", function (v) { it.priceV = v; });
+      num("costRatePct", function (v) { it.costRate = Math.min(100, v) / 100; });
+      num("laborH10a", function (v) { it.laborH10a = v; });
+      num("typhoonPct", function (v) { it.typhoonExp = Math.min(100, v) / 100; });
+      row.querySelectorAll("[data-cy]").forEach(function (inp) {
+        inp.addEventListener("input", function () {
+          var v = +inp.value;
+          if (isNaN(v)) return;
+          it.curve[+inp.dataset.cy] = Math.max(0, Math.min(100, v));
+          it.curveEdited = true;
+          recompute();
+        });
+      });
+      row.querySelector('[data-f="curveReset"]').addEventListener("click", function () {
+        it.curve = simDefaultCurve(regById(it.cropId));
+        it.curveEdited = false;
+        renderItems(); recompute();
+      });
+      row._incEl = row.querySelector('[data-v="inc"]');
+      row._incNoteEl = row.querySelector('[data-v="incNote"]');
+      it._row = row;
+      wrap.appendChild(row);
+    });
+  }
+  document.getElementById("addItem").addEventListener("click", function () {
+    state.items.push(makeItem(REG[0].id, 10));
+    renderItems(); recompute();
+  });
+  document.getElementById("srcCrops").textContent =
+    "品目の初期値は品目マスタ（県の公表資料と（仮）の目安値）です。「品目と単価」のページで直した値・足した品目はここにも反映されます。立ち上がりの既定（果樹=3年目30%・4年目60%・5年目100%、野菜など=1年目70%、さとうきび=1年目0%）はすべて仮の目安で、出典はありません。";
+
+  /* ---------- ステップ3: 投資行 ---------- */
+  function renderInvests() {
+    var wrap = document.getElementById("investWrap");
+    wrap.innerHTML = "";
+    if (!state.invests.length) {
+      wrap.innerHTML = '<p class="small muted mb16">投資の行はまだありません。「行を足す」で追加してください（無いままでも動きます）。</p>';
+    }
+    state.invests.forEach(function (iv, idx) {
+      var row = document.createElement("div");
+      row.className = "crow";
+      var yearOpts = "";
+      for (var y = 1; y <= state.years; y++) yearOpts += '<option value="' + y + '"' + (iv.year === y ? " selected" : "") + ">" + y + "年目</option>";
+      var isLease = iv.kind === "lease";
+      row.innerHTML =
+        '<div class="crow-head">' +
+          '<input type="text" data-f="label" placeholder="例: トラクター・パイプハウス・運搬車 など" value="' + (iv.label || "").replace(/"/g, "&quot;") + '" style="flex:1">' +
+          '<button class="row-del" title="この行を消す">✕</button>' +
+        "</div>" +
+        '<div class="d-body" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px">' +
+          '<div class="field"><label>区分</label><select data-f="kind">' +
+            '<option value="new"' + (iv.kind === "new" ? " selected" : "") + ">新品</option>" +
+            '<option value="used"' + (iv.kind === "used" ? " selected" : "") + ">中古</option>" +
+            '<option value="lease"' + (iv.kind === "lease" ? " selected" : "") + ">リース</option>" +
+          "</select></div>" +
+          '<div class="field"><label>取得・開始の年</label><select data-f="year">' + yearOpts + "</select></div>" +
+          (isLease
+            ? '<div class="field"><label>リース料（年額）</label><div class="input-unit"><input type="number" data-f="leaseMan" min="0" step="5" value="' + (iv.leaseMan || 0) + '"><span class="u">万円</span></div></div>' +
+              '<div class="field"><label>リース期間</label><div class="input-unit"><input type="number" data-f="leaseYears" min="1" max="20" step="1" value="' + (iv.leaseYears || 5) + '"><span class="u">年</span></div></div>'
+            : '<div class="field"><label>金額</label><div class="input-unit"><input type="number" data-f="amountMan" min="0" step="10" value="' + (iv.amountMan || 0) + '"><span class="u">万円</span></div></div>' +
+              '<div class="field"><label>耐用年数<span class="flag">（仮の目安）</span></label><div class="input-unit"><input type="number" data-f="life" min="1" max="30" step="1" value="' + (iv.life || 7) + '"><span class="u">年</span></div></div>') +
+        "</div>";
+      row.querySelector(".row-del").addEventListener("click", function () {
+        state.invests.splice(idx, 1); renderInvests(); recompute();
+      });
+      row.querySelector('[data-f="label"]').addEventListener("input", function (e) { iv.label = e.target.value; recompute(); });
+      row.querySelector('[data-f="kind"]').addEventListener("change", function (e) {
+        iv.kind = e.target.value;
+        if (iv.kind === "used" && (!iv._lifeTouched)) iv.life = 4;   // 中古の目安（仮）
+        if (iv.kind === "new" && (!iv._lifeTouched)) iv.life = 7;    // 新品の目安（仮）
+        renderInvests(); recompute();
+      });
+      row.querySelector('[data-f="year"]').addEventListener("change", function (e) { iv.year = +e.target.value; recompute(); });
+      row.querySelectorAll("input[type=number]").forEach(function (inp) {
+        inp.addEventListener("input", function () {
+          var v = +inp.value;
+          if (isNaN(v) || v < 0) return;
+          var f = inp.dataset.f;
+          iv[f] = v;
+          if (f === "life") iv._lifeTouched = true;
+          recompute();
+        });
+      });
+      wrap.appendChild(row);
+    });
+  }
+  document.getElementById("addInvest").addEventListener("click", function () {
+    state.invests.push({ label: "", amountMan: 100, year: 1, kind: "new", life: 7, leaseMan: 0, leaseYears: 5 });
+    renderInvests(); recompute();
+  });
+
+  /* ---------- ステップ3: 借入・補助金 ---------- */
+  (function () {
+    var el = document.getElementById("inLoan"), v = document.getElementById("vLoan");
+    el.value = state.loan.amountMan;
+    CORE.bindRange(el, function (val) { state.loan.amountMan = val; v.textContent = val + "万円"; recompute(); });
+    v.textContent = state.loan.amountMan + "万円";
+    el.dispatchEvent(new Event("input"));
+    el.value = state.loan.amountMan;
+    el.dispatchEvent(new Event("input"));
+  })();
+  function bindNum(id, obj, key, opt) {
+    var el = document.getElementById(id);
+    el.value = obj[key];
+    el.addEventListener("input", function () {
+      var v = +el.value;
+      if (isNaN(v) || v < 0) return;
+      obj[key] = v; recompute(opt);
+    });
+  }
+  bindNum("inRate", state.loan, "ratePct");
+  bindNum("inTerm", state.loan, "termY");
+  bindNum("inGrace", state.loan, "graceY");
+  bindNum("inHojo", state.hojo, "amountMan");
+  function renderHojoYear() {
+    var sel = document.getElementById("inHojoYear");
+    var html = "";
+    for (var y = 1; y <= state.years; y++) html += '<option value="' + y + '"' + (state.hojo.year === y ? " selected" : "") + ">" + y + "年目</option>";
+    sel.innerHTML = html;
+  }
+  document.getElementById("inHojoYear").addEventListener("change", function (e) { state.hojo.year = +e.target.value; recompute(); });
+
+  /* ---------- ステップ4: 固定費 ---------- */
+  bindNum("inFixed", state, "fixedMan");
+  (function () {
+    var el = document.getElementById("inFixedMemo");
+    el.value = state.fixedMemo || "";
+    el.addEventListener("input", function () { state.fixedMemo = el.value; persist(); });
+  })();
+  function renderExtraFixed() {
+    var tb = document.getElementById("extraFixedTbl").querySelector("tbody");
+    tb.innerHTML = "";
+    state.extraExpenses.forEach(function (x, i) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td><input type="text" data-k="xlabel" data-i="' + i + '" value="' + esc(x.label) + '" placeholder="例: 施設の保守料・研修会費 など" style="width:100%"></td>' +
+        '<td class="num"><input style="width:100px" type="number" data-k="xamt" data-i="' + i + '" value="' + x.man + '" min="0" step="1"></td>' +
+        '<td class="right"><button class="row-del" data-k="xdel" data-i="' + i + '" title="この行を消す">✕</button></td>';
+      tb.appendChild(tr);
+    });
+    if (!state.extraExpenses.length) tb.innerHTML = '<tr><td colspan="3" class="small muted">まだありません。名目を分けたい固定費があれば「その他の固定費を足す」で追加します。</td></tr>';
+    tb.querySelectorAll("input[data-k=xlabel]").forEach(function (inp) {
+      inp.addEventListener("input", function () { state.extraExpenses[+inp.dataset.i].label = inp.value; recompute(); });
+    });
+    tb.querySelectorAll("input[data-k=xamt]").forEach(function (inp) {
+      inp.addEventListener("input", function () {
+        var v = parseFloat(inp.value);
+        if (isNaN(v) || v < 0) return;
+        state.extraExpenses[+inp.dataset.i].man = v; recompute();
+      });
+    });
+    tb.querySelectorAll("button[data-k=xdel]").forEach(function (btn) {
+      btn.addEventListener("click", function () { state.extraExpenses.splice(+btn.dataset.i, 1); renderExtraFixed(); recompute(); });
+    });
+    document.getElementById("addExtraFixed").disabled = state.extraExpenses.length >= 5;
+  }
+  document.getElementById("addExtraFixed").addEventListener("click", function () {
+    if (state.extraExpenses.length >= 5) return;
+    state.extraExpenses.push({ label: "", man: 10 });
+    renderExtraFixed(); recompute();
+  });
+
+  /* ---------- 出力 ---------- */
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]; }); }
+
+  function renderKpis(r) {
+    var el = document.getElementById("kpiRow");
+    var tgt = r.targetYear;
+    el.innerHTML =
+      '<div class="kpi hero"><div class="k-label">最終年（' + state.years + "年目）の農業所得（給与を払う前）</div>" +
+        '<div class="k-value" id="kpiFinal"></div>' +
+        '<div class="k-delta ' + (r.finalIncome >= state.targetMan * 10000 ? "up" : "flat") + '">目標 年' + state.targetMan + "万円</div></div>" +
+      '<div class="kpi"><div class="k-label">目標を初めて超える年</div>' +
+        '<div class="k-value">' + (tgt ? tgt + "<small>年目</small>" : "期間内になし") + "</div>" +
+        '<div class="k-delta flat">農業所得 ≥ 目標 の最初の年</div></div>' +
+      '<div class="kpi"><div class="k-label">資金の最低点</div>' +
+        '<div class="k-value" style="' + (r.minCash < 0 ? "color:var(--critical)" : "") + '">' + fmt.manUnit(r.minCash) + "</div>" +
+        '<div class="k-delta ' + (r.minCash < 0 ? "down" : "flat") + '">' + r.minYear + "年目の年末・給与を払った後に手元へ残るお金</div></div>";
+    CORE.countUp(document.getElementById("kpiFinal"), r.finalIncome, fmt.manUnit);
+  }
+
+  /* 結果の読み方ガイド。判定の言葉（良い/注意/危ない）は AIに相談する（soudan.html）の
+     判定の目安と同じ基準に合わせる: 期間内に資金マイナス=危ない／目標未達=注意／達成=良い */
+  function renderHowToRead(r) {
+    var el = document.getElementById("howToRead");
+    if (!el) return;
+    var verdict, why;
+    if (r.minCash < 0) {
+      verdict = "危ない";
+      why = r.minYear + "年目の年末に資金が" + fmt.manUnit(r.minCash) + "とマイナスになる計算だからです。所得が黒字でも、資金が尽きる計画は途中で続けられなくなります。";
+    } else if (!r.targetYear) {
+      verdict = "注意";
+      why = "資金は期間内に尽きませんが、農業所得が期間内に目標（年" + fmt.num(state.targetMan) + "万円）に届かない計算だからです。";
+    } else {
+      verdict = "良い";
+      why = "資金が期間内にマイナスにならず、" + r.targetYear + "年目に農業所得が目標（年" + fmt.num(state.targetMan) + "万円）を超える計算だからです。";
+    }
+    el.innerHTML =
+      '<ol style="margin:8px 0 0;padding-left:1.4em;line-height:1.9;font-size:13.5px">' +
+      "<li><b>先に「資金の最低点」を見る。</b>マイナスの年がある計画は、所得が黒字でもその年に続けられなくなります。いまの計画は" + r.minYear + "年目の" + fmt.manUnit(r.minCash) + "が最低点です。</li>" +
+      "<li><b>次に「目標を初めて超える年」を見る。</b>何年目から農業の所得で生活が成り立つ見込みかの目安です。" + (r.targetYear ? "いまの計画では" + r.targetYear + "年目です。" : "いまの計画では期間内に届きません（下の「目標に届くか」に、どの前提を変えると届くかが出ます）。") + "</li>" +
+      "<li><b>最後に「もしもの一括検証」を見る。</b>単価や収量が悪い方に振れたときに資金がマイナスへ落ちるなら、その前提が計画の弱点です。</li>" +
+      "</ol>" +
+      '<div class="mt8" style="font-size:13.5px"><b>この計画のいまの見え方: ' + verdict + "</b>　<span class='small'>" + why + "</span></div>" +
+      '<div class="small muted mt8">数字を直すには: 単収・単価・経費率は上の「作付けの構成」の行、生活費・固定費は「固定費と自分・家族への給与」、借入は「初期投資と調達」です。直すとこの結果はすぐ計算し直されます。</div>';
+  }
+
+  function renderAssump() {
+    var t = document.getElementById("assumpTbl");
+    var rows = state.items.map(function (it) {
+      var c = regById(it.cropId);
+      var curveTxt = [];
+      for (var y = 0; y < state.years; y++) curveTxt.push((y + 1) + "年目" + (it.curve[y] || 0) + "%");
+      return "<tr><td>" + esc(c.name) + "</td><td class='num'>" + it.area + "a</td>" +
+        "<td class='num'>" + fmt.num(it.yieldV) + " " + c.unitY + "</td>" +
+        "<td class='num'>" + fmt.num(it.priceV, 1) + " " + c.unitP + "</td>" +
+        "<td class='num'>" + Math.round(it.costRate * 100) + "%</td>" +
+        "<td class='num'>" + fmt.num(it.laborH10a) + "h/10a</td>" +
+        "<td class='small'>" + curveTxt.join("・") + (it.curveEdited ? "（編集済み）" : "（仮）") + "</td></tr>";
+    }).join("");
+    var ivRows = state.invests.map(function (iv) {
+      var body = iv.kind === "lease"
+        ? "リース 年" + fmt.num(iv.leaseMan) + "万円 × " + (iv.leaseYears || 1) + "年"
+        : (iv.kind === "used" ? "中古" : "新品") + " " + fmt.num(iv.amountMan) + "万円（耐用" + (iv.life || 1) + "年・仮の目安）";
+      return "<tr><td>投資: " + esc(iv.label || "（名目なし）") + "</td><td colspan='6' class='small'>" + iv.year + "年目に " + body + "</td></tr>";
+    }).join("");
+    var loanRow = state.loan.amountMan > 0
+      ? "<tr><td>借入</td><td colspan='6' class='small'>" + fmt.num(state.loan.amountMan) + "万円・年利" + state.loan.ratePct + "%（仮）・" + state.loan.termY + "年返済・据置" + state.loan.graceY + "年（元利均等）</td></tr>"
+      : "";
+    var hojoRow = state.hojo.amountMan > 0
+      ? "<tr><td>補助金（仮）</td><td colspan='6' class='small'>" + fmt.num(state.hojo.amountMan) + "万円を" + state.hojo.year + "年目に入金と仮置き（採択は未確定の前提）</td></tr>"
+      : "";
+    var extraRows = state.extraExpenses.map(function (x) {
+      return "<tr><td>固定費: " + esc(x.label || "（名目なし）") + "</td><td colspan='6' class='small'>毎年 " + fmt.num(x.man) + "万円（名目行）</td></tr>";
+    }).join("");
+    var extraSum = extraFixedTotal();
+    var fixedTxt = extraSum > 0
+      ? "固定費 年" + fmt.num((parseFloat(state.fixedMan) || 0) + extraSum) + "万円（まとめ欄" + fmt.num(state.fixedMan) + "万円＋名目行" + fmt.num(extraSum) + "万円）"
+      : "固定費 年" + fmt.num(state.fixedMan) + "万円";
+    t.innerHTML = "<thead><tr><th>品目</th><th class='num'>面積</th><th class='num'>単収</th><th class='num'>単価</th><th class='num'>経費率</th><th class='num'>労働</th><th>立ち上がり</th></tr></thead><tbody>" +
+      rows + ivRows + extraRows + loanRow + hojoRow +
+      "<tr><td>共通の前提</td><td colspan='6' class='small'>計画" + state.years + "年・家族" + state.famPeople + "人×月" + state.famHours +
+      "時間・自分・家族への給与 月" + state.livingMan + "万円（家計へ渡すお金）・自己資金 " + fmt.num(state.cashStartMan) + "万円・" + fixedTxt +
+      (state.fixedMemo ? "（" + esc(state.fixedMemo) + "）" : "") + "・目標所得 年" + fmt.num(state.targetMan) + "万円</td></tr></tbody>";
+    document.getElementById("assumpSrc").textContent =
+      "単収・単価の出典と（仮）（計算値）の区別は、ステップ2の各行の「単価・収量・経費率・立ち上がりを直す」に表示しています。自分・家族への給与・固定費・耐用年数・立ち上がり・台風減収は編集前提の入力初期値（仮）です。";
+  }
+
+  function renderYearTable(r) {
+    var t = document.getElementById("yearTbl");
+    var head = "<thead><tr><th>年</th><th class='num'>売上</th><th class='num'>経費（変動＋固定＋リース＋償却）</th><th class='num'>農業所得（給与を払う前）</th><th class='num'>返済（元利）</th><th class='num'>自分・家族への給与</th><th class='num'>年末資金（給与を払った後）</th></tr></thead>";
+    var body = r.years.map(function (row) {
+      return "<tr><td>" + row.y + "年目</td>" +
+        "<td class='num'>" + fmt.manUnit(row.sales) + "</td>" +
+        "<td class='num'>" + fmt.manUnit(row.expense) + "</td>" +
+        "<td class='num " + (row.income >= 0 ? "pos" : "neg") + "'>" + fmt.manUnit(row.income) + "</td>" +
+        "<td class='num'>" + fmt.manUnit(row.repay) + "</td>" +
+        "<td class='num'>" + fmt.manUnit(row.living) + "</td>" +
+        "<td class='num " + (row.cashEnd >= 0 ? "" : "neg") + "'>" + fmt.manUnit(row.cashEnd) + "</td></tr>";
+    }).join("");
+    t.innerHTML = head + "<tbody>" + body + "</tbody>";
+
+    var labels = r.years.map(function (row) { return row.y + "年目"; });
+    VIZ.lineChart(document.getElementById("chartCash"), {
+      labels: labels,
+      series: [{ name: "年末資金", values: r.years.map(function (row) { return row.cashEnd; }) }],
+      fmt: fmt.man, area: true, h: 260
+    });
+
+    var msg = document.getElementById("cashMsg");
+    var html = '<div class="advice ' + (r.minCash < 0 ? "critical" : "info") + '"><div class="a-icon">' + (r.minCash < 0 ? "⚠" : "☂") + "</div><div>" +
+      '<div class="a-title">' + r.minYear + "年目に資金がいちばん薄くなります（" + fmt.manUnit(r.minCash) + "）</div>" +
+      '<div class="a-body">';
+    if (r.minCash < 0) {
+      html += "この計画のままでは" + r.minYear + "年目の年末に資金が足りない計算です。打つ手は主に3つ、どれにするかはご自身の判断です。" +
+        "①自己資金を増やす（不足分は約" + fmt.manUnit(-r.minCash) + "） ②借入を増やす・据置を長くする ③投資や規模拡大の年を遅らせて支出を後ろにずらす。";
+    } else {
+      html += "期間内の年末資金はマイナスになりません。ただし年の途中の支払いの波（月ごとの出入り）はこの表に出ないため、就農後は資金繰りカレンダーで月単位の確認をおすすめします。";
+    }
+    html += "</div></div></div>";
+    msg.innerHTML = html;
+  }
+
+  function renderJudge(r) {
+    var box = document.getElementById("judgeBox");
+    var tgtYen = state.targetMan * 10000;
+    var html = "";
+    if (r.targetYear) {
+      html += '<div class="advice good"><div class="a-icon">✓</div><div>' +
+        '<div class="a-title">農業所得が目標（年' + fmt.num(state.targetMan) + "万円）を初めて超えるのは " + r.targetYear + "年目です</div>" +
+        '<div class="a-body">その年の農業所得は' + fmt.manUnit(r.years[r.targetYear - 1].income) + "。以降の年も表で確認してください（超えた後にまた下回る年があれば投資・返済の重なりが原因のことが多いです）。</div></div></div>";
+    } else {
+      var last = r.years[state.years - 1];
+      html += '<div class="advice serious"><div class="a-icon">△</div><div>' +
+        '<div class="a-title">この構成では期間内（' + state.years + "年）に目標に届きません</div>" +
+        '<div class="a-body">最終年の農業所得は' + fmt.manUnit(last.income) + "で、目標まで" + fmt.manUnit(tgtYen - last.income) + "足りない計算です。</div></div></div>";
+      // 逆算: どの前提が変わると届くか（最終年ベース・1行ずつ）
+      var S = last.sales, F = last.fixed + last.lease + last.dep;
+      if (S > 0) {
+        var crEff = last.varCost / S;
+        var lines = [];
+        if (crEff < 1) {
+          var needS = (tgtYen + F) / (1 - crEff);
+          var factor = needS / S;
+          lines.push("単価: 全品目の単価がいまの想定より約" + Math.round((factor - 1) * 100) + "%高いと、最終年に届く計算です（面積を変えない場合）。");
+          lines.push("面積: 作付け全体を約" + (Math.round(factor * 100) / 100) + "倍にすると届く計算です。ただし労働時間も同じ倍率で増えます（下の月別労働で確認）。");
+        }
+        var needCr = 1 - (tgtYen + F) / S;
+        if (needCr >= 0) lines.push("経費: 経費率を全体で約" + Math.round(needCr * 100) + "%まで下げると届く計算です（いまは約" + Math.round(crEff * 100) + "%）。");
+        else lines.push("経費: 経費率を0にしても届かないため、経費の見直しだけでは足りない計算です。");
+        html += '<div class="small muted mt8" style="line-height:1.9">' + lines.map(function (l) { return "・" + esc(l); }).join("<br>") + "</div>";
+      } else {
+        html += '<div class="small muted mt8">最終年の売上が0のため逆算できません。立ち上がりと面積を確認してください。</div>';
+      }
+    }
+    box.innerHTML = html;
+  }
+
+  function renderLabor() {
+    var lb = simMonthlyLabor(state, regById);
+    var cap = state.famPeople * state.famHours;
+    VIZ.stackedBar(document.getElementById("chartLabor"), {
+      labels: MONTH_LABELS,
+      series: lb.per.map(function (p) { return { name: p.name, values: p.values }; }),
+      line: { name: "家族労働の上限（" + state.famPeople + "人×月" + state.famHours + "h）", values: new Array(12).fill(cap) },
+      fmt: function (v) { return fmt.num(v) + "h"; }, h: 300
+    });
+    var over = [];
+    lb.total.forEach(function (v, i) { if (v > cap) over.push((i + 1) + "月"); });
+    var msg = document.getElementById("laborMsg");
+    if (over.length) {
+      msg.innerHTML = '<div class="advice warn"><div class="a-icon">⚠</div><div>' +
+        '<div class="a-title">この計画は満作年に ' + over.join("・") + " で家族労働を超えます</div>" +
+        '<div class="a-body">品目の組み合わせか面積を変えるか、人を雇う前提（投資・雇用ページで試算できます）が必要になる計算です。按分は仮の計算なので、実際の作業の重なりで確かめてください。</div></div></div>';
+    } else {
+      msg.innerHTML = '<div class="advice good"><div class="a-icon">✓</div><div>' +
+        '<div class="a-title">満作年でも全12か月が家族労働の上限内です</div>' +
+        '<div class="a-body">上限 ＝ ' + state.famPeople + "人 × 月" + state.famHours + "時間 ＝ " + fmt.num(cap) + "時間。按分は仮の計算なので、実際の繁忙期の重なりはご自身の感覚で確かめてください。</div></div></div>";
+    }
+  }
+
+  function renderWhatif() {
+    var rows = simWhatif(stateForCalc(), regById);
+    var base = rows[0];
+    var t = document.getElementById("whatifTbl");
+    var head = "<thead><tr><th>ケース</th><th class='num'>最終年の農業所得</th><th class='num'>基本との差</th><th class='num'>資金の最低点</th><th class='num'>最低点の年</th><th class='num'>目標に届く年</th></tr></thead>";
+    var body = rows.map(function (r, i) {
+      var diff = r.finalIncome - base.finalIncome;
+      return "<tr" + (i === 0 ? ' style="font-weight:650"' : "") + "><td>" + r.label + "</td>" +
+        "<td class='num " + (r.finalIncome >= 0 ? "" : "neg") + "'>" + fmt.manUnit(r.finalIncome) + "</td>" +
+        "<td class='num'>" + (i === 0 ? "―" : fmt.signMan(diff)) + "</td>" +
+        "<td class='num " + (r.minCash >= 0 ? "" : "neg") + "'>" + fmt.manUnit(r.minCash) + "</td>" +
+        "<td class='num'>" + r.minYear + "年目</td>" +
+        "<td class='num'>" + (r.targetYear ? r.targetYear + "年目" : "届かない") + "</td></tr>";
+    }).join("");
+    t.innerHTML = head + "<tbody>" + body + "</tbody>";
+  }
+
+  /* ---------- 再計算 ---------- */
+  function recompute(opt) {
+    if (opt === "years") {
+      renderItems(); renderInvests(); renderHojoYear();
+      if (state.hojo.year > state.years) state.hojo.year = state.years;
+      state.invests.forEach(function (iv) { if (iv.year > state.years) iv.year = state.years; });
+    }
+    var r = simCompute(stateForCalc(), regById, {});
+    // 各品目行の満作所得の表示
+    state.items.forEach(function (it) {
+      if (!it._row) return;
+      var s = it.area / 10 * it.yieldV * it.priceV;
+      var inc = s - s * it.costRate;
+      it._row._incEl.textContent = fmt.manUnit(inc);
+      it._row._incNoteEl.textContent = "（売上" + fmt.manUnit(s) + "・立ち上がり100%のとき）";
+    });
+    renderKpis(r);
+    renderHowToRead(r);
+    renderAssump();
+    renderYearTable(r);
+    renderJudge(r);
+    renderLabor();
+    renderWhatif();
+    // DOM参照を外して保存。利用者の実操作があるまでは保存しない
+    //（開いただけで進行表が「完了」になる誤判定を防ぐ）
+    if (CORE.userActed && CORE.userActed()) {
+      var save = JSON.parse(JSON.stringify(state, function (k, v) { return k === "_row" ? undefined : v; }));
+      store.save("simPlan", save);
+    }
+  }
+
+  /* ---------- 印刷・書き出し・読み込み ---------- */
+  document.getElementById("btnPrint").addEventListener("click", function () { window.print(); });
+  document.getElementById("btnExport").addEventListener("click", function () {
+    var save = JSON.parse(JSON.stringify(state, function (k, v) { return k === "_row" ? undefined : v; }));
+    var blob = new Blob([JSON.stringify(save, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "keiei_simulator_plan.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    CORE.nextHint(document.getElementById("btnExport"), [
+      { label: "→ 計画書にまとめる", href: "keikaku.html", page: "keikaku" }
+    ], "計画を保存しました");
+  });
+  document.getElementById("fileImport").addEventListener("change", function (e) {
+    var f = e.target.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      try {
+        var obj = JSON.parse(rd.result);
+        if (!obj || !obj.items || !obj.items.length) { alert("読み込めませんでした（items がありません）"); return; }
+        store.save("simPlan", obj);
+        location.reload();
+      } catch (err) { alert("読み込めませんでした（JSONの形式が不正です）"); }
+    };
+    rd.readAsText(f);
+  });
+  document.getElementById("btnReset").addEventListener("click", function () {
+    if (confirm("入力をすべて消して初期値に戻します。よろしいですか？")) {
+      store.remove("simPlan");
+      location.reload();
+    }
+  });
+
+  /* ---------- 初期描画 ---------- */
+  if (CORE.cropAddLink) CORE.cropAddLink(document.getElementById("cropAddHost"), "simulator");
+  renderSteps();
+  renderItems();
+  renderInvests();
+  renderHojoYear();
+  renderExtraFixed();
+  recompute();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>計画の直しどころ｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<script>document.documentElement.classList.add("light");</script>
+<link rel="stylesheet" href="../assets/css/app.css">
+<style>
+  .zai { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; margin:10px 0 0; }
+  .zai .m { border:1px solid var(--hairline); border-radius:11px; padding:11px 13px; background:var(--inset); }
+  .zai .m .l { font-size:12px; color:var(--ink-3); }
+  .zai .m .v { font-size:15px; font-weight:700; margin-top:2px; }
+  .zai .m.nai { background:var(--sand-soft, #fbf5ea); border-color:var(--sand-line, #e6d5b6); }
+  .zai .m.nai .v { color:var(--sand, #b98a4f); }
+  .zai .m a { font-size:12.5px; }
+
+  .an { border:1px solid var(--hairline); border-radius:14px; background:#fff; padding:16px 18px; margin:12px 0; }
+  .an.todoku { border:2px solid var(--accent); background:var(--accent-softer,#f3f9f5); }
+  .an .na { font-size:17px; font-weight:700; }
+  .an .ri { font-size:13.5px; color:var(--ink-2); margin:4px 0 10px; }
+  .an .te { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 12px; }
+  .an .te span { font-size:12.5px; font-weight:650; background:var(--inset);
+    border:1px solid var(--hairline); border-radius:99px; padding:3px 11px; }
+  .an .kk { display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:9px; }
+  .an .kk .m { border:1px solid var(--hairline); border-radius:10px; padding:9px 11px; background:var(--inset); }
+  .an .kk .m .l { font-size:11.5px; color:var(--ink-3); }
+  .an .kk .m .v { font-size:17px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .an .kk .m .s { font-size:11.5px; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+  .an .ht { display:flex; flex-wrap:wrap; gap:8px; margin:11px 0 0; font-size:12.5px; }
+  .an .ht b { font-weight:650; padding:2px 9px; border-radius:99px; border:1px solid currentColor; }
+  .an .ht b.o { color:#0a7a0a; background:#eaf6ea; }
+  .an .ht b.x { color:#8a6200; background:#fbf3df; }
+  .an .shimai { margin:13px 0 0; }
+
+  .mihon { border:1px solid var(--sand-line,#e6d5b6); background:var(--sand-soft,#fbf5ea);
+    border-radius:11px; padding:12px 15px; margin:0 0 14px; font-size:13.5px; }
+  .mihon b { color:var(--sand,#b98a4f); }
+
+  .shikumi { font-size:13px; color:var(--ink-2); line-height:1.9; }
+  .shikumi li { margin:0 0 4px; }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="page-head fade-up">
+    <h1>計画の<span class="grad-text">直しどころ</span></h1>
+    <p class="lede">いまの計画・あなたの数字・なりたい姿の3つをもとに、計画のどこを変えると届くのかを出します。
+      画面に出る金額は、すべてこの道具が計算し直したものです。AIが金額を書くことはありません。</p>
+  </div>
+
+  <!-- 1. 材料がそろっているか -->
+  <div class="card fade-up d1">
+    <h3>材料</h3>
+    <div class="sub">この3つがそろうと、直しどころを出せます。</div>
+    <div class="zai" id="zai"></div>
+  </div>
+
+  <!-- 2. 出す -->
+  <div class="card fade-up d2" id="dasuCard">
+    <h3>直しどころを出す</h3>
+    <div class="sub" id="dasuSub"></div>
+    <div style="margin-top:12px">
+      <button class="btn" id="dasu" type="button">直しどころを出す</button>
+      <span class="small muted" id="dasuState" style="margin-left:10px"></span>
+    </div>
+  </div>
+
+  <!-- 3. 結果 -->
+  <div id="kekka"></div>
+
+  <!-- 4. 仕組み -->
+  <div class="card fade-up" style="margin-top:16px">
+    <h3>この画面が数字を作らない仕組み</h3>
+    <ul class="shikumi">
+      <li>AIが選ぶのは「どの打ち手を、どれだけ動かすか」だけです。金額は返させていません。</li>
+      <li>打ち手は決められた7種類（面積・単価・経費率・品目の入れ替え・手間を減らす投資・借入・年次）からしか選べません。</li>
+      <li>選ばれた打ち手を計画に当て直し、この道具が計算エンジンで計算します。エンジンは公開版と同じもので、1文字も変えていません。</li>
+      <li>AIにつながらないときは、機械が決めた既定の3案（面積・単価・経費率）だけを出します。そのときは上にそう書きます。</li>
+      <li>なりたい姿で「手放したくない」と選んだ品目を減らす案は出しません。</li>
+      <li>AIへは品目と数字だけを送ります。氏名・住所・電話番号は送りません。</li>
+    </ul>
+  </div>
+
+  <p class="small muted" style="margin-top:18px">
+    ここに出るのは、条件を変えたときの計算の見込みです。実際の相場・天候・出し先の都合で変わります。
+    融資や制度の判断は、市町村・普及指導センター・金融機関の窓口でお確かめください。
+  </p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/sim_engine.js"></script>
+<script src="../assets/js/uchite.js"></script>
+<script src="../assets/js/ai.js"></script>
+<script>
+(function () {
+  "use strict";
+  var store = CORE.store;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function (m) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m];
+    });
+  }
+
+  CORE.renderTopbar("teian", "../");
+
+  var REG = simBuildRegistry(DATA);
+  function regById(id) {
+    for (var i = 0; i < REG.length; i++) if (REG[i].id === id) return REG[i];
+    return null;
+  }
+  function cropName(id) {
+    var r = regById(id);
+    return r ? r.name : id;
+  }
+
+  /* ---------- 材料 ---------- */
+  function yomu() {
+    var plan = store.load("simPlan", null);
+    var nozomi = store.load("nozomi", null);
+    var cc = store.load("cropCustom", null);
+    return { plan: plan, nozomi: nozomi, cc: cc };
+  }
+
+  /* 自分の数字が何件入っているか（実績から・記録から・自分の値） */
+  function jibunNoKazu(cc) {
+    if (!cc || !cc.overrides) return 0;
+    var n = 0;
+    Object.keys(cc.overrides).forEach(function (id) {
+      var o = cc.overrides[id] || {};
+      Object.keys(o).forEach(function (k) {
+        if (k === "months") return;
+        if (o[k] != null) n++;
+      });
+    });
+    return n;
+  }
+
+  function imaNoKekka(plan) {
+    if (!plan || !plan.items || !plan.items.length) return null;
+    try { return MFK_UCHITE.kekka(MFK_UCHITE.ateru(plan, []), simCompute, regById); }
+    catch (e) { return null; }
+  }
+
+  function renderZai() {
+    var z = yomu();
+    var ima = imaNoKekka(z.plan);
+    var h = "";
+
+    h += '<div class="m' + (z.plan ? "" : " nai") + '"><div class="l">いまの計画</div><div class="v">'
+      + (ima ? (z.plan.years + "年の計画・品目" + z.plan.items.length + "件") : "まだありません")
+      + "</div>"
+      + (z.plan ? "" : '<a href="simulator.html">経営シミュレーターで作る</a>') + "</div>";
+
+    var n = jibunNoKazu(z.cc);
+    h += '<div class="m' + (n ? "" : " nai") + '"><div class="l">あなたの数字</div><div class="v">'
+      + (n ? (n + "件が自分の数字") : "まだ県の平均値のまま")
+      + "</div>"
+      + (n ? "" : '<a href="kiroku.html">記録を入れる</a> ／ <a href="checkup.html">実績を入れる</a>') + "</div>";
+
+    h += '<div class="m' + (z.nozomi ? "" : " nai") + '"><div class="l">なりたい姿</div><div class="v">'
+      + (z.nozomi && z.nozomi.mokuhyouMan
+        ? (z.nozomi.nen + "年後に " + CORE.fmt.num(z.nozomi.mokuhyouMan) + "万円")
+        : "まだありません")
+      + "</div>"
+      + (z.nozomi ? "" : '<a href="nozomi.html">なりたい姿を入れる</a>') + "</div>";
+
+    if (ima) {
+      h += '<div class="m"><div class="l">いまの計画の最終年</div><div class="v">'
+        + CORE.fmt.manUnit(ima.finalIncome) + "</div>"
+        + '<div class="l">年間に働く時間 ' + CORE.fmt.num(Math.round(ima.roudou)) + " 時間</div></div>";
+    }
+    $("zai").innerHTML = h;
+
+    var dekiru = !!(z.plan && z.plan.items && z.plan.items.length && z.nozomi && z.nozomi.mokuhyouMan);
+    $("dasu").disabled = !dekiru;
+    $("dasuSub").textContent = dekiru
+      ? (MFK_AI.tsunagatteiru()
+        ? "AIの受け口につながっています。いまの計画となりたい姿を送って、打ち手の候補を選んでもらいます。"
+        : "AIの受け口がまだ設定されていないため、機械が決めた既定の3案を出します。金額はどれも計算し直したものです。")
+      : "上の材料がそろうと押せます。";
+    return z;
+  }
+
+  /* ---------- 打ち手を日本語にする ---------- */
+  function teateNoKotoba(t) {
+    var wari = function (b) {
+      var p = Math.round((Number(b) - 1) * 100);
+      return (p >= 0 ? "+" : "") + p + "%";
+    };
+    switch (t.kata) {
+      case "menseki": return cropName(t.cropId) + "の面積 " + wari(t.bairitsu);
+      case "tanka": return cropName(t.cropId) + "の単価 " + wari(t.bairitsu);
+      case "keihiritsu": return cropName(t.cropId) + "の経費率 −" + CORE.fmt.num(t.sagenPt) + "ポイント";
+      case "hinmokuKae": return cropName(t.derucropId) + " " + CORE.fmt.num(t.area) + "a を " + cropName(t.hairucropId) + "へ";
+      case "shoryoku": return "手間を減らす投資 " + CORE.fmt.num(t.amountMan) + "万円（働く時間 −" + CORE.fmt.num(t.laborSagenPct) + "%）";
+      case "kariire": return "借入 " + CORE.fmt.num(t.amountMan) + "万円";
+      case "nensuu": return "計画の年数を " + CORE.fmt.num(t.years) + "年に";
+      default: return t.kata;
+    }
+  }
+
+  /* ---------- 結果を描く ---------- */
+  function renderKekka(list, moto, nozomi, shirase) {
+    var box = $("kekka");
+    var h = "";
+
+    if (shirase) {
+      h += '<div class="mihon"><b>見本の受け答えです。</b> ' + esc(shirase) + "</div>";
+    }
+
+    var todoku = list.filter(function (a) { return a.hantei.todoku === true; });
+    h += '<div class="card fade-up"><h3>出た案（' + list.length + "件）</h3>";
+    if (!list.length) {
+      h += '<div class="sub">出せる案がありませんでした。なりたい姿の条件を見直すか、計画の品目と面積を確かめてください。</div>';
+    } else if (!todoku.length) {
+      h += '<div class="sub">この中に、目標の農業所得に届く案はありませんでした。'
+        + "無理に届く案は作りません。目標の年数を延ばす、目標の金額を見直す、"
+        + "手放したくないものを減らす、のいずれかで条件が変わります。</div>";
+    } else {
+      h += '<div class="sub">目標に届く案が ' + todoku.length + "件あります（枠を濃くしてあります）。"
+        + "金額はすべて計算し直したものです。</div>";
+    }
+    h += "</div>";
+
+    var imaK = imaNoKekka(moto);
+    list.forEach(function (a) {
+      var k = a.kekka;
+      var sa = imaK ? (k.finalIncome - imaK.finalIncome) : null;
+      var saJ = imaK ? (Math.round(k.roudou) - Math.round(imaK.roudou)) : null;
+      h += '<div class="an' + (a.hantei.todoku === true ? " todoku" : "") + '">'
+        + '<div class="na">' + esc(a.namae) + "</div>"
+        + (a.riyuu ? '<div class="ri">' + esc(a.riyuu) + "</div>" : "")
+        + '<div class="te">' + a.teate.map(function (t) { return "<span>" + esc(teateNoKotoba(t)) + "</span>"; }).join("") + "</div>"
+        + '<div class="kk">'
+        + '<div class="m"><div class="l">最終年の農業所得</div><div class="v">' + CORE.fmt.manUnit(k.finalIncome) + "</div>"
+        + (sa != null ? '<div class="s">いまの計画との差 ' + CORE.fmt.signMan(sa) + "</div>" : "") + "</div>"
+        + '<div class="m"><div class="l">年間に働く時間</div><div class="v">' + CORE.fmt.num(Math.round(k.roudou)) + " 時間</div>"
+        + (saJ != null ? '<div class="s">差 ' + (saJ >= 0 ? "+" : "") + CORE.fmt.num(saJ) + " 時間</div>" : "") + "</div>"
+        + '<div class="m"><div class="l">現金がいちばん少ない年</div><div class="v">' + CORE.fmt.manUnit(k.minCash) + "</div>"
+        + '<div class="s">' + k.minYear + "年目</div></div>"
+        + '<div class="m"><div class="l">目標に届く年</div><div class="v">'
+        + (k.targetYear ? (k.targetYear + " 年目") : "届きません") + "</div></div>"
+        + "</div>"
+        + '<div class="ht">'
+        + (a.hantei.todoku === null ? "" : '<b class="' + (a.hantei.todoku ? "o" : "x") + '">' + (a.hantei.todoku ? "目標に届く" : "目標に届かない") + "</b>")
+        + (a.hantei.jikanOsamaru === null ? "" : '<b class="' + (a.hantei.jikanOsamaru ? "o" : "x") + '">' + (a.hantei.jikanOsamaru ? "希望の時間に収まる" : "希望の時間を超える") + "</b>")
+        + '<b class="' + (a.hantei.genkinMotsu ? "o" : "x") + '">' + (a.hantei.genkinMotsu ? "現金が底を割らない" : "現金が足りなくなる年がある") + "</b>"
+        + "</div>"
+        + '<div class="shimai"><button class="btn ghost" type="button" data-ire="' + esc(a.namae) + '">この案を計画に入れる</button></div>'
+        + "</div>";
+    });
+
+    box.innerHTML = h;
+
+    box.querySelectorAll("button[data-ire]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var na = el.getAttribute("data-ire");
+        var a = null;
+        list.forEach(function (x) { if (x.namae === na) a = x; });
+        if (!a) return;
+        if (!window.confirm("「" + na + "」を計画に入れます。いまの計画は書き換わります。よろしいですか。")) return;
+        store.save("simPlan", a.plan);
+        el.textContent = "計画に入れました";
+        el.disabled = true;
+        CORE.userActed && CORE.userActed();
+      });
+    });
+  }
+
+  /* ---------- 出す ---------- */
+  function dasu() {
+    var z = yomu();
+    if (!z.plan || !z.nozomi) return;
+    $("dasuState").textContent = "出しています…";
+    $("dasu").disabled = true;
+
+    /* AIへ渡す材料。氏名・住所・電話番号は入れない。品目と数字だけ */
+    var zairyou = {
+      years: z.plan.years,
+      items: (z.plan.items || []).map(function (it) {
+        return {
+          cropId: it.cropId, name: cropName(it.cropId), area: it.area,
+          yieldV: it.yieldV, priceV: it.priceV, costRate: it.costRate, laborH10a: it.laborH10a,
+        };
+      }),
+      ima: imaNoKekka(z.plan),
+      nozomi: {
+        nen: z.nozomi.nen, mokuhyouMan: z.nozomi.mokuhyouMan,
+        roudouKibou: z.nozomi.roudouKibou, kariireJougenMan: z.nozomi.kariireJougenMan,
+        tebanasanai: (z.nozomi.tebanasanai || []).map(function (id) { return { cropId: id, name: cropName(id) }; }),
+      },
+    };
+    if (zairyou.ima) delete zairyou.ima.years;   // 年ごとの明細まで送る必要はない
+
+    MFK_AI.naoshidokoro(zairyou).then(function (r) {
+      var an = (r && r.an) ? r.an : [];
+      /* AIが案を返しても、機械の既定3案は必ず並べる（受け入れ条件） */
+      var kitei = MFK_AI.kiteiNoAn(zairyou);
+      var arawa = {};
+      an.forEach(function (a) { arawa[a.namae] = 1; });
+      kitei.forEach(function (a) { if (!arawa[a.namae]) an.push(a); });
+
+      var deta = [];
+      an.forEach(function (a) {
+        var x = null;
+        try { x = MFK_UCHITE.anWoTameusu(z.plan, a, simCompute, regById, z.nozomi); }
+        catch (e) { x = null; }
+        if (!x) return;
+        if (!MFK_UCHITE.mamoreteiruka(x, z.plan, z.nozomi.tebanasanai || [])) return;
+        deta.push(x);
+      });
+
+      /* 届く案を先に、そのなかは働く時間の少ない順に並べる */
+      deta.sort(function (a, b) {
+        var ta = a.hantei.todoku === true ? 0 : 1;
+        var tb = b.hantei.todoku === true ? 0 : 1;
+        if (ta !== tb) return ta - tb;
+        return a.kekka.roudou - b.kekka.roudou;
+      });
+
+      var shirase = "";
+      if (r && r.mihon) shirase = r.shirase || "AIの受け口がまだ設定されていません。";
+      if (r && r.shippai) shirase += "（AIを呼びましたが返ってきませんでした：" + r.shippai + "）";
+
+      renderKekka(deta, z.plan, z.nozomi, shirase);
+      store.save("teian", {
+        an: deta.map(function (x) {
+          return { namae: x.namae, teate: x.teate, finalIncome: x.kekka.finalIncome, roudou: x.kekka.roudou };
+        }),
+        mihon: !!(r && r.mihon), dashitaAt: new Date().toISOString(),
+      });
+      $("dasuState").textContent = "出しました（" + deta.length + "件）";
+      $("dasu").disabled = false;
+      $("dasu").textContent = "もう一度出す";
+    });
+  }
+
+  $("dasu").addEventListener("click", dasu);
+  renderZai();
+})();
+</script>
+</body>
+</html>

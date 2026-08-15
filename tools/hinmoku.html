@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>品目と単価｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+<style>
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1px solid var(--hairline-strong); background: var(--inset); color: var(--ink-2);
+  font-family: var(--font); font-size: 12.5px; font-weight: 650;
+  padding: 7px 13px; border-radius: 99px; cursor: pointer; transition: all .15s;
+}
+.chip:hover { color: var(--ink); background: var(--wash-strong); }
+.chip.on { background: rgba(20,211,162,.16); border-color: var(--accent); color: var(--accent); }
+.src-cell { font-size: 11px; color: var(--ink-4); line-height: 1.6; min-width: 220px; max-width: 320px; white-space: normal; }
+.flag { font-size: 11px; color: var(--ink-3); }
+.flag.jibun { color: var(--accent); font-weight: 650; }
+/* 実績から作った値と、記録から作った値。手で打った値と分けて見せる */
+.flag.jisseki { color: #1f6f52; font-weight: 650; background: #eaf3ee;
+  border: 1px solid #cfe3d6; border-radius: 99px; padding: 1px 7px; }
+.flag.kiroku { color: #2a78d6; font-weight: 650; background: #eef4fc;
+  border: 1px solid #d3e2f5; border-radius: 99px; padding: 1px 7px; }
+
+/* いま作っているもの（段1） */
+.ima-gyou { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  border: 1px solid var(--hairline); border-radius: 11px; padding: 10px 12px; margin: 8px 0; background: #fff; }
+.ima-gyou .na { flex: 1 1 9em; font-weight: 650; }
+.ima-gyou input { width: 6em; min-height: 42px; font-size: 16px; padding: 6px 8px;
+  border: 1px solid var(--hairline-strong); border-radius: 8px; }
+.ima-gyou .tani { color: var(--ink-3); font-size: 13px; }
+.ima-gyou .hazusu { background: none; border: 0; color: var(--ink-3);
+  text-decoration: underline; cursor: pointer; font-size: 13px; min-height: 42px; }
+.ima-kekka { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 12px 0 0; }
+.ima-kekka .m { border: 1px solid var(--hairline); border-radius: 11px; padding: 11px 13px; background: var(--inset); }
+.ima-kekka .m .l { font-size: 12px; color: var(--ink-3); }
+.ima-kekka .m .v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="page-head fade-up">
+    <div class="eyebrow">CROP DATA</div>
+    <h1>品目と<span class="grad-text">単価</span></h1>
+    <p class="lede">いま作っている品目と面積を入れると、その場で1年の見通しが出ます。
+      数字は最初、県の平均値が入っています。<b>手元の記録を入れると、この数字があなたの数字に変わります。</b>
+      ここで決まった数字が、このあとの作付け・収支・資金繰り・計画書のすべての計算のもとになります。</p>
+  </div>
+
+  <!-- このページの説明（3列） -->
+  <div class="card fade-up d1" style="padding:16px 20px">
+    <div class="grid c3">
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">1　いま作っているものを入れる</div>
+        <p class="small muted">品目を選んで面積を入れます。それだけで1年の売上・経費・所得と、年間に働く時間の見込みが出ます。</p>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">2　自分の数字に変える</div>
+        <p class="small muted">手元の出荷伝票・ノート・記録ツールの書き出し・決算書を送ると、単価などが自分の数字に置き換わります。手で直すこともできます。</p>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">3　どこから来た数字か分かる</div>
+        <p class="small muted">すべての数字に出どころが付きます。県平均・実績から・記録から・自分の値・仮。窓口で根拠を聞かれたときに答えられます。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 保存先の説明 -->
+  <div class="advice info mt16 fade-up d2">
+    <div class="a-icon">💾</div>
+    <div>
+      <div class="a-title">保存先はこの端末だけです</div>
+      <div class="a-body">直した値・追加した品目はこのブラウザの中（localStorage）にだけ保存され、サーバーには送られず、他の人からは見えません。そのかわり、ブラウザの閲覧データを削除すると消えます。大事な値は下の「控えを取る・読み込む」でJSONファイルに書き出して控えを残してください。上書き・追加した値は統計値ではなく、利用者の責任で使う「自分の値」です。</div>
+    </div>
+  </div>
+
+  <!-- 段1の本体。いま作っている品目と面積を入れると、その場で1年の見通しが出る -->
+  <section class="card mt16 fade-up d2" id="cardIma" aria-labelledby="imaTitle">
+    <h2 id="imaTitle" style="margin:0 0 6px">いま作っているもの</h2>
+    <p class="small muted" style="margin:0 0 12px">
+      品目を選んで面積を入れてください。押さなくても、入れたそばから見通しが出ます。
+      面積はアール（a）で入れます。1反＝10a、1haは100aです。</p>
+
+    <div id="imaList"></div>
+
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0 0">
+      <select id="imaSel" style="min-height:44px;font-size:15px;padding:6px 10px;border:1px solid var(--hairline-strong);border-radius:8px;min-width:12em"></select>
+      <button class="btn ghost" id="imaAdd" type="button">この品目を足す</button>
+    </div>
+
+    <div id="imaKekka"></div>
+
+    <div class="advice info mt16" style="margin-top:14px">
+      <div class="a-icon">📄</div>
+      <div>
+        <div class="a-title">この数字を、自分の数字に変える</div>
+        <div class="a-body">いまは県の平均値で計算しています。手元の出荷伝票やノートの写真、記録ツールの書き出し、決算書を送ると、
+          単価や単収があなたの数字に置き換わります。1枚からで構いません。
+          <div style="margin-top:10px">
+            <a class="btn" href="kiroku.html">記録を入れる</a>
+            <a class="btn ghost" href="checkup.html" style="margin-left:6px">確定申告の数字から入れる</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="msg"></div>
+
+  <!-- ============ 収録している品目 ============ -->
+  <div class="sec-title fade-up d2"><h2>収録している品目</h2><span class="hint">「直す」で自分の値に上書きできます。空欄のままの項目は元の値が使われます</span></div>
+  <div class="card fade-up d2">
+    <div class="tbl-wrap">
+      <table class="tbl" id="baseTbl">
+        <thead>
+          <tr>
+            <th>品目名</th><th>区分</th>
+            <th class="num">単収（10a当たり）</th><th class="num">単価</th>
+            <th class="num">経費率</th><th class="num">労働時間（h/10a）</th>
+            <th>出典・ラベル</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="src mt8">経費率＝経営費÷粗収益。単価は卸売単価（手数料を引く前）が基本です。</p>
+    <ul class="src mt8" style="line-height:1.9;padding-left:1.2em">
+      <li>（実績から）＝実績の診断に入れた申告書の数字から計算した値</li>
+      <li>（記録から）＝送った記録を機械が数えて作った値</li>
+      <li>（自分の値）＝このページで手で直した値</li>
+      <li>（計算値）＝公表値から計算した値</li>
+      <li>（古い調査値）＝年数の経った公表値</li>
+      <li>（国統計・県平均）＝国の統計の県平均</li>
+      <li>（仮）＝出典のない目安</li>
+    </ul>
+  </div>
+
+  <!-- 上書きフォーム -->
+  <div class="card hide mt16" id="editCard">
+    <h3 id="editTitle">品目を直す</h3>
+    <div class="sub">直したい項目だけ入力してください。空欄の項目は元の値のまま使われます。入力した値には（自分の値）のラベルが付きます。</div>
+    <div id="editFields" class="grid c2"></div>
+    <div id="editErr"></div>
+    <div class="flex wrap mt8">
+      <button class="btn primary sm" id="editSave">この内容で保存する</button>
+      <button class="btn ghost sm" id="editRevert">上書きを全部やめて元の値に戻す</button>
+      <button class="btn ghost sm" id="editClose">閉じる</button>
+    </div>
+  </div>
+
+  <!-- ============ 追加した品目 ============ -->
+  <div class="sec-title fade-up d3"><h2>追加した品目</h2><span class="hint">自分で追加した品目は全ページの品目一覧に並びます</span></div>
+  <div class="card fade-up d3">
+    <div class="tbl-wrap" id="customWrap">
+      <table class="tbl" id="customTbl">
+        <thead>
+          <tr>
+            <th>品目名</th><th>区分</th>
+            <th class="num">単収（10a当たり）</th><th class="num">単価</th>
+            <th class="num">経費率</th><th class="num">労働時間（h/10a）</th>
+            <th>収穫の月</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="muted small hide" id="customEmpty">追加した品目はまだありません。下のフォームから追加できます。</p>
+  </div>
+
+  <!-- ============ 品目を追加する ============ -->
+  <div class="sec-title fade-up d4"><h2 id="addTitle">品目を追加する</h2><span class="hint">数字はあとから何度でも直せます</span></div>
+  <div class="card fade-up d4" id="addCard">
+    <div class="grid c2">
+      <div class="field">
+        <label>品目名（必須）</label>
+        <input type="text" id="a-name" placeholder="例: 島バナナ">
+      </div>
+      <div class="field">
+        <label>区分</label>
+        <select id="a-cat">
+          <option value="野菜">野菜</option>
+          <option value="花卉">花卉（花）</option>
+          <option value="果樹">果樹</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>数える単位</label>
+      <div class="seg" id="a-unit">
+        <button type="button" data-v="kg" class="on">kg（重さ）</button>
+        <button type="button" data-v="本">本（花など）</button>
+      </div>
+      <div class="note">単位を変えると下の単収・単価の単位も変わります。</div>
+    </div>
+    <div class="grid c2">
+      <div class="field">
+        <label id="a-yield-label">10a当たりの収量（必須）</label>
+        <div class="input-unit"><input type="number" id="a-yield" min="0" step="any" placeholder="例: 1500"><span class="u" id="a-yield-u">kg</span></div>
+      </div>
+      <div class="field">
+        <label id="a-price-label">販売単価（必須）</label>
+        <div class="input-unit"><input type="number" id="a-price" min="0" step="any" placeholder="例: 300"><span class="u" id="a-price-u">円/kg</span></div>
+      </div>
+      <div class="field">
+        <label>経費率（売上のうち経費が占める割合）</label>
+        <div class="input-unit"><input type="number" id="a-cost" min="0" max="100" step="any" value="50"><span class="u">%</span></div>
+        <div class="note">0〜100%。迷ったら50%のままにして、あとで実績の診断の実績で直すやり方もあります。</div>
+      </div>
+      <div class="field">
+        <label>10a当たりの年間労働時間（必須）</label>
+        <div class="input-unit"><input type="number" id="a-labor" min="0" step="any" placeholder="例: 400"><span class="u">時間</span></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>植え付け・種まきの月（果樹などで決まった月がなければ選ばなくて構いません）</label>
+      <div class="chips" id="a-mplant"></div>
+    </div>
+    <div class="field">
+      <label>収穫の月（1つ以上・必須）</label>
+      <div class="chips" id="a-mharvest"></div>
+    </div>
+    <div class="field">
+      <label>入金がある月（選ばなければ収穫の月と同じにします。共販は出荷の翌月になることが多い）</label>
+      <div class="chips" id="a-mincome"></div>
+    </div>
+    <div class="grid c2">
+      <div class="field">
+        <label>台風の時期（7〜10月）に畑に出ている度合い</label>
+        <div class="input-unit"><input type="number" id="a-typhoon" min="0" max="100" step="any" value="30"><span class="u">%</span></div>
+        <div class="note">0%＝台風期にほぼ何もない、100%＝台風期に丸ごと畑にある。作付けの決定・台風のページが使う自分の見立てです。</div>
+      </div>
+      <div class="field">
+        <label>施設の種類（任意）</label>
+        <input type="text" id="a-facility" placeholder="例: 露地、パイプハウス">
+      </div>
+    </div>
+    <div class="field">
+      <label>出荷の方法（当てはまるものを押す）</label>
+      <div class="chips">
+        <button type="button" class="chip" id="a-air">航空便で出せる（傷みやすい）</button>
+        <button type="button" class="chip" id="a-ship">船便で出せる（日持ちする）</button>
+      </div>
+    </div>
+    <div id="addErr"></div>
+    <div class="flex wrap mt8">
+      <button class="btn primary" id="a-save">この品目を保存する</button>
+      <button class="btn ghost hide" id="a-cancel">編集をやめる</button>
+    </div>
+  </div>
+
+  <!-- ============ 控えを取る・読み込む ============ -->
+  <div class="sec-title fade-up d5"><h2>控えを取る・読み込む</h2><span class="hint">上書きと追加品目をまとめてJSONファイルにできます</span></div>
+  <div class="card fade-up d5">
+    <p class="small muted">書き出したJSONファイルは、ブラウザのデータを消してしまったときの控えになります。別の端末へ移すときにも使えます。読み込むと、この端末のいまの上書きと追加品目は、ファイルの中身に置き換わります。</p>
+    <div class="flex wrap mt16">
+      <button class="btn ghost" id="btnExport">JSONに書き出す</button>
+      <button class="btn ghost" id="btnImport">JSONを読み込む</button>
+      <input type="file" id="importFile" accept=".json,application/json" class="hide">
+      <button class="btn ghost" id="btnReset">全部やめて初期値に戻す</button>
+    </div>
+    <div id="ioErr"></div>
+  </div>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/charts.js"></script>
+<script src="../assets/js/sim_engine.js"></script>
+<script src="../assets/js/uchite.js"></script>
+<script>
+CORE.renderTopbar("hinmoku", "../");
+document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var CATS = ["野菜", "花卉", "果樹", "その他"];
+  var OV_KEYS = ["yieldKg10a", "priceYenKg", "yieldHon10a", "priceYenHon", "costRate", "laborH10a", "typhoonExp"];
+  var MSG_KEY = "myfarm-agri-compass-pro:hinmokuMsg";
+
+  /* ---------- ?back=ページID / ?crop=品目ID（各画面からの品目追加の往復） ----------
+     location.reload() はクエリを保持するため、保存を挟んでも back/crop は失われない */
+  var qs = new URLSearchParams(location.search);
+  var BACK_PAGES = { index: "../index.html" };
+  Object.keys(CORE.STEP_LABELS).forEach(function (k) { BACK_PAGES[k] = k + ".html"; });
+  var backId = qs.get("back") || "";
+  if (!Object.prototype.hasOwnProperty.call(BACK_PAGES, backId) || backId === "hinmoku") backId = "";
+  function backLabel() { return backId === "index" ? "ホーム" : CORE.STEP_LABELS[backId]; }
+  if (backId) {
+    var backBand = document.createElement("div");
+    backBand.className = "fromq-band no-print";
+    backBand.textContent = backLabel() + "から品目の追加に来ています。追加・修正して保存したら、下のボタンで戻れます。";
+    var pageHead = document.querySelector(".page-head");
+    if (pageHead) pageHead.insertAdjacentElement("afterend", backBand);
+  }
+
+  /* ---------- 保存データ（data_okinawa.js が起動時にマージ済み） ---------- */
+  var cc = CORE.store.load("cropCustom", null);
+  if (!cc || typeof cc !== "object" || Array.isArray(cc)) cc = {};
+  if (!cc.overrides || typeof cc.overrides !== "object" || Array.isArray(cc.overrides)) cc.overrides = {};
+  if (!Array.isArray(cc.custom)) cc.custom = [];
+
+  function saveAndReload(msg) {
+    if (!CORE.store.save("cropCustom", cc)) {
+      showMsg("critical", "保存できませんでした。ブラウザの保存領域がいっぱいか、保存が禁止されている可能性があります。");
+      return;
+    }
+    try { sessionStorage.setItem(MSG_KEY, msg || "保存しました。"); } catch (e) {}
+    location.reload();
+  }
+
+  /* ---------- 表示ヘルパ ---------- */
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (m) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m];
+    });
+  }
+  function flagHtml(x) {
+    var l = DATA.flagLabel(x);
+    if (!l) return "";
+    return ' <span class="flag' + (x && x.jibun ? " jibun" : "") + '">' + esc(l) + "</span>";
+  }
+  function valCell(x, unit) {
+    if (!x || x.v == null || isNaN(x.v)) return "―<span class=\"flag\">（要確認）</span>";
+    return esc(CORE.fmt.num(x.v)) + (unit ? " " + esc(unit) : "") + flagHtml(x);
+  }
+  function pctCell(x) {
+    if (!x || x.v == null || isNaN(x.v)) return "―<span class=\"flag\">（要確認）</span>";
+    return esc(CORE.fmt.pct(x.v)) + flagHtml(x);
+  }
+  function showMsg(kind, text) {
+    $("msg").innerHTML =
+      '<div class="advice ' + kind + ' mt16"><div class="a-icon">' + (kind === "good" ? "✔" : "！") + "</div>" +
+      '<div><div class="a-body">' + esc(text) + "</div></div></div>";
+  }
+  function errBox(el, errors) {
+    el.innerHTML = errors.length
+      ? '<div class="advice critical mt8"><div class="a-icon">！</div><div><div class="a-title">保存していません</div><div class="a-body">' +
+        errors.map(esc).join("<br>") + "</div></div></div>"
+      : "";
+    if (errors.length) { try { el.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {} }
+  }
+
+  /* ---------- 入力の検証 ---------- */
+  // 文字列 → 数値。空欄は {empty:true}。max指定時は範囲チェック
+  function readNum(raw, label, max) {
+    var s = String(raw == null ? "" : raw).trim().replace(/,/g, "");
+    if (s === "") return { empty: true };
+    var n = Number(s);
+    if (!isFinite(n)) return { err: label + "は数値で入力してください。" };
+    if (n < 0) return { err: label + "は0以上で入力してください。" };
+    if (max != null && n > max) return { err: label + "は0〜" + max + "の範囲で入力してください。" };
+    return { n: n };
+  }
+  function isMonthArray(a) {
+    return Array.isArray(a) && a.every(function (m) { return Number.isInteger(m) && m >= 1 && m <= 12; });
+  }
+
+  /* ============================================================
+     収録品目の一覧と上書き
+     ============================================================ */
+  var baseCrops = DATA.CROPS.filter(function (c) { return !c.custom; });
+  var editingId = null; // 上書き編集中の収録品目id
+
+  function cropUnit(c) { return c.yieldHon10a ? "本" : "kg"; }
+  function yieldKey(c) { return c.yieldHon10a ? "yieldHon10a" : "yieldKg10a"; }
+  function priceKey(c) { return c.yieldHon10a ? "priceYenHon" : "priceYenKg"; }
+
+  function renderBaseTable() {
+    var tb = $("baseTbl").querySelector("tbody");
+    tb.innerHTML = baseCrops.map(function (c) {
+      var u = cropUnit(c);
+      var y = c[yieldKey(c)], p = c[priceKey(c)];
+      var hasOv = !!cc.overrides[c.id];
+      var srcs = [];
+      if (y) srcs.push("単収: " + DATA.srcLine(y));
+      if (p) srcs.push("単価: " + DATA.srcLine(p));
+      return "<tr>" +
+        "<td>" + esc(c.name) + (hasOv ? ' <span class="badge accent">自分の値</span>' : "") + "</td>" +
+        "<td>" + esc(c.cat) + "</td>" +
+        '<td class="num">' + valCell(y, u) + "</td>" +
+        '<td class="num">' + valCell(p, "円/" + u) + "</td>" +
+        '<td class="num">' + pctCell(c.costRate) + "</td>" +
+        '<td class="num">' + valCell(c.laborH10a, "") + "</td>" +
+        '<td class="src-cell">' + srcs.map(esc).join("<br>") + "</td>" +
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-edit="' + esc(c.id) + '">直す</button>' +
+        (hasOv ? ' <button class="btn ghost sm" data-revert="' + esc(c.id) + '">元に戻す</button>' : "") +
+        "</td></tr>";
+    }).join("");
+    tb.querySelectorAll("[data-edit]").forEach(function (b) {
+      b.addEventListener("click", function () { openEdit(b.dataset.edit); });
+    });
+    tb.querySelectorAll("[data-revert]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var c = baseCrops.find(function (x) { return x.id === b.dataset.revert; });
+        if (!confirm("「" + (c ? c.name : b.dataset.revert) + "」の上書きを取り消して、元の値に戻します。よろしいですか？")) return;
+        delete cc.overrides[b.dataset.revert];
+        saveAndReload("上書きを取り消しました。元の値に戻っています。");
+      });
+    });
+  }
+
+  // 上書きフォームの1項目
+  function editField(id, label, unit, cur, curText, ovVal, max) {
+    return '<div class="field"><label>' + esc(label) +
+      '<span class="val">' + curText + "</span></label>" +
+      '<div class="input-unit"><input type="number" id="' + id + '" min="0" ' + (max != null ? 'max="' + max + '" ' : "") +
+      'step="any" value="' + (ovVal != null ? esc(ovVal) : "") + '" placeholder="空欄＝元の値のまま"><span class="u">' + esc(unit) + "</span></div>" +
+      (cur && cur.jibun && cur.note ? '<div class="note">' + esc(cur.note) + "</div>" : "") +
+      "</div>";
+  }
+
+  function openEdit(id) {
+    var c = baseCrops.find(function (x) { return x.id === id; });
+    if (!c) return;
+    editingId = id;
+    var ov = cc.overrides[id] || {};
+    var u = cropUnit(c), yk = yieldKey(c), pk = priceKey(c);
+    $("editTitle").textContent = "「" + c.name + "」を自分の値に直す";
+    var curTyphoon = (c.typhoonExp != null && !isNaN(c.typhoonExp)) ? Math.round(c.typhoonExp * 100) + "%（仮・自分の見立てで上書き前提）" : "―";
+    $("editFields").innerHTML =
+      editField("e-yield", "単収（" + u + "/10a）", u, c[yk],
+        c[yk] && c[yk].v != null ? esc(CORE.fmt.num(c[yk].v)) + flagHtml(c[yk]) : "―（要確認）",
+        ov[yk]) +
+      editField("e-price", "単価（円/" + u + "）", "円/" + u, c[pk],
+        c[pk] && c[pk].v != null ? esc(CORE.fmt.num(c[pk].v)) + flagHtml(c[pk]) : "―（要確認）",
+        ov[pk]) +
+      editField("e-cost", "経費率", "%", c.costRate,
+        c.costRate && c.costRate.v != null ? esc(CORE.fmt.pct(c.costRate.v)) + flagHtml(c.costRate) : "―（要確認）",
+        ov.costRate != null ? Math.round(ov.costRate * 1000) / 10 : null, 100) +
+      editField("e-labor", "労働時間（h/10a）", "時間", c.laborH10a,
+        c.laborH10a && c.laborH10a.v != null ? esc(CORE.fmt.num(c.laborH10a.v)) + flagHtml(c.laborH10a) : "―（要確認）",
+        ov.laborH10a) +
+      editField("e-typhoon", "台風期に畑に出ている度合い", "%", null,
+        esc(curTyphoon),
+        ov.typhoonExp != null ? Math.round(ov.typhoonExp * 1000) / 10 : null, 100);
+    $("editErr").innerHTML = "";
+    $("editCard").classList.remove("hide");
+    $("editCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  $("editClose").addEventListener("click", function () {
+    $("editCard").classList.add("hide");
+    editingId = null;
+  });
+  $("editRevert").addEventListener("click", function () {
+    if (!editingId) return;
+    var c = baseCrops.find(function (x) { return x.id === editingId; });
+    if (!confirm("「" + (c ? c.name : editingId) + "」の上書きをすべて取り消して、元の値に戻します。よろしいですか？")) return;
+    delete cc.overrides[editingId];
+    saveAndReload("上書きを取り消しました。元の値に戻っています。");
+  });
+  $("editSave").addEventListener("click", function () {
+    if (!editingId) return;
+    var c = baseCrops.find(function (x) { return x.id === editingId; });
+    if (!c) return;
+    var errors = [], ov = {};
+    var defs = [
+      { el: "e-yield", key: yieldKey(c), label: "単収" },
+      { el: "e-price", key: priceKey(c), label: "単価" },
+      { el: "e-cost", key: "costRate", label: "経費率", max: 100, pct: true },
+      { el: "e-labor", key: "laborH10a", label: "労働時間" },
+      { el: "e-typhoon", key: "typhoonExp", label: "台風期の度合い", max: 100, pct: true },
+    ];
+    defs.forEach(function (d) {
+      var r = readNum($(d.el).value, d.label, d.max);
+      if (r.err) { errors.push(r.err); return; }
+      if (r.empty) return;
+      ov[d.key] = d.pct ? r.n / 100 : r.n;
+    });
+    errBox($("editErr"), errors);
+    if (errors.length) return;
+    /* 他ページ（作付けの決定・資金繰り）で直した入金月の上書きを、数値の再保存で消さない */
+    var prevOv = cc.overrides[editingId];
+    if (prevOv && prevOv.months) ov.months = prevOv.months;
+    if (Object.keys(ov).length) cc.overrides[editingId] = ov;
+    else delete cc.overrides[editingId];
+    saveAndReload("「" + c.name + "」を保存しました。全ページの品目一覧に反映されています。");
+  });
+
+  /* ============================================================
+     追加した品目（cc.custom が正）
+     ============================================================ */
+  var editingCustomId = null;
+
+  function monthsText(a) {
+    return (a && a.length) ? a.map(function (m) { return m + "月"; }).join("・") : "―";
+  }
+
+  function renderCustomTable() {
+    var tb = $("customTbl").querySelector("tbody");
+    if (!cc.custom.length) {
+      $("customWrap").classList.add("hide");
+      $("customEmpty").classList.remove("hide");
+      return;
+    }
+    $("customWrap").classList.remove("hide");
+    $("customEmpty").classList.add("hide");
+    tb.innerHTML = cc.custom.map(function (c) {
+      var hon = c.unit === "本";
+      var y = hon ? c.yieldHon10a : c.yieldKg10a;
+      var p = hon ? c.priceYenHon : c.priceYenKg;
+      var u = hon ? "本" : "kg";
+      return "<tr>" +
+        "<td>" + esc(c.name) + ' <span class="badge accent">自分の値</span></td>' +
+        "<td>" + esc(c.cat) + "</td>" +
+        '<td class="num">' + esc(CORE.fmt.num(y)) + " " + u + "</td>" +
+        '<td class="num">' + esc(CORE.fmt.num(p)) + " 円/" + u + "</td>" +
+        '<td class="num">' + esc(CORE.fmt.pct(c.costRate)) + "</td>" +
+        '<td class="num">' + esc(CORE.fmt.num(c.laborH10a)) + "</td>" +
+        "<td>" + esc(monthsText(c.months && c.months.harvest)) + "</td>" +
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-cedit="' + esc(c.id) + '">直す</button> ' +
+        '<button class="btn ghost sm" data-cdel="' + esc(c.id) + '">削除</button></td>' +
+        "</tr>";
+    }).join("");
+    tb.querySelectorAll("[data-cedit]").forEach(function (b) {
+      b.addEventListener("click", function () { openCustomEdit(b.dataset.cedit); });
+    });
+    tb.querySelectorAll("[data-cdel]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var c = cc.custom.find(function (x) { return x.id === b.dataset.cdel; });
+        if (!confirm("追加した品目「" + (c ? c.name : "") + "」を削除します。全ページの一覧からも消えます。よろしいですか？")) return;
+        cc.custom = cc.custom.filter(function (x) { return x.id !== b.dataset.cdel; });
+        saveAndReload("品目を削除しました。");
+      });
+    });
+  }
+
+  /* ---------- 追加・編集フォーム ---------- */
+  var addUnit = "kg";
+  var selMonths = { plant: [], harvest: [], income: [] };
+  var selTransport = { air: false, ship: false };
+
+  function renderMonthChips(boxId, key) {
+    var box = $(boxId);
+    box.innerHTML = "";
+    for (var m = 1; m <= 12; m++) {
+      (function (m) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "chip" + (selMonths[key].indexOf(m) >= 0 ? " on" : "");
+        b.textContent = m + "月";
+        b.addEventListener("click", function () {
+          var i = selMonths[key].indexOf(m);
+          if (i >= 0) selMonths[key].splice(i, 1);
+          else { selMonths[key].push(m); selMonths[key].sort(function (a, b) { return a - b; }); }
+          b.classList.toggle("on", selMonths[key].indexOf(m) >= 0);
+        });
+        box.appendChild(b);
+      })(m);
+    }
+  }
+  function renderAllMonthChips() {
+    renderMonthChips("a-mplant", "plant");
+    renderMonthChips("a-mharvest", "harvest");
+    renderMonthChips("a-mincome", "income");
+  }
+
+  function applyUnit(u) {
+    addUnit = u === "本" ? "本" : "kg";
+    $("a-yield-u").textContent = addUnit;
+    $("a-price-u").textContent = "円/" + addUnit;
+    $("a-unit").querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.v === addUnit);
+    });
+  }
+  CORE.bindSeg($("a-unit"), applyUnit);
+
+  ["a-air", "a-ship"].forEach(function (id) {
+    $(id).addEventListener("click", function () {
+      var key = id === "a-air" ? "air" : "ship";
+      selTransport[key] = !selTransport[key];
+      $(id).classList.toggle("on", selTransport[key]);
+    });
+  });
+
+  function resetAddForm() {
+    editingCustomId = null;
+    $("a-name").value = ""; $("a-cat").value = "野菜";
+    $("a-yield").value = ""; $("a-price").value = "";
+    $("a-cost").value = "50"; $("a-labor").value = "";
+    $("a-typhoon").value = "30"; $("a-facility").value = "";
+    selMonths = { plant: [], harvest: [], income: [] };
+    selTransport = { air: false, ship: false };
+    $("a-air").classList.remove("on"); $("a-ship").classList.remove("on");
+    applyUnit("kg");
+    renderAllMonthChips();
+    $("addTitle").textContent = "品目を追加する";
+    $("a-save").textContent = "この品目を保存する";
+    $("a-cancel").classList.add("hide");
+    $("addErr").innerHTML = "";
+  }
+
+  function openCustomEdit(id) {
+    var c = cc.custom.find(function (x) { return x.id === id; });
+    if (!c) return;
+    editingCustomId = id;
+    var hon = c.unit === "本";
+    $("a-name").value = c.name;
+    $("a-cat").value = CATS.indexOf(c.cat) >= 0 ? c.cat : "その他";
+    applyUnit(hon ? "本" : "kg");
+    $("a-yield").value = hon ? c.yieldHon10a : c.yieldKg10a;
+    $("a-price").value = hon ? c.priceYenHon : c.priceYenKg;
+    $("a-cost").value = Math.round((c.costRate || 0) * 1000) / 10;
+    $("a-labor").value = c.laborH10a;
+    $("a-typhoon").value = Math.round((c.typhoonExp || 0) * 1000) / 10;
+    $("a-facility").value = c.facility || "";
+    selMonths = {
+      plant: (c.months && c.months.plant || []).slice(),
+      harvest: (c.months && c.months.harvest || []).slice(),
+      income: (c.months && c.months.income || []).slice(),
+    };
+    selTransport = { air: !!(c.transport && c.transport.air), ship: !!(c.transport && c.transport.ship) };
+    $("a-air").classList.toggle("on", selTransport.air);
+    $("a-ship").classList.toggle("on", selTransport.ship);
+    renderAllMonthChips();
+    $("addTitle").textContent = "「" + c.name + "」を直す";
+    $("a-save").textContent = "この内容で保存する";
+    $("a-cancel").classList.remove("hide");
+    $("addErr").innerHTML = "";
+    $("addCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  $("a-cancel").addEventListener("click", resetAddForm);
+
+  function genId() {
+    var id;
+    do {
+      id = "c_" + Date.now().toString(36) + Math.floor(Math.random() * 46656).toString(36);
+    } while (cc.custom.some(function (x) { return x.id === id; }) ||
+             DATA.CROPS.some(function (x) { return x.id === id; }));
+    return id;
+  }
+
+  $("a-save").addEventListener("click", function () {
+    var errors = [];
+    var name = $("a-name").value.trim();
+    if (!name) errors.push("品目名を入力してください。");
+    var rYield = readNum($("a-yield").value, "収量");
+    if (rYield.err) errors.push(rYield.err);
+    else if (rYield.empty) errors.push("10a当たりの収量を入力してください（0以上）。");
+    var rPrice = readNum($("a-price").value, "単価");
+    if (rPrice.err) errors.push(rPrice.err);
+    else if (rPrice.empty) errors.push("販売単価を入力してください（0以上）。");
+    var rCost = readNum($("a-cost").value, "経費率", 100);
+    if (rCost.err) errors.push(rCost.err);
+    else if (rCost.empty) errors.push("経費率を入力してください（0〜100%）。");
+    var rLabor = readNum($("a-labor").value, "労働時間");
+    if (rLabor.err) errors.push(rLabor.err);
+    else if (rLabor.empty) errors.push("10a当たりの労働時間を入力してください（0以上）。");
+    var rTy = readNum($("a-typhoon").value, "台風期の度合い", 100);
+    if (rTy.err) errors.push(rTy.err);
+    else if (rTy.empty) errors.push("台風期に畑に出ている度合いを入力してください（0〜100%）。");
+    if (!selMonths.harvest.length) errors.push("収穫の月を1つ以上選んでください。");
+    /* 入金月が未選択なら、収穫の月と同じ扱いにする（学びの途中で止めない） */
+    if (!selMonths.income.length && selMonths.harvest.length) selMonths.income = selMonths.harvest.slice();
+    errBox($("addErr"), errors);
+    if (errors.length) return;
+
+    var entry = {
+      id: editingCustomId || genId(),
+      name: name,
+      cat: $("a-cat").value,
+      unit: addUnit,
+      costRate: rCost.n / 100,
+      laborH10a: rLabor.n,
+      months: {
+        plant: selMonths.plant.slice(),
+        harvest: selMonths.harvest.slice(),
+        income: selMonths.income.slice(),
+      },
+      typhoonExp: rTy.n / 100,
+      facility: $("a-facility").value.trim(),
+      transport: { air: selTransport.air, ship: selTransport.ship },
+    };
+    if (addUnit === "本") { entry.yieldHon10a = rYield.n; entry.priceYenHon = rPrice.n; }
+    else { entry.yieldKg10a = rYield.n; entry.priceYenKg = rPrice.n; }
+
+    if (editingCustomId) {
+      cc.custom = cc.custom.map(function (x) { return x.id === editingCustomId ? entry : x; });
+    } else {
+      cc.custom.push(entry);
+    }
+    saveAndReload("「" + name + "」を保存しました。全ページの品目一覧に反映されています。");
+  });
+
+  /* ============================================================
+     書き出し・読み込み・初期値に戻す
+     ============================================================ */
+  $("btnExport").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(cc, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    var d = new Date();
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    a.href = URL.createObjectURL(blob);
+    a.download = "hinmoku_" + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  });
+
+  // 読み込むJSONの検証。壊れていれば {errors:[…]}、通れば {value:…}
+  function validateImport(obj) {
+    var errors = [];
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) {
+      return { errors: ["ファイルの中身が品目データの形（overrides と custom を持つオブジェクト）ではありません。"] };
+    }
+    var out = { overrides: {}, custom: [] };
+    var ov = obj.overrides;
+    if (ov != null) {
+      if (typeof ov !== "object" || Array.isArray(ov)) {
+        errors.push("overrides の形が正しくありません。");
+      } else {
+        Object.keys(ov).forEach(function (id) {
+          var src = ov[id];
+          if (!src || typeof src !== "object" || Array.isArray(src)) {
+            errors.push("overrides の「" + id + "」の形が正しくありません。");
+            return;
+          }
+          var dst = {};
+          OV_KEYS.forEach(function (k) {
+            if (src[k] == null) return;
+            var n = Number(src[k]);
+            if (!isFinite(n) || n < 0) { errors.push("overrides の「" + id + "」の " + k + " が数値（0以上）ではありません。"); return; }
+            if ((k === "costRate" || k === "typhoonExp") && n > 1) { errors.push("overrides の「" + id + "」の " + k + " は0〜1の小数で入れてください。"); return; }
+            dst[k] = n;
+          });
+          /* 入金月の上書き（months.income）は1〜12月の整数配列だけ通す */
+          if (src.months && Array.isArray(src.months.income)) {
+            var mi = src.months.income.map(Number).filter(function (m) { return Number.isInteger(m) && m >= 1 && m <= 12; });
+            if (mi.length) dst.months = { income: mi };
+          }
+          if (Object.keys(dst).length) out.overrides[id] = dst;
+        });
+      }
+    }
+    var cu = obj.custom;
+    if (cu != null) {
+      if (!Array.isArray(cu)) {
+        errors.push("custom の形（配列）が正しくありません。");
+      } else {
+        var seen = {};
+        cu.forEach(function (c, i) {
+          var where = "custom の" + (i + 1) + "件目";
+          if (!c || typeof c !== "object" || Array.isArray(c)) { errors.push(where + "の形が正しくありません。"); return; }
+          if (typeof c.id !== "string" || !/^c_[A-Za-z0-9_-]+$/.test(c.id)) { errors.push(where + "の id が「c_英数字」になっていません。"); return; }
+          if (seen[c.id] || DATA.CROPS.some(function (x) { return x.id === c.id && !x.custom; })) { errors.push(where + "の id（" + c.id + "）が重複しています。"); return; }
+          seen[c.id] = true;
+          if (typeof c.name !== "string" || !c.name.trim()) { errors.push(where + "に品目名がありません。"); return; }
+          var hon = c.unit === "本";
+          if (c.unit !== "kg" && c.unit !== "本") { errors.push(where + "（" + c.name + "）の unit は kg か 本 にしてください。"); return; }
+          var y = hon ? c.yieldHon10a : c.yieldKg10a;
+          var p = hon ? c.priceYenHon : c.priceYenKg;
+          if (!isFinite(Number(y)) || Number(y) < 0) { errors.push(where + "（" + c.name + "）の単収が数値（0以上）ではありません。"); return; }
+          if (!isFinite(Number(p)) || Number(p) < 0) { errors.push(where + "（" + c.name + "）の単価が数値（0以上）ではありません。"); return; }
+          if (!isFinite(Number(c.costRate)) || Number(c.costRate) < 0 || Number(c.costRate) > 1) { errors.push(where + "（" + c.name + "）の costRate は0〜1の小数にしてください。"); return; }
+          if (!isFinite(Number(c.laborH10a)) || Number(c.laborH10a) < 0) { errors.push(where + "（" + c.name + "）の laborH10a が数値（0以上）ではありません。"); return; }
+          var m = c.months || {};
+          if (!isMonthArray(m.plant || []) || !isMonthArray(m.harvest || []) || !isMonthArray(m.income || [])) { errors.push(where + "（" + c.name + "）の months は1〜12の整数の配列にしてください。"); return; }
+          if (!(m.harvest || []).length || !(m.income || []).length) { errors.push(where + "（" + c.name + "）の harvest と income は1つ以上の月が必要です。"); return; }
+          if (c.typhoonExp != null && (!isFinite(Number(c.typhoonExp)) || Number(c.typhoonExp) < 0 || Number(c.typhoonExp) > 1)) { errors.push(where + "（" + c.name + "）の typhoonExp は0〜1の小数にしてください。"); return; }
+          var entry = {
+            id: c.id, name: c.name.trim(),
+            cat: CATS.indexOf(c.cat) >= 0 ? c.cat : "その他",
+            unit: hon ? "本" : "kg",
+            costRate: Number(c.costRate), laborH10a: Number(c.laborH10a),
+            months: { plant: (m.plant || []).slice(), harvest: m.harvest.slice(), income: m.income.slice() },
+            typhoonExp: c.typhoonExp != null ? Number(c.typhoonExp) : 0.3,
+            facility: typeof c.facility === "string" ? c.facility : "",
+            transport: { air: !!(c.transport && c.transport.air), ship: !!(c.transport && c.transport.ship) },
+          };
+          if (hon) { entry.yieldHon10a = Number(y); entry.priceYenHon = Number(p); }
+          else { entry.yieldKg10a = Number(y); entry.priceYenKg = Number(p); }
+          out.custom.push(entry);
+        });
+      }
+    }
+    if (errors.length) return { errors: errors };
+    return { value: out };
+  }
+
+  $("btnImport").addEventListener("click", function () { $("importFile").click(); });
+  $("importFile").addEventListener("change", function () {
+    var f = $("importFile").files[0];
+    $("importFile").value = "";
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var obj;
+      try { obj = JSON.parse(reader.result); }
+      catch (e) {
+        errBox($("ioErr"), ["JSONとして読めないファイルです。書き出したファイルをそのまま選んでください。（" + e.message + "）"]);
+        return;
+      }
+      var r = validateImport(obj);
+      if (r.errors) {
+        errBox($("ioErr"), ["読み込みを中止しました。いまの内容は変更していません。"].concat(r.errors.slice(0, 8)));
+        return;
+      }
+      var n = Object.keys(r.value.overrides).length + r.value.custom.length;
+      if (!confirm("読み込むと、この端末のいまの上書き・追加品目はファイルの内容（上書き" +
+        Object.keys(r.value.overrides).length + "件・追加品目" + r.value.custom.length + "件）に置き換わります。よろしいですか？")) return;
+      cc = r.value;
+      saveAndReload("JSONを読み込みました（" + n + "件）。全ページの品目一覧に反映されています。");
+    };
+    reader.onerror = function () { errBox($("ioErr"), ["ファイルを読み込めませんでした。"]); };
+    reader.readAsText(f);
+  });
+
+  $("btnReset").addEventListener("click", function () {
+    if (!confirm("収録品目の上書きと追加した品目をすべて消して、初期値に戻します。控えを取っていない値は失われます。よろしいですか？")) return;
+    CORE.store.remove("cropCustom");
+    try { sessionStorage.setItem(MSG_KEY, "初期値に戻しました。"); } catch (e) {}
+    location.reload();
+  });
+
+  /* ---------- 初期表示 ---------- */
+  renderBaseTable();
+  renderCustomTable();
+  resetAddForm();
+  var hadMsg = false;
+  try {
+    var m = sessionStorage.getItem(MSG_KEY);
+    if (m) {
+      hadMsg = true;
+      sessionStorage.removeItem(MSG_KEY);
+      showMsg("good", m);
+      /* 品目の値を保存した直後（reloadを挟む）だけ、次の一歩を出す。
+         削除・取り消し・初期化のメッセージには出さない。アンカーはmsg要素1つに固定 */
+      if (m.indexOf("を保存しました") > -1) {
+        var hintLinks = [
+          { label: "→ " + CORE.STEP_LABELS.sakutsuke + "で、直した数字の効き方を見る", href: "sakutsuke.html", page: "sakutsuke" },
+          { label: "→ " + CORE.STEP_LABELS.simulator + "で数年先を試算する", href: "simulator.html", page: "simulator" }
+        ].filter(function (l) { return l.page !== backId; });
+        if (backId) {
+          /* ?back= で来ている人には、元のページへの戻り口を先頭に出す（KOMA絞り込みの対象外にするため page は付けない） */
+          hintLinks.unshift({ label: "→ " + backLabel() + "に戻る（追加した品目が選べるようになっています）", href: BACK_PAGES[backId] });
+        }
+        CORE.nextHint($("msg"), hintLinks, "自分の値を保存しました");
+      }
+    }
+  } catch (e) {}
+
+  /* ?crop=品目ID があれば、その品目の編集フォームを開いた状態で表示する。
+     保存直後のreload時（メッセージ表示あり）は開かず、上の保存メッセージと戻りボタンを見せる */
+  var cropParam = qs.get("crop");
+  if (cropParam && !hadMsg) {
+    if (cc.custom.some(function (x) { return x.id === cropParam; })) openCustomEdit(cropParam);
+    else if (baseCrops.some(function (x) { return x.id === cropParam; })) openEdit(cropParam);
+    /* 該当IDが無ければ何もしない */
+  }
+})();
+  /* この下は上の囲みの外にあるので、囲みの中の小道具は使えない。要るものはここで用意する */
+  function imaEsc(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, function (m) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m];
+    });
+  }
+
+  /* ============================================================
+     段1「いま作っているもの」。
+     品目と面積を入れると、その場で1年の見通しが出る。
+     計算は sim_engine.js に任せる（式には触れない）。
+     ============================================================ */
+  var IMA_KEY = "profile";
+
+  function imaYomu() {
+    var pf = CORE.getProfile();
+    var a = (pf && Array.isArray(pf.crops)) ? pf.crops : [];
+    return a.map(function (c) {
+      return { cropId: c.cropId, areaA: (Number(c.area10a) || 0) * 10 };
+    }).filter(function (c) { return c.cropId; });
+  }
+
+  function imaKaku(rows) {
+    var pf = CORE.getProfile() || {};
+    pf.crops = rows.map(function (r) { return { cropId: r.cropId, area10a: (Number(r.areaA) || 0) / 10 }; });
+    CORE.saveProfile(pf);
+  }
+
+  /* 品目1件から、計算に渡す1行を作る。値が欠けていれば作らない（作り話をしないため） */
+  function imaItem(cropId, areaA) {
+    var reg = simBuildRegistry(DATA);
+    var r = null;
+    for (var i = 0; i < reg.length; i++) if (reg[i].id === cropId) r = reg[i];
+    if (!r) return null;
+    var y = r.yieldObj && r.yieldObj.v;
+    var pr = r.priceObj && r.priceObj.v;
+    var cr = r.costRateObj && r.costRateObj.v;
+    if (y == null || pr == null || cr == null) return null;
+    return {
+      cropId: cropId, area: Number(areaA) || 0,
+      yieldV: y, priceV: pr, costRate: cr,
+      laborH10a: (r.laborObj && r.laborObj.v) || 0,
+      /* 現役の農家はもう満作なので、立ち上がりは初年から100%にする */
+      curve: MFK_UCHITE.gennekiCurve(), typhoonExp: r.typhoonExp || 0,
+    };
+  }
+
+  function imaKeisan(rows) {
+    var items = [];
+    rows.forEach(function (r) {
+      if (!(Number(r.areaA) > 0)) return;
+      var it = imaItem(r.cropId, r.areaA);
+      if (it) items.push(it);
+    });
+    if (!items.length) return null;
+    var st = {
+      years: 1, livingMan: 0, fixedMan: 0, cashStartMan: 0, targetMan: 0,
+      loan: { amountMan: 0, ratePct: 0, termY: 1, graceY: 0 },
+      items: items, invests: [], hojo: { amountMan: 0, year: 1 },
+    };
+    var k = simCompute(st, function () { return null; }, {});
+    return { st: st, k: k, roudou: MFK_UCHITE.roudouNen(st) };
+  }
+
+  function imaCropName(id) {
+    for (var i = 0; i < DATA.CROPS.length; i++) if (DATA.CROPS[i].id === id) return DATA.CROPS[i].name;
+    if (DATA.KIBI && id === "kibi") return "さとうきび（分蜜糖）";
+    return id;
+  }
+
+  function imaFudaHtml(id) {
+    /* その品目の単価に付いている出どころを、そのまま出す */
+    var c = null;
+    for (var i = 0; i < DATA.CROPS.length; i++) if (DATA.CROPS[i].id === id) c = DATA.CROPS[i];
+    if (!c) return "";
+    var x = c.priceYenKg || c.priceYenHon;
+    if (!x) return "";
+    var l = DATA.flagLabel(x);
+    var cls = x.jisseki ? "flag jisseki" : (x.kiroku ? "flag kiroku" : (x.jibun ? "flag jibun" : "flag"));
+    if (!l) return ' <span class="flag">（県平均）</span>';
+    return ' <span class="' + cls + '">' + imaEsc(l) + "</span>";
+  }
+
+  function imaRender() {
+    var rows = imaYomu();
+    var list = document.getElementById("imaList");
+    if (!list) return;
+
+    if (!rows.length) {
+      list.innerHTML = '<p class="small muted" style="margin:0">まだ入っていません。下から品目を足してください。</p>';
+    } else {
+      list.innerHTML = rows.map(function (r, i) {
+        return '<div class="ima-gyou">'
+          + '<span class="na">' + imaEsc(imaCropName(r.cropId)) + imaFudaHtml(r.cropId) + "</span>"
+          + '<input type="number" min="0" step="1" inputmode="numeric" data-i="' + i + '" value="'
+          + (r.areaA ? imaEsc(String(r.areaA)) : "") + '" aria-label="' + imaEsc(imaCropName(r.cropId)) + 'の面積">'
+          + '<span class="tani">a</span>'
+          + '<button class="hazusu" type="button" data-del="' + i + '">この品目を外す</button>'
+          + "</div>";
+      }).join("");
+    }
+
+    list.querySelectorAll("input[data-i]").forEach(function (el) {
+      el.addEventListener("input", function () {
+        var rs = imaYomu();
+        var n = Number(el.value);
+        rs[+el.getAttribute("data-i")].areaA = (isFinite(n) && n > 0) ? n : 0;
+        imaKaku(rs);
+        imaKekkaRender();
+      });
+    });
+    list.querySelectorAll("button[data-del]").forEach(function (el) {
+      el.addEventListener("click", function () {
+        var rs = imaYomu();
+        rs.splice(+el.getAttribute("data-del"), 1);
+        imaKaku(rs);
+        imaRender();
+        imaKekkaRender();
+      });
+    });
+
+    /* 足せる品目の一覧（もう入れているものは出さない） */
+    var sel = document.getElementById("imaSel");
+    var aru = {};
+    rows.forEach(function (r) { aru[r.cropId] = 1; });
+    var opts = ['<option value="">品目を選んでください</option>'];
+    DATA.CROPS.forEach(function (c) {
+      if (aru[c.id]) return;
+      opts.push('<option value="' + imaEsc(c.id) + '">' + imaEsc(c.name) + "</option>");
+    });
+    if (DATA.KIBI && !aru.kibi) opts.push('<option value="kibi">さとうきび（分蜜糖）</option>');
+    sel.innerHTML = opts.join("");
+  }
+
+  function imaKekkaRender() {
+    var box = document.getElementById("imaKekka");
+    if (!box) return;
+    var r = imaKeisan(imaYomu());
+    if (!r) {
+      box.innerHTML = '<p class="small muted" style="margin:12px 0 0">品目と面積を入れると、ここに1年の見通しが出ます。</p>';
+      return;
+    }
+    var y = r.k.years[0];
+    box.innerHTML =
+      '<div class="ima-kekka">'
+      + '<div class="m"><div class="l">1年の売上</div><div class="v">' + CORE.fmt.manUnit(y.sales) + "</div></div>"
+      + '<div class="m"><div class="l">1年の経費</div><div class="v">' + CORE.fmt.manUnit(y.expense) + "</div></div>"
+      + '<div class="m"><div class="l">農業所得（売上−経費）</div><div class="v">' + CORE.fmt.manUnit(y.income) + "</div></div>"
+      + '<div class="m"><div class="l">年間に働く時間の見込み</div><div class="v">' + CORE.fmt.num(Math.round(r.roudou)) + " 時間</div></div>"
+      + "</div>"
+      + '<p class="small muted" style="margin:10px 0 0">'
+      + "固定費・生活費・借入の返済はまだ入っていません。そのぶん、実際よりゆとりがあるように見えます。"
+      + "働く時間は、10a当たりの労働時間から出したおおよそです。</p>";
+  }
+
+  (function imaHajime() {
+    var add = document.getElementById("imaAdd");
+    if (!add) return;
+    add.addEventListener("click", function () {
+      var sel = document.getElementById("imaSel");
+      if (!sel || !sel.value) return;
+      var rs = imaYomu();
+      rs.push({ cropId: sel.value, areaA: 0 });
+      imaKaku(rs);
+      imaRender();
+      imaKekkaRender();
+    });
+    imaRender();
+    imaKekkaRender();
+  })();
+
+</script>
+</body>
+</html>

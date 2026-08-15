@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>資金繰りカレンダー｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+<style>
+  /* このページ専用の最小限の追加（共通CSSは変更しない） */
+  .month-chips { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+  .month-chips .mc { font-size: 10.5px; color: var(--ink-3); background: var(--wash); border: 1px solid var(--hairline); border-radius: 6px; padding: 1px 6px; }
+  /* 押して切り替える入金月（オン＝実登録、点線＝仮の表示） */
+  .month-chips button.mc { cursor: pointer; font-family: var(--font); line-height: 1.5; }
+  .month-chips button.mc:hover { border-color: var(--accent); color: var(--ink); }
+  .month-chips .mc.on { background: rgba(20,211,162,.16); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+  .month-chips .mc.kari { background: rgba(20,211,162,.06); border-style: dashed; border-color: rgba(20,211,162,.45); color: var(--ink-3); font-weight: 650; }
+  .row-del { background: transparent; border: none; color: var(--ink-4); cursor: pointer; font-size: 15px; padding: 4px 8px; border-radius: 6px; }
+  .row-del:hover { color: var(--critical); background: var(--critical-bg); }
+  .tbl input[type="number"], .tbl select { padding: 6px 9px; font-size: 13px; }
+  .tbl .w-area { width: 84px; } .tbl .w-man { width: 110px; } .tbl .w-month { width: 96px; } .tbl .w-label { min-width: 150px; }
+  .band-note { font-size: 11.5px; color: var(--ink-3); margin-top: 8px; }
+  @media print {
+    .viz svg text { fill: #333 !important; }
+    .viz svg line { stroke: #bbb !important; }
+    .viz svg path[stroke="#fff"] { stroke: #111 !important; }
+    .viz svg circle[fill="#fff"] { fill: #111 !important; stroke: #fff !important; }
+    .advice { background: #fff; border-color: #ccc; }
+    .advice .a-body, .kpi .k-label { color: #444; }
+    .seg, input[type="range"] { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="page-head fade-up">
+    <div class="eyebrow">CASH CALENDAR</div>
+    <h1>資金繰り<span class="grad-text">カレンダー</span></h1>
+    <p class="lede">向こう12〜18か月の月末残高を先に計算します。入金が少ない月と支払いが重なる月を早めに見つけて、支払い月の変更や借入の検討につなげるためのページです。</p>
+  </div>
+
+  <!-- ========== このページの説明 ========== -->
+  <section class="card fade-up d1">
+    <div class="grid c3">
+      <div>
+        <h3 style="font-size:13px;color:var(--accent)">できること</h3>
+        <p class="small muted">月別の入金・支払い・月末残高の一覧、資金が不足する月と不足額の警告、台風で被災した場合の残高の試算、対策（支払い月の変更・短期借入）の比較。</p>
+      </div>
+      <div>
+        <h3 style="font-size:13px;color:var(--accent)">使う場面</h3>
+        <p class="small muted">作付けを決めたあと、大きな支払いの前、農協や金融機関に借入を相談する前。</p>
+      </div>
+      <div>
+        <h3 style="font-size:13px;color:var(--accent)">他のページとのつながり</h3>
+        <p class="small muted">作付けの決定で決めた計画の入金月と、投資・雇用で計算した返済額を自動で読み込みます。単独でも使えます。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 設定 ========== -->
+  <section class="card fade-up d1">
+    <h3>いつから、いくら手元にあるか</h3>
+    <p class="sub">開いた時点で例の数字が入っています。自分の数字に直すと自動で保存されます。</p>
+    <div class="grid c3">
+      <div class="field">
+        <label>始まりの月</label>
+        <div class="flex">
+          <select id="inYear" style="max-width:110px"></select>
+          <select id="inMonth" style="max-width:96px"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label>先読みする長さ</label>
+        <div class="seg" id="segH">
+          <button data-v="12" class="on">12か月</button>
+          <button data-v="15">15か月</button>
+          <button data-v="18">18か月</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>いま手元にあるお金 <span class="val" id="cashVal"></span></label>
+        <div class="input-unit"><input type="number" id="inCash" min="-1000" step="10"><span class="u">万円</span></div>
+        <div class="note">通帳残高のうち、農業と暮らしに使える分（初期値は例）</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 入金 ========== -->
+  <div class="sec-title"><h2>入ってくるお金</h2></div>
+  <section class="card fade-up d2" id="incomeCard">
+    <div class="tbl-wrap">
+      <table class="tbl" id="incomeTbl">
+        <thead><tr><th>品目</th><th class="num">面積</th><th class="num">年間の入金（万円）</th><th>入金の月</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="flex wrap mt16">
+      <select id="addCropSel" style="max-width:230px"></select>
+      <div class="input-unit" style="max-width:120px"><input type="number" id="addCropArea" value="10" min="1" max="500"><span class="u">a</span></div>
+      <button class="btn ghost sm" id="addCropBtn">品目を足す</button>
+    </div>
+    <div id="cropAddHost"></div>
+    <p class="band-note">年間の入金の初期値は「面積 × 県平均単収 × 市場単価」の計算値です。自分の伝票の実額に書き換えてください（書き換えた値が優先されます）。入金は品目の入金月に均等割りで置きます。行の入金月は押して直せます（直した月は品目マスタに保存され、全ページで使われます）。入金の月が未登録の品目は、収穫の月に入金があるとみなします（仮・点線の薄い表示。押すとそのまま実登録になります）。収穫の月も未登録の品目だけ12か月均等で置きます（仮）。さとうきびの代金は製糖期（おおむね1〜3月）に集中します。先読みが13か月以上のときは、2年目も同じ作付けを続ける前提で置きます。</p>
+    <p class="src" id="incomeSrc"></p>
+  </section>
+
+  <!-- ========== 支出 ========== -->
+  <div class="sec-title"><h2>出ていくお金</h2><span class="hint">毎月のもの・年に数回のもの・返済の3つに分けます</span></div>
+  <div class="grid c2">
+    <section class="card fade-up d2">
+      <h3>毎月の支出</h3>
+      <p class="sub">スライダーで動かすと下の残高がすぐ変わります。</p>
+      <div class="field">
+        <label>自分・家族への給与（家計へ渡すお金・月） <span class="val" id="livingVal"></span></label>
+        <input type="range" id="inLiving" min="0" max="60" step="1">
+        <div class="note">経営から家計へ渡すお金です。毎月の支出の先頭に置いています。初期値の20万円は編集前提の例で、統計値ではありません。</div>
+      </div>
+      <p class="band-note">この欄がここに入る理由: このページは儲け（損益）ではなく、手元のお金が尽きないかを見るページです。経営と家計を分けて考えるために、家計へ渡す分を「自分・家族への給与」として毎月の支出に置いています。個人事業では、自分と家族へのこの取り分は税務上の経費にできません（事業主貸。青色事業専従者給与は別制度）。確定申告の農業所得は「給与を払う前」の金額です。だから実績の診断（損益）には入れず、資金繰りにだけ入れています。法人にお勤めの方・役員給与制の方は、実際に家計へ渡している給与の額をここに入れてください。</p>
+      <div class="field">
+        <label>農業の経費（月あたり） <span class="val" id="keihiVal"></span></label>
+        <input type="range" id="inKeihi" min="0" max="100" step="1">
+        <div class="note" id="keihiNote"></div>
+      </div>
+      <p class="src" id="keihiSrc"></p>
+
+      <h3 class="mt24">その他の支出（毎月）</h3>
+      <div class="tbl-wrap">
+        <table class="tbl" id="extraTbl">
+          <thead><tr><th>名目</th><th class="num">月々の金額（万円）</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn ghost sm mt8" id="addExtraBtn">その他の支出を足す</button>
+      <p class="band-note">自分・家族への給与・農業の経費に入らない毎月の支払い（例: 通信費・組合費・車のローン）をここに足します（最大5行）。毎月同じ額を払う前提で、下の残高の計算に入ります。</p>
+    </section>
+
+    <section class="card fade-up d3">
+      <h3>大口の支払い（年に数回のもの）</h3>
+      <p class="sub">納付書・証書に書いてある月と金額を入れてください。毎年その月に払う前提で置きます。</p>
+      <div class="tbl-wrap">
+        <table class="tbl" id="bigTbl">
+          <thead><tr><th>月</th><th>名目</th><th class="num">金額（万円）</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn ghost sm mt8" id="addBigBtn">支払いを足す</button>
+      <p class="band-note">名目の例: 固定資産税・共済掛金・国民健康保険料 など。納める月は市町村や契約ごとに違うので、このページでは決めつけません。手元の納付書の月を入れてください。</p>
+
+      <h3 class="mt24">借入の返済（毎月）</h3>
+      <div class="tbl-wrap">
+        <table class="tbl" id="loanTbl">
+          <thead><tr><th>名目</th><th class="num">月額（万円）</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button class="btn ghost sm mt8" id="addLoanBtn">返済を足す</button>
+    </section>
+  </div>
+
+  <!-- ========== 結果 ========== -->
+  <div class="sec-title"><h2>月末残高の先読み</h2><span class="hint">棒＝その月の入り(上)と出(下)、白い線＝月末残高</span></div>
+  <div class="grid c4" id="kpiRow">
+    <div class="kpi"><div class="k-label">いちばん低い月末残高</div><div class="k-value" id="kpiValley">―</div><div class="k-delta flat" id="kpiValleyM"></div></div>
+    <div class="kpi"><div class="k-label">残高がいちばん低くなるのは</div><div class="k-value" id="kpiValleyWhen">―</div><div class="k-delta flat" id="kpiValleyDist"></div></div>
+    <div class="kpi"><div class="k-label">残高マイナスの月</div><div class="k-value" id="kpiNegCnt">―</div><div class="k-delta flat" id="kpiNegList"></div></div>
+    <div class="kpi"><div class="k-label">期間の終わりの残高</div><div class="k-value" id="kpiEnd">―</div><div class="k-delta flat" id="kpiEndNote"></div></div>
+  </div>
+  <section class="card fade-up mt16">
+    <div class="flex between wrap">
+      <h3>資金繰りカレンダー</h3>
+      <button class="btn ghost sm no-print" id="printBtn">印刷して持っていく</button>
+    </div>
+    <p class="sub">赤い帯の月は月末残高がマイナスです。マウスを乗せると内訳が出ます。</p>
+    <div class="viz" id="mainChart"></div>
+    <div id="warnBox" class="mt16"></div>
+  </section>
+
+  <!-- ========== 台風シナリオ ========== -->
+  <div class="sec-title"><h2>台風で被災した場合の試算</h2><span class="hint">被災した場合の第2の残高線を引きます</span></div>
+  <section class="card fade-up">
+    <label class="flex" style="cursor:pointer"><input type="checkbox" id="stOn" style="width:auto"> <b>台風シナリオを表示する</b></label>
+    <div id="stPanel" class="hide mt16">
+      <div class="grid c3">
+        <div class="field">
+          <label>被災する月</label>
+          <select id="stMonth"></select>
+          <div class="note">台風など災害の多い時期は地域で異なります（沖縄地方への接近は7〜10月が多い。月別平年値の出典は下の表示のとおり）</div>
+        </div>
+        <div class="field">
+          <label>復旧にかかる支出 <span class="val" id="stRecoverVal"></span></label>
+          <div class="input-unit"><input type="number" id="stRecover" min="0" step="5"><span class="u">万円</span></div>
+          <div class="note">片付け・被覆材の張り替えなどの見込み額（入力）</div>
+        </div>
+        <div class="field">
+          <label>共済金・保険金の見込み</label>
+          <div class="flex">
+            <div class="input-unit" style="flex:1"><input type="number" id="stKyosai" min="0" step="5"><span class="u">万円</span></div>
+            <div class="input-unit" style="flex:1"><input type="number" id="stDelay" min="0" max="12" step="1"><span class="u">か月後</span></div>
+          </div>
+          <div class="note">金額は証書・NOSAIの窓口で確認してください。入金は被災の3か月後を初期値にしています（編集できます）。</div>
+        </div>
+      </div>
+      <h3 class="mt16">被災後の収入の減り方（品目ごと・仮）</h3>
+      <p class="sub">被災月から12か月間の入金を、この割合だけ減らします。初期値は台風期に収穫前の作物がどれだけあるかを基にした仮の値（仮）です。自分の経験で必ず上書きしてください。</p>
+      <div class="tbl-wrap">
+        <table class="tbl" id="expTbl"><thead><tr><th>品目</th><th class="num">収入の減り（%）</th><th>メモ</th></tr></thead><tbody></tbody></table>
+      </div>
+      <p class="src" id="stSrc"></p>
+    </div>
+  </section>
+
+  <!-- ========== 対策の比較 ========== -->
+  <div class="sec-title"><h2>対策で残高の落ち込みがどう変わるか</h2><span class="hint">どれかを選ぶと下の比較グラフに緑の線が増えます</span></div>
+  <section class="card fade-up">
+    <div class="grid c2">
+      <div>
+        <h3>案1: 大口支払いの月をずらす</h3>
+        <p class="sub">分納・納期の相談ができる支払いを、残高がいちばん低い月から離す案です。実際にずらせるかは支払い先との相談で決まります。</p>
+        <div class="field">
+          <label>ずらす支払い</label>
+          <select id="tsShiftSel"></select>
+        </div>
+        <div class="field">
+          <label>ずらした後の月</label>
+          <select id="tsShiftTo"></select>
+        </div>
+      </div>
+      <div>
+        <h3>案2: 短期の借入でつなぐ</h3>
+        <p class="sub">資金が不足する月の手前で借りて、毎月返す案です。利息の分だけ総支払いは増えます。</p>
+        <div class="grid c2">
+          <div class="field">
+            <label>借りる金額</label>
+            <div class="input-unit"><input type="number" id="tsLoan" min="0" step="10"><span class="u">万円</span></div>
+          </div>
+          <div class="field">
+            <label>借りる月</label>
+            <select id="tsLoanMonth"></select>
+          </div>
+          <div class="field">
+            <label>年利率（仮・編集）</label>
+            <div class="input-unit"><input type="number" id="tsRate" min="0" max="20" step="0.1"><span class="u">%</span></div>
+          </div>
+          <div class="field">
+            <label>返す回数</label>
+            <div class="input-unit"><input type="number" id="tsMonths" min="1" max="36" step="1"><span class="u">回</span></div>
+          </div>
+        </div>
+        <div class="note">利息は簡易計算（金額 × 年利率 × 回数÷12 を均等割り）です。実際の返済額は金融機関の見積りで確認してください。</div>
+      </div>
+    </div>
+    <div class="grid c3 mt16" id="tsKpis">
+      <div class="kpi"><div class="k-label">いまの最低残高</div><div class="k-value" id="tsBase">―</div></div>
+      <div class="kpi"><div class="k-label">対策後の最低残高</div><div class="k-value" id="tsAfter">―</div></div>
+      <div class="kpi"><div class="k-label">最低残高の変わり幅</div><div class="k-value" id="tsDiff">―</div><div class="k-delta flat" id="tsDiffNote"></div></div>
+    </div>
+    <button class="btn ghost sm mt16" id="tsReset">対策を外す</button>
+  </section>
+
+  <!-- ========== 残高の比較 ========== -->
+  <section class="card fade-up mt16" id="cmpCard">
+    <h3>残高線の比較</h3>
+    <p class="sub" id="cmpSub">いまの計画の残高線です。台風シナリオや対策を選ぶと線が増えます。</p>
+    <div class="viz" id="cmpChart"></div>
+  </section>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/charts.js"></script>
+<script>
+CORE.renderTopbar("shikin", "../");
+document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+(function () {
+  "use strict";
+  var MAN = 10000;
+  var fmt = CORE.fmt;
+  function $(id) { return document.getElementById(id); }
+  function num(v, fb) { var n = parseFloat(v); return isNaN(n) ? (fb || 0) : n; }
+
+  /*TEST-START*/
+  /* ============ 純粋な計算部（DATAとS＝状態だけに依存） ============ */
+  var KIBI_ID = "kibi";
+  function cropById(id) { for (var i = 0; i < DATA.CROPS.length; i++) if (DATA.CROPS[i].id === id) return DATA.CROPS[i]; return null; }
+  function cropName(id) { if (id === KIBI_ID) return "さとうきび（分蜜糖）"; var c = cropById(id); return c ? c.name : id; }
+  function incomeMonthsOf(id) {
+    if (id === KIBI_ID) return DATA.KIBI ? DATA.KIBI.months.income.slice() : [];
+    var c = cropById(id);
+    var arr = (c && c.months && c.months.income) ? c.months.income.slice() : [];
+    if (!arr.length && c) {
+      /* 入金月が未登録の品目は、収穫の月に入金があるとみなす（仮）。
+         収穫月も未登録なら12か月均等（仮）。空のままだとカレンダーに現れず連動が切れる */
+      var hv = (c.months && c.months.harvest) ? c.months.harvest.slice() : [];
+      arr = hv.length ? hv : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    }
+    return arr;
+  }
+  /* 入金月の出どころ: master=登録済み / harvest=収穫月とみなした（仮） / even=12か月均等（仮） */
+  function incomeMonthKind(id) {
+    if (id === KIBI_ID) return "master";
+    var c = cropById(id);
+    if (!c) return "master";
+    if (c.months && (c.months.income || []).length) return "master";
+    if (c.months && (c.months.harvest || []).length) return "harvest";
+    return "even";
+  }
+  // 年間入金の自動計算値（面積10a単位）
+  function autoAnnualYen(id, area10a) {
+    if (id === KIBI_ID) {
+      if (!DATA.KIBI) return 0;
+      var t = area10a * DATA.KIBI.yield.r6kei.v / 1000; // トン
+      return Math.round(t * DATA.KIBI.tedori.totalYenT.v);
+    }
+    var c = cropById(id); if (!c) return 0;
+    if (c.yieldKg10a && c.priceYenKg) return Math.round(area10a * c.yieldKg10a.v * c.priceYenKg.v);
+    if (c.yieldHon10a && c.priceYenHon) return Math.round(area10a * c.yieldHon10a.v * c.priceYenHon.v);
+    return 0;
+  }
+  // 年間経費の自動計算値
+  function autoCostYen(id, area10a, annualYen) {
+    if (id === KIBI_ID) {
+      if (!DATA.KIBI) return 0;
+      // 物財費 + 雇用労働費（家族労働費は現金支出でないため除く・計算値）
+      return Math.round(area10a * (DATA.KIBI.seisanhi.buzaihi.v + DATA.KIBI.seisanhi.koyoRodo.v));
+    }
+    var c = cropById(id); if (!c) return 0;
+    if (c.cost10a) return Math.round(area10a * c.cost10a.v);
+    if (c.costRate) return Math.round(annualYen * c.costRate.v);
+    return 0;
+  }
+  function rowAnnualYen(r) { return (r.annualYen != null) ? r.annualYen : autoAnnualYen(r.id, r.area10a); }
+  function defaultExp(id) {
+    if (id === KIBI_ID) return 0.1; // 仮。倒伏しても全滅しにくい（DATA.KIBI.typhoonNote・R5年産は前年比7%減）
+    var c = cropById(id); return (c && c.typhoonExp != null) ? c.typhoonExp : 0.3;
+  }
+  function monthsOf(S) {
+    var arr = [], y = S.startYear, m = S.startMonth;
+    for (var i = 0; i < S.horizon; i++) {
+      arr.push({ y: y, m: m, label: String(y).slice(2) + "/" + m });
+      m++; if (m > 12) { m = 1; y++; }
+    }
+    return arr;
+  }
+  function autoKeihiManOf(S) {
+    var total = 0;
+    S.incomes.forEach(function (r) { total += autoCostYen(r.id, r.area10a, rowAnnualYen(r)); });
+    return Math.round(total / 12 / MAN);
+  }
+  // 資金繰りの本体。opt = { stress: bool, taisaku: bool }
+  function buildFlows(S, opt) {
+    opt = opt || {};
+    var months = monthsOf(S), N = months.length;
+    var inSeries = S.incomes.map(function (r) { return { name: cropName(r.id), vals: new Array(N).fill(0) }; });
+    var sIdx = S.stress.idx;
+    S.incomes.forEach(function (r, ri) {
+      var im = incomeMonthsOf(r.id);
+      if (!im.length) return;
+      var per = rowAnnualYen(r) / im.length;
+      months.forEach(function (mo, i) {
+        if (im.indexOf(mo.m) < 0) return;
+        var v = per;
+        if (opt.stress && i >= sIdx && i < sIdx + 12) {
+          var e = (S.stress.exps[r.id] != null) ? S.stress.exps[r.id] : defaultExp(r.id);
+          v *= (1 - e);
+        }
+        inSeries[ri].vals[i] += v;
+      });
+    });
+    var extraIn = new Array(N).fill(0); // 共済金・借入金の入金
+    if (opt.stress && S.stress.kyosaiMan > 0) {
+      var at = sIdx + Math.round(S.stress.delayM);
+      if (at < N) extraIn[at] += S.stress.kyosaiMan * MAN;
+    }
+    if (opt.taisaku && S.taisaku.loanMan > 0 && S.taisaku.loanIdx < N) extraIn[S.taisaku.loanIdx] += S.taisaku.loanMan * MAN;
+
+    var livingYen = S.livingMan * MAN;
+    var keihiYen = ((S.keihiMan != null) ? S.keihiMan : autoKeihiManOf(S)) * MAN;
+    var extraMonthlyYen = 0;
+    (S.extraExpenses || []).forEach(function (x) { extraMonthlyYen += num(x.man) * MAN; });
+    var outLiving = new Array(N).fill(livingYen);
+    var outKeihi = new Array(N).fill(keihiYen);
+    var outExtra = new Array(N).fill(extraMonthlyYen);
+    var outBig = new Array(N).fill(0), outLoan = new Array(N).fill(0), outRecover = new Array(N).fill(0);
+    var bigs = S.bigPays.map(function (b, bi) {
+      if (opt.taisaku && S.taisaku.shiftIdx === bi) return { month: S.taisaku.shiftTo, amountMan: b.amountMan };
+      return b;
+    });
+    months.forEach(function (mo, i) {
+      bigs.forEach(function (b) { if (+b.month === mo.m) outBig[i] += num(b.amountMan) * MAN; });
+      S.loans.forEach(function (l) { outLoan[i] += num(l.monthlyMan) * MAN; });
+    });
+    if (opt.stress && S.stress.recoverMan > 0 && sIdx < N) outRecover[sIdx] += S.stress.recoverMan * MAN;
+    if (opt.taisaku && S.taisaku.loanMan > 0) {
+      var nRep = Math.max(1, Math.round(S.taisaku.months));
+      var totalRep = S.taisaku.loanMan * MAN * (1 + (S.taisaku.ratePct / 100) * nRep / 12);
+      var perRep = totalRep / nRep;
+      for (var k = 1; k <= nRep; k++) {
+        var idx = S.taisaku.loanIdx + k;
+        if (idx < N) outLoan[idx] += perRep;
+      }
+    }
+    var inflow = new Array(N).fill(0), outflow = new Array(N).fill(0), balance = new Array(N).fill(0);
+    var bal = S.cashStartMan * MAN;
+    for (var i = 0; i < N; i++) {
+      var pin = extraIn[i]; inSeries.forEach(function (s) { pin += s.vals[i]; });
+      var pout = outLiving[i] + outKeihi[i] + outExtra[i] + outBig[i] + outLoan[i] + outRecover[i];
+      inflow[i] = pin; outflow[i] = pout;
+      bal += pin - pout; balance[i] = bal;
+    }
+    return { months: months, inSeries: inSeries, extraIn: extraIn,
+      outLiving: outLiving, outKeihi: outKeihi, outExtra: outExtra, outBig: outBig, outLoan: outLoan, outRecover: outRecover,
+      inflow: inflow, outflow: outflow, balance: balance };
+  }
+  /*TEST-END*/
+
+  /* ============ 入金月の直接修正（正は品目マスタ cropCustom への書き戻し） ============
+     形式は hinmoku.html と同じ: 収録品目は overrides[品目id].months.income、
+     追加品目は custom 配列側の months.income を更新する。ページ独自の保存はしない。
+     さとうきび（KIBI_ID）は品目マスタ外のため編集対象外 */
+  var cc = CORE.store.load("cropCustom", null);
+  if (!cc || typeof cc !== "object" || Array.isArray(cc)) cc = {};
+  if (!cc.overrides || typeof cc.overrides !== "object" || Array.isArray(cc.overrides)) cc.overrides = {};
+  if (!Array.isArray(cc.custom)) cc.custom = [];
+  function canEditIncomeMonths(id) { return id !== KIBI_ID && !!cropById(id); }
+  function writeIncomeMonths(cropId, arr) {
+    arr = arr.slice().sort(function (a, b) { return a - b; });
+    var base = cropById(cropId);
+    if (!base || !arr.length) return false;
+    if (base.custom) {
+      var entry = null;
+      cc.custom.forEach(function (e) { if (e && e.id === cropId) entry = e; });
+      if (!entry) return false;
+      if (!entry.months) entry.months = { plant: [], harvest: [], income: [] };
+      entry.months.income = arr.slice();
+    } else {
+      var ov = cc.overrides[cropId] || {};
+      ov.months = Object.assign({}, ov.months || {}, { income: arr.slice() });
+      cc.overrides[cropId] = ov;
+    }
+    if (!CORE.store.save("cropCustom", cc)) return false;
+    /* メモリ上の品目データも更新して、この場で表とグラフを再計算できるようにする */
+    if (!base.months) base.months = { plant: [], harvest: [], income: [] };
+    base.months.income = arr.slice();
+    return true;
+  }
+
+  /* ============ 状態 ============ */
+  var now = new Date();
+  var S = {
+    startYear: now.getFullYear(), startMonth: now.getMonth() + 1, horizon: 12,
+    cashStartMan: 100, livingMan: 20, keihiMan: null,
+    incomes: [], bigPays: [], loans: [], extraExpenses: [],
+    stress: { on: false, idx: 1, recoverMan: 50, kyosaiMan: 0, delayM: 3, exps: {} },
+    taisaku: { shiftIdx: -1, shiftTo: 1, loanMan: 0, loanIdx: 0, ratePct: 2, months: 12 },
+  };
+  var incomeSourceLabel = "";
+  var incomeSourceKind = "example";
+
+  function loadState() {
+    var saved = CORE.store.load("cashflow", null);
+    /* 投資・雇用ページは incomes を持たない cashflow（loans だけ）を保存する。
+       品目を plan/profile から読む場合でも、保存済みの返済・大きな支払いは失わずに引き継ぐ */
+    function mergeSavedExtras() {
+      if (!saved) return;
+      if (saved.loans && saved.loans.length && !S.loans.length) {
+        S.loans = saved.loans.map(function (l) { return { label: l.label || "", monthlyMan: Math.round(num(l.monthly) / MAN * 10) / 10 }; });
+      }
+      if (saved.bigPays && saved.bigPays.length && !S.bigPays.length) {
+        S.bigPays = saved.bigPays.map(function (b) { return { month: b.month, label: b.label || "", amountMan: Math.round(num(b.amount) / MAN * 10) / 10 }; });
+      }
+    }
+    /* incomes が空配列でも「保存済み」として復元する（全行削除した状態を尊重する）。
+       行を全部消しても再読込で例の作付けが復活しない（現場フィードバック 2026-07-31）。
+       投資・雇用ページが保存する incomes 無しの cashflow は従来どおり素通しする */
+    if (saved && Array.isArray(saved.incomes)) {
+      S.startYear = saved.startYear || S.startYear;
+      S.startMonth = saved.startMonth || S.startMonth;
+      S.horizon = saved.horizon || 12;
+      S.cashStartMan = Math.round(num(saved.cashStart, S.cashStartMan * MAN) / MAN);
+      S.livingMan = Math.round(num(saved.living, S.livingMan * MAN) / MAN);
+      S.keihiMan = (saved.keihi != null) ? Math.round(saved.keihi / MAN) : null;
+      S.incomes = saved.incomes.map(function (r) { return { id: r.cropId, area10a: num(r.area10a, 1), annualYen: (r.annualYen != null) ? r.annualYen : null }; });
+      S.bigPays = (saved.bigPays || []).map(function (b) { return { month: b.month, label: b.label || "", amountMan: Math.round(num(b.amount) / MAN * 10) / 10 }; });
+      S.loans = (saved.loans || []).map(function (l) { return { label: l.label || "", monthlyMan: Math.round(num(l.monthly) / MAN * 10) / 10 }; });
+      /* 旧データに extraExpenses が無くても動く（後方互換） */
+      S.extraExpenses = (saved.extraExpenses || []).slice(0, 5).map(function (x) { return { label: (x && x.label) || "", man: num(x && x.man) }; });
+      if (saved.stress) { S.stress = Object.assign(S.stress, saved.stress); S.stress.on = false; }
+      incomeSourceLabel = "保存したデータを復元しました";
+      incomeSourceKind = "saved";
+      return;
+    }
+    var plan = CORE.store.load("plan", null);
+    if (plan && plan.items && plan.items.length) {
+      S.incomes = plan.items.map(function (it) {
+        var annual = null;
+        if (it.yieldKg10a != null && it.priceYenKg != null) annual = Math.round(it.area10a * it.yieldKg10a * it.priceYenKg);
+        return { id: it.cropId, area10a: it.area10a, annualYen: annual };
+      });
+      incomeSourceLabel = "「作付けの決定」の確定案（" + (plan.name || "無題") + "）を読み込みました";
+      incomeSourceKind = "plan";
+      mergeSavedExtras();
+      return;
+    }
+    var prof = CORE.getProfile();
+    if (prof.crops && prof.crops.length) {
+      S.incomes = prof.crops.map(function (c) { return { id: c.cropId, area10a: c.area10a, annualYen: null }; });
+      incomeSourceLabel = "はじめの3問で入れた品目を読み込みました";
+      incomeSourceKind = "profile";
+      mergeSavedExtras();
+      return;
+    }
+    // 何もない場合の例（編集前提の初期値。事実ではない）
+    if (DATA.KIBI) {
+      S.incomes = [
+        { id: KIBI_ID, area10a: 15, annualYen: null },
+        { id: "goya_sokusei", area10a: 2, annualYen: null },
+      ];
+      incomeSourceLabel = "例の作付け（きび1.5ha＋施設ゴーヤー20a）が入っています。自分の品目に直してください";
+    } else {
+      S.incomes = [];
+      if (DATA.CROPS[0]) S.incomes.push({ id: DATA.CROPS[0].id, area10a: 3, annualYen: null });
+      if (DATA.CROPS[1]) S.incomes.push({ id: DATA.CROPS[1].id, area10a: 2, annualYen: null });
+      incomeSourceLabel = "例の作付け（県の収録品目の先頭2つ）が入っています。自分の品目に直してください";
+    }
+    mergeSavedExtras();
+  }
+
+  function saveState() {
+    CORE.store.save("cashflow", {
+      startMonth: S.startMonth, startYear: S.startYear, horizon: S.horizon,
+      cashStart: S.cashStartMan * MAN,
+      living: S.livingMan * MAN,
+      keihi: (S.keihiMan != null) ? S.keihiMan * MAN : null,
+      incomes: S.incomes.map(function (r) { return { cropId: r.id, area10a: r.area10a, annualYen: r.annualYen }; }),
+      bigPays: S.bigPays.map(function (b) { return { month: +b.month, label: b.label, amount: Math.round(num(b.amountMan) * MAN) }; }),
+      loans: S.loans.map(function (l) { return { label: l.label, monthly: Math.round(num(l.monthlyMan) * MAN) }; }),
+      extraExpenses: S.extraExpenses.map(function (x) { return { label: x.label, man: num(x.man) }; }),
+      stress: { idx: S.stress.idx, recoverMan: S.stress.recoverMan, kyosaiMan: S.stress.kyosaiMan, delayM: S.stress.delayM, exps: S.stress.exps },
+      savedAt: new Date().toISOString(),
+    });
+  }
+
+  /* ============ 入力UIの描画 ============ */
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+  function fillMonthSelect(sel, val) {
+    sel.innerHTML = "";
+    for (var m = 1; m <= 12; m++) {
+      var o = document.createElement("option");
+      o.value = m; o.textContent = m + "月";
+      if (+val === m) o.selected = true;
+      sel.appendChild(o);
+    }
+  }
+  function fillHorizonMonthSelect(sel, idxVal) {
+    var months = monthsOf(S);
+    sel.innerHTML = "";
+    months.forEach(function (mo, i) {
+      var o = document.createElement("option");
+      o.value = i; o.textContent = mo.y + "年" + mo.m + "月";
+      if (i === idxVal) o.selected = true;
+      sel.appendChild(o);
+    });
+  }
+
+  function renderIncomeTable() {
+    var tb = $("incomeTbl").querySelector("tbody");
+    tb.innerHTML = "";
+    S.incomes.forEach(function (r, i) {
+      var im = incomeMonthsOf(r.id);
+      var annualMan = Math.round(rowAnnualYen(r) / 1000) / 10;
+      var kind = incomeMonthKind(r.id);
+      var editable = canEditIncomeMonths(r.id);
+      var regUrl = "hinmoku.html?back=shikin&crop=" + encodeURIComponent(r.id);
+      var monthNote = "";
+      if (kind === "harvest") {
+        monthNote = '<div class="band-note" style="margin-top:4px">入金の月が未登録のため、収穫の月に入金があるとみなしています（仮・点線の表示）。月を押すとそのまま実登録になります。<a href="' + regUrl + '">→ 登録する</a></div>';
+      } else if (kind === "even") {
+        monthNote = '<div class="band-note" style="margin-top:4px">入金の月が未登録のため、12か月均等で置いています（仮・点線の表示）。月を押すとそのまま実登録になります。<a href="' + regUrl + '">→ 登録する</a></div>';
+      }
+      /* 入金月のチップ。編集できる行は12か月ぶんをオン・オフの押しボタンで出す（オン＝入金月・点線＝仮） */
+      var chips;
+      if (editable) {
+        chips = "";
+        for (var m = 1; m <= 12; m++) {
+          var on = im.indexOf(m) >= 0;
+          chips += '<button type="button" class="mc' + (on ? (kind === "master" ? " on" : " kari") : "") +
+            '" data-k="im" data-i="' + i + '" data-m="' + m + '" title="押すと' + m + '月の入金のオン・オフが切り替わります（品目マスタに保存され、全ページで使われます）">' + m + "月</button>";
+        }
+      } else {
+        chips = im.map(function (m) { return '<span class="mc">' + m + "月</span>"; }).join("");
+      }
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + esc(cropName(r.id)) + (r.annualYen != null ? ' <span class="badge accent">実額</span>' : "") + "</td>" +
+        '<td class="num"><div class="input-unit w-area" style="display:inline-block"><input type="number" data-k="area" data-i="' + i + '" value="' + (r.area10a * 10) + '" min="1" max="5000"><span class="u">a</span></div></td>' +
+        '<td class="num"><input class="w-man" style="display:inline-block;width:110px" type="number" data-k="annual" data-i="' + i + '" value="' + annualMan + '" step="1"></td>' +
+        '<td><span class="month-chips">' + chips + "</span>" + monthNote + "</td>" +
+        '<td class="right"><button class="row-del" data-k="del" data-i="' + i + '" title="行を消す">×</button></td>';
+      tb.appendChild(tr);
+    });
+    if (!S.incomes.length) {
+      tb.innerHTML = '<tr><td colspan="5" class="muted">品目がありません。下から足してください。</td></tr>';
+    }
+    tb.querySelectorAll("input[data-k=area]").forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        var i = +inp.dataset.i;
+        S.incomes[i].area10a = Math.max(0.1, num(inp.value, 10) / 10);
+        S.incomes[i].annualYen = null; // 面積を変えたら自動計算に戻す
+        renderIncomeTable(); renderStressExpTable(); recalc();
+      });
+    });
+    tb.querySelectorAll("input[data-k=annual]").forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        var i = +inp.dataset.i;
+        S.incomes[i].annualYen = Math.round(num(inp.value) * MAN);
+        renderIncomeTable(); recalc();
+      });
+    });
+    tb.querySelectorAll("button[data-k=del]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        S.incomes.splice(+btn.dataset.i, 1);
+        renderIncomeTable(); renderStressExpTable(); recalc();
+      });
+    });
+    tb.querySelectorAll("button[data-k=im]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var r = S.incomes[+btn.dataset.i];
+        if (!r) return;
+        var m = +btn.dataset.m;
+        /* 押した時点の実効値（仮の収穫月とみなしを含む）を出発点に、その月だけ切り替えて実登録する */
+        var cur = incomeMonthsOf(r.id);
+        var j = cur.indexOf(m);
+        if (j >= 0) {
+          if (cur.length <= 1) return;   // 入金月は1か月以上残す
+          cur.splice(j, 1);
+        } else {
+          cur.push(m);
+        }
+        if (writeIncomeMonths(r.id, cur)) { renderIncomeTable(); recalc(); }
+      });
+    });
+  }
+
+  function renderBigTable() {
+    var tb = $("bigTbl").querySelector("tbody");
+    tb.innerHTML = "";
+    S.bigPays.forEach(function (b, i) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td><select class="w-month" data-k="bmonth" data-i="' + i + '"></select></td>' +
+        '<td><input class="w-label" type="text" data-k="blabel" data-i="' + i + '" value="' + esc(b.label) + '" placeholder="例: 固定資産税・共済掛金・国保 など"></td>' +
+        '<td class="num"><input style="width:100px" type="number" data-k="bamt" data-i="' + i + '" value="' + b.amountMan + '" min="0" step="1"></td>' +
+        '<td class="right"><button class="row-del" data-k="bdel" data-i="' + i + '">×</button></td>';
+      tb.appendChild(tr);
+      fillMonthSelect(tr.querySelector("select"), b.month);
+    });
+    if (!S.bigPays.length) tb.innerHTML = '<tr><td colspan="4" class="muted">まだありません。「支払いを足す」で追加します。</td></tr>';
+    tb.querySelectorAll("select[data-k=bmonth]").forEach(function (sel) {
+      sel.addEventListener("change", function () { S.bigPays[+sel.dataset.i].month = +sel.value; recalc(); });
+    });
+    tb.querySelectorAll("input[data-k=blabel]").forEach(function (inp) {
+      inp.addEventListener("change", function () { S.bigPays[+inp.dataset.i].label = inp.value; renderTaisakuSelects(); recalc(); });
+    });
+    tb.querySelectorAll("input[data-k=bamt]").forEach(function (inp) {
+      inp.addEventListener("change", function () { S.bigPays[+inp.dataset.i].amountMan = num(inp.value); recalc(); });
+    });
+    tb.querySelectorAll("button[data-k=bdel]").forEach(function (btn) {
+      btn.addEventListener("click", function () { S.bigPays.splice(+btn.dataset.i, 1); S.taisaku.shiftIdx = -1; renderBigTable(); renderTaisakuSelects(); recalc(); });
+    });
+    renderTaisakuSelects();
+  }
+
+  function renderLoanTable() {
+    var tb = $("loanTbl").querySelector("tbody");
+    tb.innerHTML = "";
+    S.loans.forEach(function (l, i) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td><input class="w-label" type="text" data-k="llabel" data-i="' + i + '" value="' + esc(l.label) + '" placeholder="例: 農機の割賦・既存の借入"></td>' +
+        '<td class="num"><input style="width:100px" type="number" data-k="lamt" data-i="' + i + '" value="' + l.monthlyMan + '" min="0" step="0.5"></td>' +
+        '<td class="right"><button class="row-del" data-k="ldel" data-i="' + i + '">×</button></td>';
+      tb.appendChild(tr);
+    });
+    if (!S.loans.length) tb.innerHTML = '<tr><td colspan="3" class="muted">まだありません。毎月の返済があれば追加します。</td></tr>';
+    tb.querySelectorAll("input[data-k=llabel]").forEach(function (inp) {
+      inp.addEventListener("change", function () { S.loans[+inp.dataset.i].label = inp.value; recalc(); });
+    });
+    tb.querySelectorAll("input[data-k=lamt]").forEach(function (inp) {
+      inp.addEventListener("change", function () { S.loans[+inp.dataset.i].monthlyMan = num(inp.value); recalc(); });
+    });
+    tb.querySelectorAll("button[data-k=ldel]").forEach(function (btn) {
+      btn.addEventListener("click", function () { S.loans.splice(+btn.dataset.i, 1); renderLoanTable(); recalc(); });
+    });
+  }
+
+  function renderExtraTable() {
+    var tb = $("extraTbl").querySelector("tbody");
+    tb.innerHTML = "";
+    S.extraExpenses.forEach(function (x, i) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td><input class="w-label" type="text" data-k="xlabel" data-i="' + i + '" value="' + esc(x.label) + '" placeholder="例: 通信費・組合費・車のローン など"></td>' +
+        '<td class="num"><input style="width:100px" type="number" data-k="xamt" data-i="' + i + '" value="' + x.man + '" min="0" step="0.5"></td>' +
+        '<td class="right"><button class="row-del" data-k="xdel" data-i="' + i + '">×</button></td>';
+      tb.appendChild(tr);
+    });
+    if (!S.extraExpenses.length) tb.innerHTML = '<tr><td colspan="3" class="muted">まだありません。毎月の支払いがあれば追加します。</td></tr>';
+    tb.querySelectorAll("input[data-k=xlabel]").forEach(function (inp) {
+      inp.addEventListener("change", function () { S.extraExpenses[+inp.dataset.i].label = inp.value; recalc(); });
+    });
+    tb.querySelectorAll("input[data-k=xamt]").forEach(function (inp) {
+      inp.addEventListener("change", function () { S.extraExpenses[+inp.dataset.i].man = num(inp.value); recalc(); });
+    });
+    tb.querySelectorAll("button[data-k=xdel]").forEach(function (btn) {
+      btn.addEventListener("click", function () { S.extraExpenses.splice(+btn.dataset.i, 1); renderExtraTable(); recalc(); });
+    });
+    $("addExtraBtn").disabled = S.extraExpenses.length >= 5;
+  }
+
+  function renderStressExpTable() {
+    var tb = $("expTbl").querySelector("tbody");
+    tb.innerHTML = "";
+    S.incomes.forEach(function (r) {
+      var cur = (S.stress.exps[r.id] != null) ? S.stress.exps[r.id] : defaultExp(r.id);
+      var memo = (r.id === KIBI_ID)
+        ? "倒伏しても全滅しにくく減収にとどまることが多い（初期値は仮）"
+        : "台風期に収穫前の作物がどれだけあるかを基にした仮の初期値";
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + esc(cropName(r.id)) + "</td>" +
+        '<td class="num"><div class="input-unit" style="display:inline-block;width:110px"><input type="number" data-id="' + esc(r.id) + '" value="' + Math.round(cur * 100) + '" min="0" max="100" step="5"><span class="u">%</span></div> <span class="provisional">（仮）</span></td>' +
+        '<td class="muted small">' + memo + "</td>";
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll("input[data-id]").forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        S.stress.exps[inp.dataset.id] = Math.min(1, Math.max(0, num(inp.value) / 100));
+        recalc();
+      });
+    });
+  }
+
+  function renderTaisakuSelects() {
+    var sel = $("tsShiftSel");
+    sel.innerHTML = "";
+    var o0 = document.createElement("option");
+    o0.value = -1; o0.textContent = S.bigPays.length ? "ずらさない" : "（大口支払いを先に登録）";
+    sel.appendChild(o0);
+    S.bigPays.forEach(function (b, i) {
+      var o = document.createElement("option");
+      o.value = i;
+      o.textContent = b.month + "月・" + (b.label || "名目なし") + "・" + b.amountMan + "万円";
+      if (S.taisaku.shiftIdx === i) o.selected = true;
+      sel.appendChild(o);
+    });
+    sel.disabled = !S.bigPays.length;
+    fillMonthSelect($("tsShiftTo"), S.taisaku.shiftTo);
+    fillHorizonMonthSelect($("tsLoanMonth"), S.taisaku.loanIdx);
+    fillHorizonMonthSelect($("stMonth"), S.stress.idx);
+  }
+
+  /* ============ 出典表示 ============ */
+  function renderSources() {
+    var lines = [];
+    function push(x) { var s = DATA.srcLine(x); if (s && lines.indexOf(s) < 0) lines.push(s); }
+    S.incomes.forEach(function (r) {
+      if (r.annualYen != null) return; // 実額入力の行は出典表示不要
+      if (r.id === KIBI_ID) { if (DATA.KIBI) { push(DATA.KIBI.yield.r6kei); push(DATA.KIBI.tedori.totalYenT); } return; }
+      var c = cropById(r.id); if (!c) return;
+      if (c.yieldKg10a) push(c.yieldKg10a); if (c.yieldHon10a) push(c.yieldHon10a);
+      if (c.priceYenKg) push(c.priceYenKg); if (c.priceYenHon) push(c.priceYenHon);
+    });
+    var srcTxt = lines.length ? "出典: " + lines.join("／") : "";
+    /* 入金月が未登録の行の注記は表の行内に出す（登録リンクに一本化） */
+    $("incomeSrc").textContent = srcTxt;
+
+    var kl = [];
+    var hasKibi = S.incomes.some(function (r) { return r.id === KIBI_ID; });
+    if (hasKibi && DATA.KIBI) {
+      var s1 = DATA.srcLine(DATA.KIBI.seisanhi.buzaihi); if (s1) kl.push(s1);
+      var s2 = DATA.srcLine(DATA.KIBI.seisanhi.koyoRodo); if (s2 && kl.indexOf(s2) < 0) kl.push(s2);
+    }
+    $("keihiSrc").textContent = kl.length ? "きびの経費の出典: " + kl.join("／") : "";
+    var m = DATA.TYPHOON.heinen;
+    $("stSrc").textContent = "台風接近数の平年値: " + DATA.srcLine(m.annual) + "。月別の内訳は" + m.monthlyNote;
+  }
+
+  /* ============ 結果の描画 ============ */
+  var COLORS = { living: "var(--s6)", keihi: "var(--s3)", big: "var(--s8)", loan: "var(--s7)", recover: "var(--s5)" };
+  var EXTRA_COLORS = ["#7f8fa6", "#8d6fc0", "#5f9ea0", "#b08968", "#728c69"];
+
+  function overlayBands(container, N, negIdx, H) {
+    var svg = container.querySelector("svg");
+    if (!svg) return;
+    var W = 720, padL = 58, padR = 12, padT = 14, padB = 34;
+    var slotW = (W - padL - padR) / N;
+    negIdx.forEach(function (i) {
+      var r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      r.setAttribute("x", padL + slotW * i);
+      r.setAttribute("y", padT);
+      r.setAttribute("width", slotW);
+      r.setAttribute("height", H - padT - padB);
+      r.setAttribute("fill", "rgba(224,82,82,.14)");
+      svg.insertBefore(r, svg.firstChild);
+    });
+  }
+
+  function monthLabelLong(mo) { return mo.y + "年" + mo.m + "月"; }
+
+  function recalc() {
+    /* 保存ボタンのない画面（入力のたびに自動保存）。利用者の実操作（クリック・キー入力）が
+       あるまでは保存しない。開いただけで進行表が「完了」になる誤判定を防ぐ */
+    if (CORE.userActed && CORE.userActed()) {
+      saveState();
+      CORE.nextHint($("printBtn"), [
+        { label: "→ 災害への備えで、被災した場合の残高を確かめる", href: "taifu.html", page: "taifu" },
+        { label: "→ 計画書にまとめる", href: "keikaku.html", page: "keikaku" }
+      ], "カレンダーを保存しました");
+    }
+    renderSources();
+
+    var base = buildFlows(S, {});
+    var N = base.months.length;
+    var labels = base.months.map(function (mo) { return mo.label; });
+
+    // 経費スライダーの自動値表示
+    var autoK = autoKeihiManOf(S);
+    var keihiMan = (S.keihiMan != null) ? S.keihiMan : autoK;
+    var kInp = $("inKeihi");
+    kInp.max = Math.max(100, Math.ceil(autoK * 2 / 10) * 10, keihiMan);
+    kInp.value = keihiMan;
+    paintRange(kInp);
+    $("keihiVal").textContent = keihiMan + "万円";
+    $("keihiNote").innerHTML = (S.keihiMan == null)
+      ? "初期値 " + autoK + "万円は品目ごとの経費（きびは生産費統計、園芸は売上×経費率<span class='provisional'>（仮）</span>）を12で割った<b>計算値</b>です。実態に合わせて動かしてください。"
+      : "手で動かした値を使っています（品目からの計算値は月" + autoK + "万円）。";
+    $("livingVal").textContent = S.livingMan + "万円";
+    $("cashVal").textContent = S.cashStartMan + "万円";
+    $("stRecoverVal").textContent = S.stress.recoverMan + "万円";
+
+    // KPI
+    var minI = 0;
+    base.balance.forEach(function (v, i) { if (v < base.balance[minI]) minI = i; });
+    var negIdx = [];
+    base.balance.forEach(function (v, i) { if (v < 0) negIdx.push(i); });
+    CORE.countUp($("kpiValley"), base.balance[minI], function (v) { return fmt.manUnit(v); });
+    $("kpiValley").style.color = base.balance[minI] < 0 ? "var(--critical)" : "";
+    $("kpiValleyM").textContent = monthLabelLong(base.months[minI]) + " の月末";
+    $("kpiValleyWhen").textContent = (minI + 1) + "か月先";
+    $("kpiValleyDist").textContent = monthLabelLong(base.months[minI]);
+    $("kpiNegCnt").textContent = negIdx.length + "か月";
+    $("kpiNegCnt").style.color = negIdx.length ? "var(--critical)" : "var(--good)";
+    $("kpiNegList").textContent = negIdx.length ? negIdx.map(function (i) { return base.months[i].m + "月"; }).join("・") : "なし";
+    CORE.countUp($("kpiEnd"), base.balance[N - 1], function (v) { return fmt.manUnit(v); });
+    $("kpiEndNote").textContent = monthLabelLong(base.months[N - 1]) + " 時点";
+
+    // メインチャート（いまの計画）
+    var series = base.inSeries.map(function (s, i) { return { name: s.name, values: s.vals, color: VIZ.SERIES[i % 4] }; });
+    series.push({ name: "自分・家族への給与", values: base.outLiving.map(function (v) { return -v; }), color: COLORS.living });
+    series.push({ name: "経費", values: base.outKeihi.map(function (v) { return -v; }), color: COLORS.keihi });
+    S.extraExpenses.forEach(function (x, xi) {
+      var v = num(x.man) * MAN;
+      if (v <= 0) return;
+      series.push({ name: "その他（" + (x.label || "名目なし") + "）", values: base.months.map(function () { return -v; }), color: EXTRA_COLORS[xi % EXTRA_COLORS.length] });
+    });
+    if (base.outBig.some(function (v) { return v > 0; })) series.push({ name: "大口支払い", values: base.outBig.map(function (v) { return -v; }), color: COLORS.big });
+    if (base.outLoan.some(function (v) { return v > 0; })) series.push({ name: "借入返済", values: base.outLoan.map(function (v) { return -v; }), color: COLORS.loan });
+    var H = 320;
+    VIZ.stackedBar($("mainChart"), {
+      labels: labels, series: series, h: H,
+      line: { name: "月末残高", values: base.balance },
+      fmt: function (v) { return fmt.man(v); },
+    });
+    overlayBands($("mainChart"), N, negIdx, H);
+
+    // 警告カード
+    var wb = $("warnBox");
+    wb.innerHTML = "";
+    if (!negIdx.length) {
+      wb.innerHTML =
+        '<div class="advice good"><div class="a-icon">✓</div><div>' +
+        '<div class="a-title">この入力では、月末残高がマイナスになる月はありません</div>' +
+        '<div class="a-body">いちばん低いのは ' + monthLabelLong(base.months[minI]) + " の " + fmt.manUnit(base.balance[minI]) +
+        "。大口支払いの入れ忘れがないか、下の台風シナリオも合わせて確かめてください。</div></div></div>";
+    } else {
+      var shown = negIdx.slice(0, 4);
+      shown.forEach(function (i) {
+        var mo = base.months[i];
+        var short = -base.balance[i];
+        var reason = "この月は入金 " + fmt.manUnit(base.inflow[i]) + " に対し出金 " + fmt.manUnit(base.outflow[i]) + "。";
+        var parts = [];
+        parts.push("給与" + fmt.man(base.outLiving[i]));
+        parts.push("経費" + fmt.man(base.outKeihi[i]));
+        if (base.outExtra[i] > 0) parts.push("その他" + fmt.man(base.outExtra[i]));
+        if (base.outBig[i] > 0) parts.push("大口" + fmt.man(base.outBig[i]));
+        if (base.outLoan[i] > 0) parts.push("返済" + fmt.man(base.outLoan[i]));
+        reason += "出金の内訳は " + parts.join("・") + "。";
+        var back = 0;
+        for (var j = Math.max(0, i - 2); j <= i; j++) back += base.inflow[j];
+        reason += "直前3か月の入金合計が " + fmt.manUnit(back) + " と少ないことが不足の主な原因です。";
+        var d = document.createElement("div");
+        d.className = "advice critical";
+        d.innerHTML = '<div class="a-icon">⚠</div><div><div class="a-title">' +
+          monthLabelLong(mo) + "に " + fmt.manUnit(short) + " 足りません</div>" +
+          '<div class="a-body">' + reason + "</div></div>";
+        wb.appendChild(d);
+      });
+      if (negIdx.length > shown.length) {
+        var p = document.createElement("p");
+        p.className = "band-note";
+        p.textContent = "ほか " + (negIdx.length - shown.length) + " か月もマイナスです（上のグラフの赤い帯）。";
+        wb.appendChild(p);
+      }
+    }
+
+    // 台風シナリオ・対策
+    var stress = S.stress.on ? buildFlows(S, { stress: true }) : null;
+    var taisakuActive = (S.taisaku.shiftIdx >= 0) || (S.taisaku.loanMan > 0);
+    var after = taisakuActive ? buildFlows(S, { stress: S.stress.on, taisaku: true }) : null;
+
+    // 対策KPI
+    var refBal = stress ? stress.balance : base.balance;
+    var refMin = Math.min.apply(null, refBal);
+    $("tsBase").textContent = fmt.manUnit(refMin);
+    if (after) {
+      var aMin = Math.min.apply(null, after.balance);
+      $("tsAfter").textContent = fmt.manUnit(aMin);
+      var diff = aMin - refMin;
+      $("tsDiff").textContent = fmt.signMan(diff);
+      $("tsDiff").style.color = diff >= 0 ? "var(--good)" : "var(--critical)";
+      $("tsDiffNote").textContent = S.stress.on ? "台風シナリオに対策を重ねた場合" : "いまの計画に対策を重ねた場合";
+    } else {
+      $("tsAfter").textContent = "―";
+      $("tsDiff").textContent = "―";
+      $("tsDiff").style.color = "";
+      $("tsDiffNote").textContent = "対策を選ぶと計算します";
+    }
+
+    // 残高の比較の折れ線
+    var cmpSeries = [{ name: "いまの計画", values: base.balance, color: "var(--s1)" }];
+    if (stress) cmpSeries.push({ name: "台風シナリオ", values: stress.balance, color: "var(--s6)" });
+    if (after) cmpSeries.push({ name: "対策後", values: after.balance, color: "var(--s2)" });
+    VIZ.lineChart($("cmpChart"), { labels: labels, series: cmpSeries, h: 280, fmt: function (v) { return fmt.man(v); }, area: false });
+    $("cmpSub").textContent = cmpSeries.length === 1
+      ? "いまの計画の残高線です。台風シナリオや対策を選ぶと線が増えます。"
+      : cmpSeries.map(function (s) { return s.name; }).join(" / ") + " の月末残高の比較です。";
+
+    // 台風シナリオの説明（表示中のみ）
+    if (stress) {
+      var sMin = Math.min.apply(null, stress.balance);
+      var sMinI = stress.balance.indexOf(sMin);
+      var note = document.createElement("div");
+      note.className = "advice " + (sMin < 0 ? "critical" : "warn");
+      note.innerHTML = '<div class="a-icon">🌀</div><div><div class="a-title">台風シナリオのいちばん低い月末残高は ' +
+        monthLabelLong(stress.months[sMinI]) + " の " + fmt.manUnit(sMin) + "</div>" +
+        '<div class="a-body">' + monthLabelLong(base.months[S.stress.idx]) + "に被災し、以後12か月の入金を品目ごとの割合（仮）で減らし、復旧支出 " +
+        S.stress.recoverMan + "万円と、共済金 " + S.stress.kyosaiMan + "万円（" + S.stress.delayM + "か月後の入金）を重ねた計算です。共済金の実額は証書・NOSAIの窓口で確認してください。</div></div>";
+      wb.appendChild(note);
+    }
+  }
+
+  function paintRange(inp) {
+    var min = +inp.min || 0, max = +inp.max || 100;
+    var p = ((+inp.value - min) / (max - min)) * 100;
+    inp.style.setProperty("--fill", p + "%");
+  }
+
+  /* ============ 初期化 ============ */
+  loadState();
+
+  // 開始月・年
+  (function () {
+    var ySel = $("inYear");
+    var y0 = now.getFullYear();
+    [y0 - 1, y0, y0 + 1].forEach(function (y) {
+      var o = document.createElement("option");
+      o.value = y; o.textContent = y + "年";
+      if (y === S.startYear) o.selected = true;
+      ySel.appendChild(o);
+    });
+    ySel.addEventListener("change", function () { S.startYear = +ySel.value; renderTaisakuSelects(); recalc(); });
+    fillMonthSelect($("inMonth"), S.startMonth);
+    $("inMonth").addEventListener("change", function () { S.startMonth = +$("inMonth").value; renderTaisakuSelects(); recalc(); });
+  })();
+
+  // 期間セグメント
+  (function () {
+    var seg = $("segH");
+    seg.querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("on", +b.dataset.v === S.horizon);
+    });
+    CORE.bindSeg(seg, function (v) {
+      S.horizon = +v;
+      if (S.stress.idx >= S.horizon) S.stress.idx = 0;
+      if (S.taisaku.loanIdx >= S.horizon) S.taisaku.loanIdx = 0;
+      renderTaisakuSelects(); recalc();
+    });
+  })();
+
+  // 手持ち資金
+  $("inCash").value = S.cashStartMan;
+  $("inCash").addEventListener("change", function () { S.cashStartMan = num(this.value); recalc(); });
+
+  // 自分・家族への給与（旧: 生活費）・経費スライダー
+  $("inLiving").value = S.livingMan;
+  CORE.bindRange($("inLiving"), function (v) { S.livingMan = v; recalc(); });
+  CORE.bindRange($("inKeihi"), function (v) { S.keihiMan = v; recalc(); });
+
+  // 追加ボタン類
+  (function () {
+    var sel = $("addCropSel");
+    if (DATA.KIBI) {
+      var oK = document.createElement("option");
+      oK.value = KIBI_ID; oK.textContent = "さとうきび（分蜜糖）";
+      sel.appendChild(oK);
+    }
+    DATA.CROPS.forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = c.id; o.textContent = c.name;
+      sel.appendChild(o);
+    });
+    $("addCropBtn").addEventListener("click", function () {
+      S.incomes.push({ id: sel.value, area10a: Math.max(0.1, num($("addCropArea").value, 10) / 10), annualYen: null });
+      renderIncomeTable(); renderStressExpTable(); recalc();
+    });
+  })();
+  $("addBigBtn").addEventListener("click", function () {
+    S.bigPays.push({ month: S.startMonth, label: "", amountMan: 10 });
+    renderBigTable(); recalc();
+  });
+  $("addLoanBtn").addEventListener("click", function () {
+    S.loans.push({ label: "", monthlyMan: 3 });
+    renderLoanTable(); recalc();
+  });
+  $("addExtraBtn").addEventListener("click", function () {
+    if (S.extraExpenses.length >= 5) return;
+    S.extraExpenses.push({ label: "", man: 1 });
+    renderExtraTable(); recalc();
+  });
+
+  // 台風シナリオ
+  (function () {
+    // 既定の被災月: 期間内で最初の8月（なければ先頭）
+    var months = monthsOf(S);
+    if (!(S.stress.idx > 0)) {
+      var idx8 = -1;
+      months.forEach(function (mo, i) { if (idx8 < 0 && mo.m === 8) idx8 = i; });
+      S.stress.idx = idx8 >= 0 ? idx8 : 0;
+    }
+    $("stOn").addEventListener("change", function () {
+      S.stress.on = this.checked;
+      $("stPanel").classList.toggle("hide", !this.checked);
+      recalc();
+    });
+    $("stMonth").addEventListener("change", function () { S.stress.idx = +this.value; recalc(); });
+    $("stRecover").value = S.stress.recoverMan;
+    $("stRecover").addEventListener("change", function () { S.stress.recoverMan = num(this.value); recalc(); });
+    $("stKyosai").value = S.stress.kyosaiMan;
+    $("stKyosai").addEventListener("change", function () { S.stress.kyosaiMan = num(this.value); recalc(); });
+    $("stDelay").value = S.stress.delayM;
+    $("stDelay").addEventListener("change", function () { S.stress.delayM = num(this.value, 3); recalc(); });
+  })();
+
+  // 対策
+  $("tsShiftSel").addEventListener("change", function () { S.taisaku.shiftIdx = +this.value; recalc(); });
+  $("tsShiftTo").addEventListener("change", function () { S.taisaku.shiftTo = +this.value; recalc(); });
+  $("tsLoan").value = S.taisaku.loanMan;
+  $("tsLoan").addEventListener("change", function () { S.taisaku.loanMan = num(this.value); recalc(); });
+  $("tsLoanMonth").addEventListener("change", function () { S.taisaku.loanIdx = +this.value; recalc(); });
+  $("tsRate").value = S.taisaku.ratePct;
+  $("tsRate").addEventListener("change", function () { S.taisaku.ratePct = num(this.value, 2); recalc(); });
+  $("tsMonths").value = S.taisaku.months;
+  $("tsMonths").addEventListener("change", function () { S.taisaku.months = Math.max(1, num(this.value, 12)); recalc(); });
+  $("tsReset").addEventListener("click", function () {
+    S.taisaku.shiftIdx = -1; S.taisaku.loanMan = 0;
+    $("tsLoan").value = 0;
+    renderTaisakuSelects(); recalc();
+  });
+
+  $("printBtn").addEventListener("click", function () { window.print(); });
+
+  // 出所バッジ（この品目一覧がどこから来たか）と品目追加への誘導
+  (function () {
+    var links = [];
+    if (incomeSourceKind === "plan") links.push({ label: "→ 作付けの決定で直す", href: "sakutsuke.html" });
+    if (incomeSourceKind === "profile" || incomeSourceKind === "example") links.push({ label: "→ はじめの3問を直す", href: "../index.html" });
+    if (CORE.sourceBadge) CORE.sourceBadge($("incomeCard"), incomeSourceLabel, links);
+    if (CORE.cropAddLink) CORE.cropAddLink($("cropAddHost"), "shikin");
+    /* 保存済みデータを表示中でも、作付けの決定で計画を決め直した場合に読み込み直せる導線 */
+    var planNow = CORE.store.load("plan", null);
+    if (incomeSourceKind === "saved" && planNow && planNow.items && planNow.items.length) {
+      var rb = document.createElement("button");
+      rb.className = "btn ghost sm no-print";
+      rb.textContent = "→ 作付けの決定の確定案を読み込み直す（いまの品目一覧を置き換え）";
+      rb.style.marginTop = "6px";
+      rb.addEventListener("click", function () {
+        if (!confirm("品目一覧を「作付けの決定」の確定案（" + (planNow.name || "無題") + "）で置き換えます。返済・大きな支払いの入力は残ります。よろしいですか？")) return;
+        S.incomes = planNow.items.map(function (it) {
+          var annual = null;
+          if (it.yieldKg10a != null && it.priceYenKg != null) annual = Math.round(it.area10a * it.yieldKg10a * it.priceYenKg);
+          return { id: it.cropId, area10a: it.area10a, annualYen: annual };
+        });
+        saveState();
+        location.reload();
+      });
+      $("incomeCard").appendChild(rb);
+    }
+  })();
+
+  // 最初の描画
+  renderIncomeTable();
+  renderBigTable();
+  renderLoanTable();
+  renderExtraTable();
+  renderStressExpTable();
+  renderTaisakuSelects();
+  recalc();
+})();
+</script>
+</body>
+</html>
