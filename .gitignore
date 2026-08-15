@@ -1,3 +1,6 @@
 BUILD_SPEC.md
 node_modules/
 バージョン管理/
+
+# 検査が書き出す中間ファイル
+tests/_saba_azukari.json
