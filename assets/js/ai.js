@@ -19,42 +19,46 @@
 
   var store = (window.CORE && window.CORE.store) || null;
 
-  /* ---------- 設定（この端末にだけ保存する） ----------
-     url      … AWS側の受け口。例 https://xxxx.execute-api.ap-northeast-1.amazonaws.com/ai
-     aikotoba … 8文字の合言葉。Authorization: Aikotoba XXXXXXXX として送る */
+  /* ---------- 設定と呼び出し ----------
+     サーバの設定（受け口のURLと8文字の合言葉）は db.js が1つだけ持つ。
+     ここはそれを借りる。db.js はあとから読み込まれるので、
+     まだ読めていないときは同じ保存を直接見る（画面の描き出しが先に走るため）。 */
+  var SETTEI_KAGI = "sabaSetting";
+
   function settei() {
-    var s = store ? store.load("aiSetting", null) : null;
+    if (window.MFK_DB) return MFK_DB.settei();
+    var s = store ? store.load(SETTEI_KAGI, null) : null;
     if (!s || !s.url || !s.aikotoba) return null;
     return s;
   }
   function setteiWoKaku(url, aikotoba) {
+    if (window.MFK_DB) return MFK_DB.setteiWoKaku(url, aikotoba);
     if (!store) return false;
-    if (!url || !aikotoba) { store.remove("aiSetting"); return false; }
-    store.save("aiSetting", { url: String(url).trim(), aikotoba: String(aikotoba).trim() });
+    if (!url || !aikotoba) { store.remove(SETTEI_KAGI); return false; }
+    store.save(SETTEI_KAGI, {
+      url: String(url).trim().replace(/\/+$/, ""),
+      aikotoba: String(aikotoba).trim(),
+    });
     return true;
   }
   function tsunagatteiru() { return !!settei(); }
 
-  /* ---------- AWSを呼ぶ ----------
-     shurui: "yomitori" | "naoshidokoro" | "yomiawase"
-     返すのは必ずオブジェクト。中身の検証は呼んだ側の関数で行う。 */
+  /* AWSのAIを呼ぶ。呼び先は受け口の /compass/ai。
+     返すのは必ずオブジェクト。中身の検証は下の各関数で行う。 */
   function awsWoYobu(shurui, zairyou) {
+    if (window.MFK_DB) {
+      return MFK_DB.yobu("/compass/ai", {
+        method: "POST", body: { shurui: shurui, zairyou: zairyou }, byou: 60,
+      });
+    }
     var st = settei();
     if (!st) return Promise.reject(new Error("設定がありません"));
-    var t = setTimeout(function () {}, 0); clearTimeout(t);
-    var ctl = (typeof AbortController !== "undefined") ? new AbortController() : null;
-    var toki = setTimeout(function () { if (ctl) ctl.abort(); }, 60000);
-    return fetch(st.url, {
+    return fetch(st.url + "/compass/ai", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Aikotoba " + st.aikotoba,
-      },
+      headers: { "Content-Type": "application/json", "Authorization": "Aikotoba " + st.aikotoba },
       body: JSON.stringify({ shurui: shurui, zairyou: zairyou }),
-      signal: ctl ? ctl.signal : undefined,
     }).then(function (r) {
-      clearTimeout(toki);
-      if (!r.ok) throw new Error("AWSが " + r.status + " を返しました");
+      if (!r.ok) throw new Error("サーバが " + r.status + " を返しました");
       return r.json();
     });
   }

@@ -276,12 +276,12 @@
 
   <!-- ============ 5. 設定 ============ -->
   <details class="mt24" id="setDetails">
-    <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--ink-2);padding:10px 0">AIの受け口の設定（事務局・詳しい方向け）</summary>
+    <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--ink-2);padding:10px 0">サーバの設定（事務局・詳しい方向け）</summary>
     <div class="card mt8">
       <div id="setJoutai"></div>
       <div class="grid c2 mt8">
         <div class="field">
-          <label>受け口のURL</label>
+          <label>サーバのURL</label>
           <input type="text" id="setUrl" placeholder="https://…/ai" autocomplete="off">
         </div>
         <div class="field">
@@ -294,7 +294,7 @@
         <button class="btn primary sm" id="btnSetSave">この設定を保存する</button>
         <button class="btn ghost sm" id="btnSetClear">設定を消す</button>
       </div>
-      <p class="src mt8">受け口とは、この画面が読み取りを頼む先です。設定はこの端末のブラウザにだけ保存され、ほかの人には渡りません。</p>
+      <p class="src mt8">ここを設定すると、2つのことが起きます。ひとつは、入れた数字がマイファームのサーバに預けられ、端末を替えても続きから使えるようになること。もうひとつは、記録の読み取りと計画の直しどころを、本物のAIが受け持つようになることです。設定そのものはこの端末のブラウザにだけ保存されます。</p>
     </div>
   </details>
 
@@ -500,9 +500,9 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     var w = [];
     if (res.mihon) {
       w.push('<div class="advice warn"><div class="a-icon">！</div><div>' +
-        '<div class="a-title">AIの受け口がまだ設定されていないため、見本の受け答えです</div>' +
+        '<div class="a-title">サーバがまだ設定されていないため、見本の受け答えです</div>' +
         '<div class="a-body">' + esc(res.shirase || "") +
-        ' これは本物の読み取り結果ではありません。下の「AIの受け口の設定」で受け口を入れると、送ったファイルをAIが実際に読み取ります。</div></div></div>');
+        ' これは本物の読み取り結果ではありません。下の「サーバの設定」を入れると、送ったファイルをAIが実際に読み取ります。</div></div></div>');
     } else if (res.shirase) {
       w.push('<div class="advice info"><div class="a-icon">ⓘ</div><div><div class="a-body">' + esc(res.shirase) + "</div></div></div>");
     }
@@ -783,7 +783,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
       '<div class="a-title">読み取った記録 ' + nokori.length + "件をこの端末に保存しました</div>" +
       '<div class="a-body">' +
       (kekka && kekka.mihon
-        ? "この内容は、AIの受け口が無いときの見本の受け答えです。本物の読み取り結果ではありません。"
+        ? "この内容は、サーバの設定が無いときの見本の受け答えです。本物の読み取り結果ではありません。"
         : "内容はいつでも、もう一度ファイルを送って入れ替えられます。") +
       "</div></div></div>");
     if (!ccOk) {
@@ -814,22 +814,22 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
   });
 
   /* ============================================================
-     E. AIの受け口の設定
+     E. サーバの設定
      ============================================================ */
   function setJoutai() {
     var tsunagatte = window.MFK_AI.tsunagatteiru();
     var s = window.MFK_AI.settei();
     $("setJoutai").innerHTML = tsunagatte
-      ? '<div class="advice good"><div class="a-icon">✔</div><div><div class="a-title">受け口が設定されています</div>' +
-        '<div class="a-body">送り先: ' + esc(s.url) + "（合言葉は保存済み）。ファイルを送ると、この受け口のAIが読み取ります。</div></div></div>"
-      : '<div class="advice warn"><div class="a-icon">！</div><div><div class="a-title">まだ受け口がありません</div>' +
+      ? '<div class="advice good"><div class="a-icon">✔</div><div><div class="a-title">サーバにつながっています</div>' +
+        '<div class="a-body">送り先: ' + esc(s.url) + "（合言葉は保存済み）。入れた数字はここへ預けられ、ファイルはここのAIが読み取ります。</div></div></div>"
+      : '<div class="advice warn"><div class="a-icon">！</div><div><div class="a-title">まだサーバにつながっていません</div>' +
         '<div class="a-body">設定すると本物のAIが読み取ります。設定するまでは、送っても見本の受け答えが返るだけで、読み取りは行われません。</div></div></div>';
     if (s) { $("setUrl").value = s.url; $("setAi").value = s.aikotoba; }
   }
   $("btnSetSave").addEventListener("click", function () {
     var u = $("setUrl").value.trim(), a = $("setAi").value.trim();
     var errors = [];
-    if (!/^https:\/\/\S+$/.test(u)) errors.push("受け口のURLは https:// で始まる住所を入れてください。");
+    if (!/^https:\/\/\S+$/.test(u)) errors.push("サーバのURLは https:// で始まる住所を入れてください。");
     if (a.length !== 8) errors.push("合言葉は8文字で入れてください（いまは" + a.length + "文字）。");
     errBox($("setErr"), errors, "保存していません");
     if (errors.length) return;
@@ -840,7 +840,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
       '<p class="src">保存しました。この端末のブラウザにだけ残ります。</p>');
   });
   $("btnSetClear").addEventListener("click", function () {
-    if (!confirm("AIの受け口の設定を消します。以後は見本の受け答えに戻ります。よろしいですか？")) return;
+    if (!confirm("サーバの設定を消します。以後は端末の中だけで動き、見本の受け答えに戻ります。よろしいですか？")) return;
     window.MFK_AI.setteiWoKaku("", "");
     $("setUrl").value = ""; $("setAi").value = "";
     errBox($("setErr"), []);
@@ -863,7 +863,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     $("msg").innerHTML = '<div class="advice info mt16"><div class="a-icon">📄</div><div>' +
       '<div class="a-title">この端末には、確定済みの記録が ' + k.kensu + "件あります</div>" +
       '<div class="a-body">' + (toki ? "確定した日時: " + esc(toki) + "。" : "") +
-      (k.mihon ? "これはAIの受け口が無いときの見本の受け答えを確定したもので、本物の読み取り結果ではありません。" : "") +
+      (k.mihon ? "これはサーバの設定が無いときの見本の受け答えを確定したもので、本物の読み取り結果ではありません。" : "") +
       "新しいファイルを送って確定すると、この内容は入れ替わります。</div></div></div>";
   })();
 })();

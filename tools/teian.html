@@ -267,6 +267,23 @@
         if (!a) return;
         if (!window.confirm("「" + na + "」を計画に入れます。いまの計画は書き換わります。よろしいですか。")) return;
         store.save("simPlan", a.plan);
+        /* どの案を選んだかを残す。出した案のうち、実際に使われるのはどれかが分かる */
+        if (window.MFK_DB && MFK_DB.tsunagatteiru()) {
+          MFK_DB.yobu("/compass/teian", {
+            method: "POST",
+            body: { an: [{ namae: a.namae, teate: a.teate }], mihon: false, eranda: a.namae },
+          }).catch(function () {});
+          MFK_DB.yobu("/compass/keikaku", {
+            method: "POST",
+            body: {
+              keikaku: a.plan,
+              kekka: {
+                finalIncome: a.kekka.finalIncome, minCash: a.kekka.minCash,
+                minYear: a.kekka.minYear, targetYear: a.kekka.targetYear, roudou: a.kekka.roudou,
+              },
+            },
+          }).catch(function () {});
+        }
         el.textContent = "計画に入れました";
         el.disabled = true;
         CORE.userActed && CORE.userActed();
@@ -330,12 +347,20 @@
       if (r && r.shippai) shirase += "（AIを呼びましたが返ってきませんでした：" + r.shippai + "）";
 
       renderKekka(deta, z.plan, z.nozomi, shirase);
-      store.save("teian", {
-        an: deta.map(function (x) {
-          return { namae: x.namae, teate: x.teate, finalIncome: x.kekka.finalIncome, roudou: x.kekka.roudou };
-        }),
-        mihon: !!(r && r.mihon), dashitaAt: new Date().toISOString(),
+      var nokosu = deta.map(function (x) {
+        return { namae: x.namae, teate: x.teate, finalIncome: x.kekka.finalIncome, roudou: x.kekka.roudou };
       });
+      store.save("teian", {
+        an: nokosu, mihon: !!(r && r.mihon), dashitaAt: new Date().toISOString(),
+      });
+      /* サーバにも残す。どんな打ち手を出したかは当社の学びになる。
+         つながっていなければ何もしない（端末には残っている） */
+      if (window.MFK_DB && MFK_DB.tsunagatteiru()) {
+        MFK_DB.yobu("/compass/teian", {
+          method: "POST",
+          body: { an: nokosu, mihon: !!(r && r.mihon), eranda: null },
+        }).catch(function () { /* 残せなくても画面は動く */ });
+      }
       $("dasuState").textContent = "出しました（" + deta.length + "件）";
       $("dasu").disabled = false;
       $("dasu").textContent = "もう一度出す";

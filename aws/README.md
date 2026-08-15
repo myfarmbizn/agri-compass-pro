@@ -1,53 +1,42 @@
-# AIの受け口（まだ置いていない）
+# サーバ側は、のうきろくの基盤に載せてある
 
-画面（`assets/js/ai.js`）から呼ばれる受け口。ここに置く前は、画面は見本の受け答えで動き、
-「見本です」と必ず出す。段6では機械が決めた既定の3案が必ず出るので、受け口が無くても最後まで通る。
+この画面が話す相手（データベースとAI）は、この置き場所には入っていない。
+のうきろくの基盤（`ツール本体\platform\`）に載せてある。別に建てなかったのは、
+同じ農家が2つのIDを持ってしまうと、記録と経営の数字がつながらなくなるためである。
 
-2026年8月16日の時点で、この受け口はまだAWSに置いていない。
-作業した端末にAWSの鍵が無く、立てられなかったため。`handler.mjs` は書いてある。
+## どこに何があるか
 
-## 置き方
-
-1. Lambda を1つ作る（Node.js 20以上・ESM）。`handler.mjs` を入れ、入口を `handler.handler` にする
-2. 環境変数を3つ渡す
-
-| 名前 | 中身 |
+| 何 | どこ |
 |---|---|
-| `MODEL_ID` | Bedrock の呼び先。日本国内で処理する推論プロファイルに固定する |
-| `AIKOTOBA` | 8文字の合言葉。複数なら読点で区切る |
-| `ALLOW_ORIGIN` | `https://myfarmbizn.github.io`（絞らないなら `*`） |
+| 表と預かる口（PostgreSQL・行ごとの権限つき） | `platform/db/migrations/057_compass_wo_azukaru.sql` |
+| 受け口（預かる・返す） | `platform/api/src/compass.mjs` |
+| AI（読み取り・直しどころ・読み合わせ） | `platform/api/src/compass_ai.mjs` |
+| 道の配線 | `platform/api/src/handler.mjs` の `/compass` から始まる5本 |
+| 試験（WASM版PostgreSQLで実際に動かす） | `platform/api/test/compass_test.mjs` |
+| 基盤の定義（Lambda・API Gateway・RDS） | `platform/infra/lib/app-stack.ts` |
 
-3. Lambda の役に `bedrock:InvokeModel` を付ける
-4. 関数URL（または API Gateway）を作り、POST を受けられるようにする
-5. できたURLと合言葉を、記録を入れる画面（`tools/kiroku.html`）の下の設定欄に入れる
+## 画面から見た道
 
-## 受け取る形
-
-```
-POST /
-Authorization: Aikotoba XXXXXXXX
-{ "shurui": "yomitori" | "naoshidokoro" | "yomiawase", "zairyou": { ... } }
-```
-
-## 返す形
-
-| 種類 | 返すもの |
+| 道 | 何をする |
 |---|---|
-| `yomitori` | `{ "records": [{hizuke, hinmoku, shurui, suryo, tani, kingaku, moto}] }` |
-| `naoshidokoro` | `{ "an": [{namae, riyuu, teate: [{kata, ...}]}] }` |
-| `yomiawase` | `{ "shiteki": [{kata, basho, naiyou}] }` |
+| `GET /compass` | 預けたものを全部返す（端末を替えたとき、これで戻る） |
+| `POST /compass/hikae` | 端末の保存を1つ預ける。同時に、数えられる形へも写す |
+| `POST /compass/keikaku` | 計画と、その計算結果を残す |
+| `POST /compass/teian` | 出した案と、本人が選んだ案を残す |
+| `POST /compass/ai` | AIに聞く（読み取り・直しどころ・読み合わせ） |
 
-## 守っている決まり
+どれも見出しに `Authorization: Aikotoba XXXXXXXX`（8文字）を付ける。
+画面側の窓口は `assets/js/db.js` の1本だけで、設定（URLと合言葉）もそこが持つ。
 
-- AIは抽出と選択だけ。ツール実行・外部取得の権限を与えない
-- 利用者の書類は「資料」として囲みの中に入れ、指示として読ませない
-- 出力はJSONで受け取り、機械で確かめてから返す（画面側でも同じ確認をする。二重にしてある）
-- 使ったトークン数を毎回記録に残す（費用を見張るため）
-- **金額はAIに作らせない。**`naoshidokoro` の言いつけに「金額は一切返すな」と書いてあり、
-  返ってきても機械が採らない。金額は画面側の `sim_engine.js` が計算する
+## 置くときに要ること
 
-## まだ決めていないこと
+1. 移行057を実機のデータベースへ当てる
+2. 受け口を組み立て直して置く（`scripts/build_api_bundle.py` が `api/src/*.mjs` を拾う）
+3. AIを使うなら、Lambda の環境変数に `COMPASS_MODEL_ID`（Bedrockの呼び先）を渡し、
+   役に `bedrock:InvokeModel` を付ける。あわせて `npm install` で
+   `@aws-sdk/client-bedrock-runtime` を入れる（取り決めには書き足してある）
+4. 画面が呼ぶので、受け口の側で GitHub Pages の住所からの呼び出しを許す
 
-- 呼び先（どのモデルを使うか）と、1人あたり何回呼んでよいか
-- 写真とPDFの渡し方（いまは base64 を `zairyou.files[].data` に入れる前提で書いてある）
-- 大きいファイルの上限
+2026年8月16日の時点で、1〜4は実機へ当てていない。作業した端末にAWSの鍵が無いため。
+当てるまでのあいだ、画面は端末の中だけで動き、AIは見本の受け答えを返し、
+画面には必ず「見本です」と出る。

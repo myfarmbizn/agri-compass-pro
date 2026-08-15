@@ -368,6 +368,8 @@
       el.title = "保存ボタンはありません。入力するたびに自動でこの端末（ブラウザ）に保存されます。";
       el.style.cssText = "margin-left:10px;font-size:11px;color:var(--ink-3);white-space:nowrap;flex-shrink:0;";
       el.textContent = "";
+      /* サーバへ預ける層（db.js）が、ここの文字を預かり具合に書き替える */
+      el.setAttribute("data-saved-note", "1");
       bar.appendChild(el);
       window.__mfkStamp = function () {
         try {
@@ -601,6 +603,18 @@
   });
 
   window.CORE = { store, IRIGUCHI, getProfile, saveProfile, fmt, countUp, renderTopbar, bindRange, bindSeg, nextHint, sourceBadge, cropAddLink, userActed, TOOLS, STEP_LABELS, FULL_MODE, PERSONA_ID, PERSONA, REGION, KOMA, wipeAll, opLog, exportLog, sendLogs };
+
+  /* ---------- サーバへ預ける層（db.js）を全ページで読み込む ----------
+     端末にしか置いていなかった中身を、サーバへ預ける。ページ側の改修は要らない。
+     合言葉が設定されていないときは、これまでとまったく同じに動く（外へは何も送らない）。
+     道筋の層より先に読むのは、CORE.store をくるむのが早いほうが取りこぼしが無いため */
+  try {
+    var ds = document.createElement("script");
+    var me = document.currentScript && document.currentScript.src ? document.currentScript.src : null;
+    ds.src = me ? me.replace(/core\.js([?#].*)?$/, "db.js")
+                : (location.pathname.indexOf("/tools/") > -1 ? "../" : "") + "assets/js/db.js";
+    document.head.appendChild(ds);
+  } catch (e) { /* 預ける層が読めなくても、端末の中では動く */ }
 
   /* ---------- 道筋の層（journey.js）を全ページで読み込む ----------
      ページ側の改修なしで「いまどこ・ここで何を・次はどこ」を重ねる。詳細は journey.js 冒頭。
