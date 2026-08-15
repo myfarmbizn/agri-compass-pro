@@ -68,8 +68,8 @@
     </div>
   </div>
 
-  <!-- 保存先の説明 -->
-  <div class="advice info mt16 fade-up d2">
+  <!-- 保存先の説明。中身は預ける層（db.js）が、いまの預かり具合に合わせて書き替える -->
+  <div class="advice info mt16 fade-up d2" data-hozon-annai="1">
     <div class="a-icon">💾</div>
     <div>
       <div class="a-title">保存先はこの端末だけです</div>
@@ -870,9 +870,16 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
      品目と面積を入れると、その場で1年の見通しが出る。
      計算は sim_engine.js に任せる（式には触れない）。
      ============================================================ */
-  var IMA_KEY = "profile";
-
+  /* 品目と面積の正本は、計画（simPlan）の items に置く。
+     こうしないと、ここで入れたものが経営シミュレーターにも計画の直しどころにも渡らない。
+     計画がまだ無いときだけ、農場の情報（profile）から読む。 */
   function imaYomu() {
+    var plan = CORE.store.load("simPlan", null);
+    if (plan && Array.isArray(plan.items) && plan.items.length) {
+      return plan.items
+        .filter(function (it) { return it && it.cropId; })
+        .map(function (it) { return { cropId: it.cropId, areaA: Number(it.area) || 0 }; });
+    }
     var pf = CORE.getProfile();
     var a = (pf && Array.isArray(pf.crops)) ? pf.crops : [];
     return a.map(function (c) {
@@ -880,7 +887,48 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     }).filter(function (c) { return c.cropId; });
   }
 
+  /* 計画の骨組み。まだ計画が無いときに、これを土台にする。
+     お金の項目は0にしてある。ここで入れていない数字を、入れたことにしないため
+     （経営シミュレーターの画面で入れてもらう）。 */
+  function imaKarahoneKeikaku() {
+    var pf = CORE.getProfile() || {};
+    var nozomi = CORE.store.load("nozomi", null);
+    return {
+      years: (nozomi && Number(nozomi.nen) > 0) ? Math.min(10, Math.max(3, Number(nozomi.nen))) : 5,
+      famPeople: Number(pf.laborFamily) > 0 ? Number(pf.laborFamily) : 2,
+      famHours: 160,
+      livingMan: 0, cashStartMan: 0,
+      targetMan: (nozomi && Number(nozomi.mokuhyouMan) > 0) ? Number(nozomi.mokuhyouMan) : 0,
+      items: [], invests: [],
+      loan: { amountMan: 0, ratePct: 2.0, termY: 10, graceY: 3 },
+      hojo: { amountMan: 0, year: 1 },
+      fixedMan: 0, fixedMemo: "", extraExpenses: [],
+    };
+  }
+
   function imaKaku(rows) {
+    /* 1. 計画の品目を、ここで入れたものに置き換える。
+          ほかの項目（年数・お金・投資・借入）は触らない */
+    var plan = CORE.store.load("simPlan", null);
+    if (!plan || typeof plan !== "object") plan = imaKarahoneKeikaku();
+    var mae = {};
+    (Array.isArray(plan.items) ? plan.items : []).forEach(function (it) {
+      if (it && it.cropId) mae[it.cropId] = it;
+    });
+    plan.items = rows.map(function (r) {
+      var moto = mae[r.cropId];
+      if (moto) {
+        /* 既にある品目は、面積だけ入れ替える。
+           シミュレーターで単価などを直していたら、それを消さない */
+        moto.area = Number(r.areaA) || 0;
+        return moto;
+      }
+      var atarashii = imaItem(r.cropId, r.areaA);
+      return atarashii || { cropId: r.cropId, area: Number(r.areaA) || 0 };
+    });
+    CORE.store.save("simPlan", plan);
+
+    /* 2. 農場の情報にも写す。ほかの画面（実績の診断・作付けの決定）がこちらを読むため */
     var pf = CORE.getProfile() || {};
     pf.crops = rows.map(function (r) { return { cropId: r.cropId, area10a: (Number(r.areaA) || 0) / 10 }; });
     CORE.saveProfile(pf);

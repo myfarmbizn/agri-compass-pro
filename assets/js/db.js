@@ -48,7 +48,14 @@
 
   function azukaruKagi(k) { return AZUKARU.indexOf(k) > -1; }
 
-  /* ---------- 設定 ---------- */
+  /* ---------- 設定 ----------
+     住所は saba_settei.js が1か所で決める。合言葉は、初めて開いたときに
+     こちらから自動で迎え入れて作る（農家に登録も入力も求めない）。 */
+  function kiteiNoUrl() {
+    var k = window.MFK_SABA_SETTEI;
+    var u = (k && k.url) ? String(k.url).trim().replace(/\/+$/, "") : "";
+    return u;
+  }
   function settei() {
     var s = store.load(SETTEI_KAGI, null);
     if (!s || !s.url || !s.aikotoba) return null;
@@ -66,6 +73,41 @@
     return true;
   }
   function tsunagatteiru() { return !!settei(); }
+
+  /* この端末を、まだ迎え入れていなければ迎え入れる。
+     合言葉は1度しか出ないので、受け取ったらすぐ端末に残す。
+     控えは記録の画面の設定欄に出す（端末の掃除で消えるため）。 */
+  var mukaeiretechuu = false;
+  function mukaeireru() {
+    if (settei()) return Promise.resolve(settei());
+    var url = kiteiNoUrl();
+    if (!url) return Promise.resolve(null);       // 住所が決まっていなければ、端末の中だけで動く
+    if (mukaeiretechuu) return Promise.resolve(null);
+    mukaeiretechuu = true;
+
+    var k = window.MFK_SABA_SETTEI || {};
+    var namae = (k.namae || "コンパスから") + " " + new Date().toISOString().slice(0, 10);
+
+    return fetch(url + "/welcome", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ namae: namae }),
+    }).then(function (r) {
+      if (!r.ok) throw new Error("迎え入れができませんでした（" + r.status + "）");
+      return r.json();
+    }).then(function (j) {
+      if (!j || !j.aikotoba) throw new Error("合言葉が返ってきませんでした");
+      store.save(SETTEI_KAGI, { url: url, aikotoba: String(j.aikotoba).trim(), jidou: true });
+      mukaeiretechuu = false;
+      shirase();
+      return settei();
+    }).catch(function (e) {
+      mukaeiretechuu = false;
+      jotai.shippai = e.message;
+      shirase();
+      return null;
+    });
+  }
 
   /* ---------- サーバを呼ぶ ---------- */
   function yobu(michi, opt) {
@@ -274,14 +316,54 @@
     el.title = jotai.saigo ? ("最後に預けた時刻 " + jotai.saigo.toLocaleTimeString()) : "";
   }
 
-  /* 帯はあとから描かれるので、少し待ってから1回、そのあと時々書き替える */
-  setTimeout(shirase, 300);
-  setInterval(shirase, 5000);
+  /* ---------- 保存先の案内を、いまの預かり具合に書き替える ----------
+     画面には静かに「保存先はこの端末だけです」と書いてある。
+     サーバへ預かるようになったら、そのままでは嘘になるので、ここで書き替える。 */
+  function annai() {
+    var el = document.querySelector("[data-hozon-annai]");
+    if (!el) return;
+    var midashi = el.querySelector(".a-title");
+    var honbun = el.querySelector(".a-body");
+    if (!midashi || !honbun) return;
 
-  /* 開いたら取り合わせる（合言葉が無ければ何もしない） */
-  setTimeout(function () { if (!hikiawaseta) hikiawaseru(); }, 200);
+    if (tsunagatteiru()) {
+      midashi.textContent = "入れた数字は、この端末とマイファームのサーバの両方に保存されます";
+      honbun.textContent =
+        "入力するたびに、この端末のブラウザに保存し、あわせてマイファームのサーバへも預かります。"
+        + "端末を替えても、ブラウザの閲覧データを消しても、続きから使えます。"
+        + "預かった数字は、農家の経営を良くするための当社の調べものに使います。"
+        + "預けたくないときや、消してほしいときは、下の「控えを取る・読み込む」から控えを取ったうえで、"
+        + "記録を入れる画面の下にある「サーバの設定」でつながりを外してください。";
+      return;
+    }
+    if (kiteiNoUrl()) {
+      midashi.textContent = "サーバへ預かれていません（いまはこの端末だけです）";
+      honbun.textContent =
+        "マイファームのサーバへ預かる決まりですが、いまはつながっていません。"
+        + (jotai.shippai ? "（" + jotai.shippai + "）" : "")
+        + "入れた数字はこの端末のブラウザには残っているので、そのまま使えます。"
+        + "つながり次第、あとから預かります。";
+      return;
+    }
+    /* 住所がまだ決まっていないとき。元の文のままにしておく（嘘にならない） */
+  }
+
+  /* 帯はあとから描かれるので、少し待ってから1回、そのあと時々書き替える */
+  function shiraseToAnnai() { shirase(); annai(); }
+  setTimeout(shiraseToAnnai, 300);
+  setInterval(shiraseToAnnai, 5000);
+
+  /* 開いたら、まだ迎え入れていなければ迎え入れて、そのあと取り合わせる。
+     住所が決まっていなければ、どちらも何もしない（端末の中だけで動く） */
+  setTimeout(function () {
+    if (hikiawaseta) return;
+    if (settei()) { hikiawaseru(); return; }
+    mukaeireru().then(function (st) { if (st) hikiawaseru(); });
+  }, 200);
 
   window.MFK_DB = {
+    kiteiNoUrl: kiteiNoUrl,
+    mukaeireru: mukaeireru,
     settei: settei,
     setteiWoKaku: setteiWoKaku,
     tsunagatteiru: tsunagatteiru,

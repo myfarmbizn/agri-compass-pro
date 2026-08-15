@@ -153,16 +153,21 @@
     var ima = imaNoKekka(z.plan);
     var h = "";
 
-    h += '<div class="m' + (z.plan ? "" : " nai") + '"><div class="l">いまの計画</div><div class="v">'
-      + (ima ? (z.plan.years + "年の計画・品目" + z.plan.items.length + "件") : "まだありません")
+    var planAri = !!(z.plan && Array.isArray(z.plan.items) && z.plan.items.length);
+    h += '<div class="m' + (planAri ? "" : " nai") + '"><div class="l">いまの計画</div><div class="v">'
+      + (planAri ? (z.plan.years + "年の計画・品目" + z.plan.items.length + "件") : "まだありません")
       + "</div>"
-      + (z.plan ? "" : '<a href="simulator.html">経営シミュレーターで作る</a>') + "</div>";
+      + (planAri ? "" : '<div class="l">品目と面積を入れると、ここが埋まります</div>'
+                      + '<a href="hinmoku.html">品目と単価へ</a> ／ <a href="simulator.html">経営シミュレーターへ</a>') + "</div>";
 
+    /* 自分の数字は、入っていなくても先へ進める。入っていれば結果が実際に近づく、というだけ。
+       だから足りない印（.nai）は付けない */
     var n = jibunNoKazu(z.cc);
-    h += '<div class="m' + (n ? "" : " nai") + '"><div class="l">あなたの数字</div><div class="v">'
-      + (n ? (n + "件が自分の数字") : "まだ県の平均値のまま")
+    h += '<div class="m"><div class="l">あなたの数字（入れなくても進めます）</div><div class="v">'
+      + (n ? (n + "件が自分の数字") : "県の平均値で計算します")
       + "</div>"
-      + (n ? "" : '<a href="kiroku.html">記録を入れる</a> ／ <a href="checkup.html">実績を入れる</a>') + "</div>";
+      + (n ? "" : '<div class="l">入れると、この先の数字が実際に近づきます</div>'
+             + '<a href="kiroku.html">記録を入れる</a> ／ <a href="checkup.html">実績を入れる</a>') + "</div>";
 
     h += '<div class="m' + (z.nozomi ? "" : " nai") + '"><div class="l">なりたい姿</div><div class="v">'
       + (z.nozomi && z.nozomi.mokuhyouMan
@@ -182,9 +187,11 @@
     $("dasu").disabled = !dekiru;
     $("dasuSub").textContent = dekiru
       ? (MFK_AI.tsunagatteiru()
-        ? "AIの受け口につながっています。いまの計画となりたい姿を送って、打ち手の候補を選んでもらいます。"
-        : "AIの受け口がまだ設定されていないため、機械が決めた既定の3案を出します。金額はどれも計算し直したものです。")
-      : "上の材料がそろうと押せます。";
+        ? "いまの計画となりたい姿を送って、AIに打ち手の候補を選んでもらいます。金額はこの道具が計算し直します。"
+        : "AIにつながっていないため、機械が決めた既定の3案を出します。金額はどれも計算し直したものです。")
+      : (!planAri
+        ? "品目と面積を入れると押せます。自分の数字は無くても構いません（県の平均値で計算します）。"
+        : "なりたい姿を入れると押せます。");
     return z;
   }
 

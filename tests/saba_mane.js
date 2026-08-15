@@ -19,6 +19,7 @@ const koushin = {};
 const teian = [];
 const keikaku = [];
 const aiYobareta = [];
+const mukaeireta = [];
 
 function atama(res, status) {
   res.writeHead(status, {
@@ -33,6 +34,25 @@ const server = http.createServer((req, res) => {
   const michi = (req.url || "/").split("?")[0];
 
   if (req.method === "OPTIONS") { atama(res, 204); res.end(); return; }
+
+  /* 迎え入れ（/welcome）だけは合言葉の前にある。本物と同じ */
+  if (req.method === "POST" && michi === "/welcome") {
+    let nama0 = "";
+    req.on("data", (c) => { nama0 += c; });
+    req.on("end", () => {
+      let bo = {};
+      try { bo = nama0 ? JSON.parse(nama0) : {}; } catch (e) { bo = {}; }
+      mukaeireta.push({ namae: bo.namae });
+      atama(res, 200);
+      res.end(JSON.stringify({
+        aikotoba: AIKOTOBA, tenantId: "mane-tenant", userId: "mane-user",
+        namae: bo.namae || "",
+        message: "この合言葉は再発行できません。書き留めてから次へお進みください。",
+        chuui: "この端末では次回から入力せずに使えます。",
+      }));
+    });
+    return;
+  }
 
   /* 合言葉を確かめる。見出しの書き方は本物と同じにそろえてある */
   const h = req.headers.authorization || "";
@@ -115,7 +135,7 @@ server.listen(PORT, "127.0.0.1", () => {
 function kakidasu() {
   if (!OUT) return;
   try {
-    fs.writeFileSync(OUT, JSON.stringify({ azukari, koushin, teian, keikaku, aiYobareta }, null, 2));
+    fs.writeFileSync(OUT, JSON.stringify({ azukari, koushin, teian, keikaku, aiYobareta, mukaeireta }, null, 2));
   } catch (e) { /* 書けなくても止めない */ }
 }
 process.on("SIGTERM", () => { kakidasu(); process.exit(0); });

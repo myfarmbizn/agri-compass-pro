@@ -609,11 +609,15 @@
      合言葉が設定されていないときは、これまでとまったく同じに動く（外へは何も送らない）。
      道筋の層より先に読むのは、CORE.store をくるむのが早いほうが取りこぼしが無いため */
   try {
-    var ds = document.createElement("script");
     var me = document.currentScript && document.currentScript.src ? document.currentScript.src : null;
-    ds.src = me ? me.replace(/core\.js([?#].*)?$/, "db.js")
-                : (location.pathname.indexOf("/tools/") > -1 ? "../" : "") + "assets/js/db.js";
-    document.head.appendChild(ds);
+    var soto = (location.pathname.indexOf("/tools/") > -1 ? "../" : "") + "assets/js/";
+    ["saba_settei.js", "db.js"].forEach(function (na) {
+      var ds = document.createElement("script");
+      ds.src = me ? me.replace(/core\.js([?#].*)?$/, na) : (soto + na);
+      /* 読む順番を守る。住所の決めが先、預ける層があと */
+      ds.async = false;
+      document.head.appendChild(ds);
+    });
   } catch (e) { /* 預ける層が読めなくても、端末の中では動く */ }
 
   /* ---------- 道筋の層（journey.js）を全ページで読み込む ----------

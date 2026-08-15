@@ -197,8 +197,9 @@ def main():
             check('なりたい姿がサーバへ届く', 'nozomi' in azu['azukari'])
 
             hairu(pg, 'tools/teian.html', 1200)
-            check('AIの受け口につながっていると出る',
-                  'つながっています' in pg.inner_text('#dasuSub'), pg.inner_text('#dasuSub')[:60])
+            check('AIにつながっている旨が出る（つながっていないとは書かない）',
+                  'AIにつながっていない' not in pg.inner_text('#dasuSub'),
+                  pg.inner_text('#dasuSub')[:60])
             pg.click('#dasu')
             pg.wait_for_timeout(2500)
             azu = azukari_wo_yomu()
