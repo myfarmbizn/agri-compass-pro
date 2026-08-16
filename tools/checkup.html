@@ -104,7 +104,18 @@
     <p class="src" id="defaultSrc"></p>
   </div>
 
-  <div class="sec-title no-print"><h2>2. 経費（8分類）</h2><span class="hint">収支内訳書の「経費」欄をまとめて写す</span></div>
+  <div class="sec-title no-print"><h2>2. 品目に紐づかない収入</h2><span class="hint">収支内訳書の「家事消費・事業消費」「雑収入」から写す</span></div>
+  <div class="card no-print fade-up d2">
+    <div class="grid c2">
+      <div class="field"><label>家事消費・事業消費</label><div class="input-unit"><input type="number" id="inKaji" min="0" step="1000"><span class="u">円</span></div>
+        <p class="src">自分の家で食べたぶん・贈答したぶん。申告では収入に入ります。</p></div>
+      <div class="field"><label>雑収入</label><div class="input-unit"><input type="number" id="inZatsu" min="0" step="1000"><span class="u">円</span></div>
+        <p class="src">共済金・補助金・作業受託料など、品目の売上に入らない収入。</p></div>
+    </div>
+    <p class="src">この2つは、どの品目のもうけかを決められないため、下の品目別の表には配りません。農業所得（売上 − 経費）の計算にだけ足します。決算書を読み取って入れた場合は、はじめから埋まっています。</p>
+  </div>
+
+  <div class="sec-title no-print"><h2>3. 経費（8分類）</h2><span class="hint">収支内訳書の「経費」欄をまとめて写す</span></div>
   <div class="card no-print fade-up d2">
     <div class="grid c4" id="expGrid"></div>
     <div class="flex wrap" style="margin-top:10px;align-items:center;gap:10px">
@@ -114,7 +125,7 @@
     <p class="src">ハーベスタ委託料・賃借料・共済掛金などは「その他」に入れてください。品目ごとにかかったと分かる分は、上の品目の行の「その品目だけの経費」に内数として書くと、品目別のもうけが正確になります。「目安を出す」は、品目の売上×県平均の経費率の合計です。8分類の内訳は県平均が無いので、合計を見比べる目安としてだけ使い、実額は収支内訳書から写してください。</p>
   </div>
 
-  <div class="sec-title no-print"><h2>3. 労働時間の概算</h2><span class="hint">週何日 × 1日何時間 × 何か月</span></div>
+  <div class="sec-title no-print"><h2>4. 労働時間の概算</h2><span class="hint">週何日 × 1日何時間 × 何か月</span></div>
   <div class="card no-print fade-up d3">
     <div class="grid c2">
       <div>
@@ -142,7 +153,7 @@
     </div>
   </div>
 
-  <div class="sec-title"><h2>4. 診断結果</h2>
+  <div class="sec-title"><h2>5. 診断結果</h2>
     <span class="hint">結果は入力した数字から計算した目安です</span>
     <button class="btn ghost sm no-print" id="printBtn" style="margin-left:auto">印刷する</button>
   </div>
@@ -150,7 +161,7 @@
 
   <div class="grid c4 mt16 fade-up d1">
     <div class="kpi hero"><div class="k-label">農業所得（売上 − 経費）</div><div class="k-value" id="kpiIncome">―</div><div class="k-delta flat" id="kpiIncomeSub"></div></div>
-    <div class="kpi"><div class="k-label">売上合計</div><div class="k-value" id="kpiSales">―</div></div>
+    <div class="kpi"><div class="k-label">収入合計</div><div class="k-value" id="kpiSales">―</div><div class="k-delta flat" id="kpiSalesSub"></div></div>
     <div class="kpi"><div class="k-label">経費合計</div><div class="k-value" id="kpiExp">―</div></div>
     <div class="kpi"><div class="k-label">時給換算（本人＋家族）</div><div class="k-value" id="kpiWage">―</div><div class="k-delta flat" id="kpiWageSub"></div></div>
   </div>
@@ -310,6 +321,8 @@
     var kibi = mkKibi(kibiArea);
     return {
       year: year, items: items, kibi: kibi, kibiOff: false,
+      /* 品目に紐づかない収入。目安を置かない（自分で入れるか、決算書から入る） */
+      hoka: { kaji: 0, zatsu: 0 },
       expenses: defaultExpenses(items, kibi),
       labor: { sd: 5, sh: 6, sm: 10, fd: 3, fh: 4, fm: 10 },
       note: "",
@@ -353,10 +366,20 @@
     }
     var ex = {};
     EXP_CATS.forEach(function (k) { ex[k] = st.expenses[k] || 0; });
-    return { items: items, expenses: ex, laborTotalH: total, note: st.note, laborDetail: st.labor, kibiOff: !!st.kibiOff };
+    return {
+      items: items, expenses: ex, laborTotalH: total, note: st.note,
+      laborDetail: st.labor, kibiOff: !!st.kibiOff,
+      hinmokuGaiShuunyuu: { kaji: st.hoka.kaji || 0, zatsu: st.hoka.zatsu || 0 },
+      /* 決算書から読み取ったときの控え。この画面では書き換えないが、
+         保存のたびに消えないよう持ち越す */
+      kessanshoKara: st.kessanshoKara || undefined,
+    };
   }
   function restore(year, rec) {
     var st = { year: year, items: [], kibi: mkKibi(0), kibiOff: !!rec.kibiOff, expenses: {}, labor: { sd: 5, sh: 6, sm: 10, fd: 0, fh: 0, fm: 0 }, note: rec.note || "" };
+    var hg = rec.hinmokuGaiShuunyuu || {};
+    st.hoka = { kaji: hg.kaji || 0, zatsu: hg.zatsu || 0 };
+    if (rec.kessanshoKara) st.kessanshoKara = rec.kessanshoKara;
     (rec.items || []).forEach(function (it) {
       if (it.cropId === "kibi") {
         st.kibi = { area10a: it.area10a || 0, tons: it.qty || 0, genryo: it.kibiGenryo || 0, kofukin: it.kibiKofukin || 0, direct: it.direct || 0 };
@@ -401,7 +424,7 @@
           return '<div><span class="mini-label">' + k + '（円）</span><div class="input-unit"><input type="number" min="0" step="1000" data-cat="' + k + '" value="' + v + '"><span class="u">円</span></div></div>';
         }).join("") +
         '</div>' +
-        '<p class="src">入れた金額の合計が、上の「その品目だけの経費」欄に自動で入ります。くわしい入力があるとき（合計が0円より大きいとき）は、この合計が優先されます。8分類の並びは「2. 経費（8分類）」と同じで、金額はその内数として入れてください。</p>' +
+        '<p class="src">入れた金額の合計が、上の「その品目だけの経費」欄に自動で入ります。くわしい入力があるとき（合計が0円より大きいとき）は、この合計が優先されます。8分類の並びは「3. 経費（8分類）」と同じで、金額はその内数として入れてください。</p>' +
         '</div>';
       var directInp = row.querySelector('input[data-k="direct"]');
       row.querySelectorAll("input[data-k]").forEach(function (inp) {
@@ -522,6 +545,19 @@
   }
 
   /* ---------- 入力②：経費 ---------- */
+  function renderHoka() {
+    [["inKaji", "kaji"], ["inZatsu", "zatsu"]].forEach(function (x) {
+      var el = $(x[0]);
+      if (!el) return;
+      el.value = S.hoka[x[1]] || 0;
+      el.addEventListener("input", function () {
+        S.hoka[x[1]] = +this.value || 0;
+        recompute();
+        persist();
+      });
+    });
+  }
+
   function renderExpenses() {
     var g = $("expGrid");
     g.innerHTML = "";
@@ -681,7 +717,11 @@
 
   function recompute() {
     var rows = buildRows();
-    var totalSales = rows.reduce(function (a, r) { return a + r.sales; }, 0);
+    var hinmokuSales = rows.reduce(function (a, r) { return a + r.sales; }, 0);
+    /* 品目に紐づかない収入は、品目別の表には配らず、収入の合計にだけ足す。
+       申告では家事消費も雑収入も収入に入るので、落とすと所得が実際より低く出る */
+    var hoka = (S.hoka.kaji || 0) + (S.hoka.zatsu || 0);
+    var totalSales = hinmokuSales + hoka;
     var totalExp = EXP_CATS.reduce(function (a, k) { return a + (S.expenses[k] || 0); }, 0);
     var income = totalSales - totalExp;
     var laborH = laborTotal(S);
@@ -696,6 +736,12 @@
     }
     $("kpiIncomeSub").textContent = S.year + "年" + (DATA.KIBI ? "・売上には原料代金＋交付金を含む" : "");
     $("kpiSales").textContent = fmt.manUnit(totalSales);
+    var sub = $("kpiSalesSub");
+    if (sub) {
+      sub.textContent = hoka > 0
+        ? "品目の売上 " + fmt.manUnit(hinmokuSales) + " ＋ 品目に紐づかない収入 " + fmt.manUnit(hoka)
+        : "品目の売上の合計";
+    }
     $("kpiExp").textContent = fmt.manUnit(totalExp);
     $("kpiWage").textContent = wage == null ? "―" : fmt.num(Math.round(wage)) + "円";
     $("kpiWageSub").textContent = wage == null ? "労働時間が0のため計算できません" : "農業所得 ÷ 本人・家族の年間" + fmt.num(laborH) + "時間";
@@ -1040,6 +1086,7 @@
     updateSrcBadge(!!rec);
     renderItems();
     renderKibi();
+    renderHoka();
     renderExpenses();
     renderLabor();
     $("noteTa").value = S.note || "";

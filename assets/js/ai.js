@@ -153,6 +153,9 @@
       nen: (nen && nen >= 1990 && nen <= 2100) ? Math.round(nen) : null,
       shuunyuu: {
         hanbai: kazu(o.shuunyuu && o.shuunyuu.hanbai),
+        /* 家事消費・事業消費。自家で食べたぶんや贈答も収入に入るので、
+           これを落とすと所得が実際より低く出る */
+        kaji: kazu(o.shuunyuu && o.shuunyuu.kaji),
         zatsu: kazu(o.shuunyuu && o.shuunyuu.zatsu),
       },
       keihi: keihi,
@@ -184,7 +187,7 @@
 
   function mihonKessansho(files) {
     return {
-      nen: null, shuunyuu: { hanbai: null, zatsu: null }, keihi: {}, shotoku: null,
+      nen: null, shuunyuu: { hanbai: null, kaji: null, zatsu: null }, keihi: {}, shotoku: null,
       hinmoku: [], mihon: true,
       shirase: "サーバがまだ設定されていないため、読み取りは行っていません。"
              + "ファイル " + (files ? files.length : 0) + "件は送られていません。",

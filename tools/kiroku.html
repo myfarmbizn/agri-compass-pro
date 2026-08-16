@@ -552,6 +552,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
 
     h += '<div class="tbl-wrap mt16"><table class="tbl"><tbody>'
       + "<tr><th>販売金額</th><td>" + en(res.shuunyuu && res.shuunyuu.hanbai) + "</td></tr>"
+      + "<tr><th>家事消費・事業消費</th><td>" + en(res.shuunyuu && res.shuunyuu.kaji) + "</td></tr>"
       + "<tr><th>雑収入</th><td>" + en(res.shuunyuu && res.shuunyuu.zatsu) + "</td></tr>"
       + "<tr><th>経費の合計</th><td>" + en(keihiGoukei || null) + "</td></tr>"
       + "<tr><th>差引の所得</th><td>" + en(res.shotoku) + "</td></tr>"
@@ -642,8 +643,15 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
       year: kessanKekka.nen,
       items: items.length ? items : (ima.items || []),
       expenses: Object.assign({}, ima.expenses || {}, keihi),
+      /* 品目に紐づかない収入。実績の診断はこれを売上合計に足す。
+         品目ごとの所得には配らない（共済金や補助金は品目に紐づかないため） */
+      hinmokuGaiShuunyuu: {
+        kaji: kessanKekka.shuunyuu.kaji || 0,
+        zatsu: kessanKekka.shuunyuu.zatsu || 0,
+      },
       kessanshoKara: {
         hanbai: kessanKekka.shuunyuu.hanbai,
+        kaji: kessanKekka.shuunyuu.kaji,
         zatsu: kessanKekka.shuunyuu.zatsu,
         shotoku: kessanKekka.shotoku,
         yomitoriAt: new Date().toISOString(),
