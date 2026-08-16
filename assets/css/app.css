@@ -414,6 +414,10 @@ input[type="range"]::-moz-range-thumb {
 .seg {
   display: inline-flex; background: var(--surface);
   border: 1px solid var(--hairline); border-radius: 12px; padding: 3px; gap: 2px;
+  /* 3つ以上並ぶ切り替えは、電話の幅で入りきらない。折り返して全部押せるようにする
+     （災害への備えの「暴風後（72時間）」が幅390で13pxはみ出していた。2026-08-16に実測） */
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 .seg button {
   border: none; background: transparent; color: var(--ink-3); font-family: var(--font);
