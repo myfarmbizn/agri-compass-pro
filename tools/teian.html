@@ -274,7 +274,14 @@
         if (!a) return;
         if (!window.confirm("「" + na + "」を計画に入れます。いまの計画は書き換わります。よろしいですか。")) return;
         store.save("simPlan", a.plan);
-        /* どの案を選んだかを残す。出した案のうち、実際に使われるのはどれかが分かる */
+        /* どの案を選んだかを端末にも残す。計画書がこれを読んで、
+           「この計画は、どの直しどころを入れて作ったものか」を1行載せる */
+        var t = store.load("teian", null) || {};
+        t.eranda = a.namae;
+        t.erandaTeate = a.teate;
+        t.erandaAt = new Date().toISOString();
+        store.save("teian", t);
+        /* どの案を選んだかをサーバにも残す。出した案のうち、実際に使われるのはどれかが分かる */
         if (window.MFK_DB && MFK_DB.tsunagatteiru()) {
           MFK_DB.yobu("/compass/teian", {
             method: "POST",

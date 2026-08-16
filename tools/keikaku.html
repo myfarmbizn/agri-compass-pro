@@ -615,7 +615,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
       '<div class="tblx"><table><thead><tr><th>年</th><th class="num">農業所得(万円)</th><th class="num">＋減価償却</th><th class="num">＋借入・補助金の入金</th><th class="num">−設備などの支払い</th><th class="num">−借入の返済</th><th class="num">−自分・家族への給与</th><th class="num">年末の手元資金</th></tr></thead><tbody>' +
       cfRows + "</tbody></table></div>" +
       '<div class="dc-note">' + minLine + " 月ごとの支払いの波はこの表に出ないため、月単位は資金繰りカレンダーで確認します。</div>" +
-      tsukiNoYama();
+      tsukiNoYama() + eranda();
 
     /* ---- 資金繰りカレンダーで作った月ごとの見通しを、1行だけ持ってくる ----
        段4で月ごとの資金繰りを作っても、計画書に1行も出ていなかった。
@@ -647,6 +647,28 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
         + (yasui < 0 ? "（マイナスになります）" : "")
         + "。入金は品目の年間売上を12か月に等分して置いた概算です。"
         + "くわしくは資金繰りカレンダーで確かめてください。</div>";
+    }
+
+    /* ---- この計画が、どの直しどころを入れて作ったものか ----
+       段6で「この案を計画に入れる」を押すと teian.eranda に残る。
+       窓口では「なぜこの数字にしたのか」を必ず聞かれるので、計画書に1行残す */
+    function eranda() {
+      var t = CORE.store.load("teian", null);
+      if (!t || !t.eranda) return "";
+      var KATA = {
+        menseki: "面積を変える", tanka: "単価を上げる", keihiritsu: "経費率を下げる",
+        hinmokuKae: "品目を入れ替える", shoryoku: "省力の道具で労働時間を減らす",
+        toushi: "投資をする", koyou: "人を雇う",
+      };
+      var na = [];
+      (t.erandaTeate || []).forEach(function (x) {
+        if (x && x.kata) na.push(KATA[x.kata] || x.kata);
+      });
+      var hi = t.erandaAt ? String(t.erandaAt).slice(0, 10) : "";
+      return '<div class="dc-note">この計画は、段6「計画の直しどころ」で出た案のうち'
+        + "「" + esc(t.eranda) + "」を計画に入れて作ったものです"
+        + (na.length ? "（打ち手：" + esc(na.join("・")) + "）" : "")
+        + (hi ? "。入れた日 " + esc(hi) : "") + "。</div>";
     }
 
     /* ---- 8. 前提が悪い方に振れたときの試算 ---- */

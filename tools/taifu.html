@@ -940,6 +940,27 @@
     $("srcCmp").textContent += " 掛金・補償の水準は県・作物により異なります。ご自身の証書・見積の数字だけを使ってください。";
   }
 
+  /* 前に保存した3案の比較を、開き直したときに出す。
+     保存はしていたのに読む場所がどこにも無く、開き直すと消えたように見えていた */
+  (function maeNoHikaku() {
+    var ins = store.load("insurance", null);
+    if (!ins || !ins.items || !ins.items.length) return;
+    var host = document.getElementById("savePlansBtn");
+    if (!host || !host.parentElement) return;
+    var box = document.createElement("div");
+    box.className = "advice info mt16";
+    var gyou = ins.items.map(function (x) {
+      return "<li>" + String(x.label || "") + "：掛金 "
+        + F.num(x["kakekin円"] || 0) + "円 ／ 補償（収量3割減） "
+        + F.num(x["hosho円"] || 0) + "円</li>";
+    }).join("");
+    box.innerHTML = '<div class="a-icon">🗂</div><div>'
+      + '<div class="a-title">前に保存した3案の比較</div>'
+      + '<div class="a-body"><ul style="margin:6px 0 0;padding-left:1.2em">' + gyou + "</ul>"
+      + "下の欄を直して保存し直すと、この一覧も入れ替わります。</div></div>";
+    host.parentElement.insertBefore(box, host);
+  })();
+
   $("savePlansBtn").addEventListener("click", function () {
     store.save("insurance", {
       items: L.plans.map(function (p) {
