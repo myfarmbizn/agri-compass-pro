@@ -235,6 +235,19 @@
 
     <div id="sendErr"></div>
 
+    <!-- 何の書類かで、読み取り方が変わる。
+         決算書には日付の付いた行が無いので、記録としては読み取れない。
+         1年ぶんの数字として読み取り、実績の診断へ渡す -->
+    <div class="mt16">
+      <div class="small" style="font-weight:650;margin-bottom:6px">送るのはどちらですか</div>
+      <div class="seg" id="shoruiSeg" role="group" aria-label="書類の種類">
+        <button type="button" class="on" data-shorui="kiroku">作業や販売の記録</button>
+        <button type="button" data-shorui="kessansho">決算書・確定申告書</button>
+      </div>
+      <p class="muted small mt8" id="shoruiSoe">
+        伝票・ノートの写真・記録ツールの書き出しは「作業や販売の記録」です。</p>
+    </div>
+
     <div class="flex wrap mt16">
       <button class="btn primary" id="btnSend" disabled>送って読み取る</button>
       <button class="btn ghost sm hide" id="btnClear">選んだファイルを全部外す</button>
@@ -247,6 +260,9 @@
   </div>
 
   <!-- ============ 3. 読み取った結果を確かめる ============ -->
+  <!-- 決算書として読んだときの結果。記録の表とは別に出す -->
+  <div id="kessanKekka"></div>
+
   <div class="sec-title fade-up hide" id="kekkaTitle"><h2>読み取った結果</h2><span class="hint">読み違いがあれば、その行を外してください</span></div>
   <div class="card hide" id="kekkaCard">
     <div id="kekkaShirase"></div>
@@ -463,12 +479,15 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
       susumu(70, window.MFK_AI.tsunagatteiru()
         ? "AIに送っています。写真やPDFは時間がかかることがあります…"
         : "読み取りを頼んでいます…");
-      return window.MFK_AI.yomitori(arr);
+      return (shorui === "kessansho")
+        ? window.MFK_AI.kessansho(arr)
+        : window.MFK_AI.yomitori(arr);
     }).then(function (res) {
       susumu(100, "読み取りが終わりました");
       setTimeout(susumuOwari, 400);
       $("btnSend").disabled = false;
-      kekkaWoDasu(res || {});
+      if (shorui === "kessansho") kessanshoWoDasu(res || {});
+      else kekkaWoDasu(res || {});
     }).catch(function (e) {
       susumuOwari();
       $("btnSend").disabled = false;
@@ -483,6 +502,171 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
   var kekka = null;     // ai.js が返したもの
   var erabiCrop = {};   // 品目名 → 選んだ品目ID（同じ名前が複数あるとき）
   var kakuteiZumi = false;
+
+  /* ============================================================
+     B-2. 決算書として読んだとき
+     ============================================================ */
+  var shorui = "kiroku";
+  var kessanKekka = null;
+
+  (function shoruiWoErabu() {
+    var seg = $("shoruiSeg");
+    if (!seg) return;
+    seg.querySelectorAll("button").forEach(function (b2) {
+      b2.addEventListener("click", function () {
+        seg.querySelectorAll("button").forEach(function (x) { x.classList.remove("on"); });
+        b2.classList.add("on");
+        shorui = b2.getAttribute("data-shorui");
+        $("shoruiSoe").textContent = (shorui === "kessansho")
+          ? "収支内訳書・青色申告決算書です。1年ぶんの数字として読み、実績の診断へ渡します。"
+          : "伝票・ノートの写真・記録ツールの書き出しは「作業や販売の記録」です。";
+        $("kessanKekka").innerHTML = "";
+      });
+    });
+  })();
+
+  function en(v) { return (v == null) ? "―" : CORE.fmt.num(v) + " 円"; }
+
+  function kessanshoWoDasu(res) {
+    kessanKekka = res;
+    var box = $("kessanKekka");
+    var h = "";
+
+    if (res.mihon) {
+      h += '<div class="advice warn"><div class="a-icon">！</div><div>'
+        + '<div class="a-title">サーバがまだ設定されていないため、見本の受け答えです</div>'
+        + '<div class="a-body">' + esc(res.shirase || "") + " これは本物の読み取り結果ではありません。</div></div></div>";
+    }
+    if (res.shippai) {
+      h += '<div class="advice warn"><div class="a-icon">！</div><div>'
+        + '<div class="a-title">読み取れませんでした</div>'
+        + '<div class="a-body">' + esc(res.shippai) + "</div></div></div>";
+    }
+
+    var keihiGoukei = 0;
+    Object.keys(res.keihi || {}).forEach(function (k) { keihiGoukei += Number(res.keihi[k]) || 0; });
+
+    h += '<div class="card mt16"><h3>読み取った決算書の数字</h3>'
+      + '<div class="sub">' + (res.nen ? esc(String(res.nen)) + "年分" : "年が読み取れませんでした")
+      + "。数字が違うときは、このあと実績の診断の画面で直せます。</div>";
+
+    h += '<div class="tbl-wrap mt16"><table class="tbl"><tbody>'
+      + "<tr><th>販売金額</th><td>" + en(res.shuunyuu && res.shuunyuu.hanbai) + "</td></tr>"
+      + "<tr><th>雑収入</th><td>" + en(res.shuunyuu && res.shuunyuu.zatsu) + "</td></tr>"
+      + "<tr><th>経費の合計</th><td>" + en(keihiGoukei || null) + "</td></tr>"
+      + "<tr><th>差引の所得</th><td>" + en(res.shotoku) + "</td></tr>"
+      + "</tbody></table></div>";
+
+    if (Object.keys(res.keihi || {}).length) {
+      h += '<div class="tbl-wrap mt16"><table class="tbl"><thead><tr><th>経費の内訳</th><th>金額</th></tr></thead><tbody>';
+      (window.MFK_AI.KEIHI_MIDASHI || []).forEach(function (k) {
+        if (res.keihi[k] == null) return;
+        h += "<tr><td>" + esc(k) + "</td><td>" + en(res.keihi[k]) + "</td></tr>";
+      });
+      h += "</tbody></table></div>";
+    }
+
+    if ((res.hinmoku || []).length) {
+      h += '<div class="tbl-wrap mt16"><table class="tbl"><thead><tr><th>品目</th><th>面積</th><th>収穫量</th></tr></thead><tbody>';
+      res.hinmoku.forEach(function (x) {
+        h += "<tr><td>" + esc(x.na) + "</td><td>"
+          + (x.mensekiA != null ? CORE.fmt.num(x.mensekiA) + " a" : "―")
+          + "</td><td>" + (x.shuukakuKg != null ? CORE.fmt.num(x.shuukakuKg) + " kg" : "―")
+          + "</td></tr>";
+      });
+      h += "</tbody></table></div>";
+    }
+
+    var ireru = !!(res.nen && (keihiGoukei > 0 || (res.shuunyuu && res.shuunyuu.hanbai)));
+    h += '<div class="flex wrap mt16">'
+      + '<button class="btn primary" id="btnKessanIreru"' + (ireru ? "" : " disabled") + ">実績の診断に入れる</button>"
+      + '<span class="small muted" id="kessanJotai" style="align-self:center"></span></div>'
+      + '<p class="src mt8">入れたあと、実績の診断の画面で中身を確かめてください。'
+      + "そこで「この実績を、これからの計算の前提にする」を押すと、単価などが自分の数字になります。</p>"
+      + "</div>";
+
+    box.innerHTML = h;
+
+    var b3 = $("btnKessanIreru");
+    if (b3) b3.addEventListener("click", kessanshoWoIreru);
+  }
+
+  /* 読み取った決算書を、実績の診断の保存（annual）へ入れる。
+     品目ごとの内訳までは決算書に無いことが多いので、経費は共通経費として置く。
+     品目の面積と収穫量が読めていれば、その行も作る。 */
+  function kessanshoWoIreru() {
+    if (!kessanKekka || !kessanKekka.nen) return;
+    var nen = String(kessanKekka.nen);
+    var annual = CORE.store.load("annual", {}) || {};
+    var ima = annual[nen] || {};
+
+    var keihi = {};
+    (window.MFK_AI.KEIHI_MIDASHI || []).forEach(function (k) {
+      if (kessanKekka.keihi[k] != null) keihi[k] = kessanKekka.keihi[k];
+    });
+
+    /* 品目は、名前から品目IDへ当てられたものだけ作る。当たらないものは作らない
+       （知らない品目IDを作ると、ほかの画面の計算が壊れる） */
+    var items = [];
+    var atarazu = [];
+    (kessanKekka.hinmoku || []).forEach(function (x) {
+      /* 品目の名前を、一覧の品目に当てる。
+         決算書は「ゴーヤー（施設）」のように括弧の中の言葉が一覧と違うことが多いので、
+         まず丸ごと、次に括弧の前だけで比べる。
+         括弧の前で当たる相手が2つ以上あるときは決めない（取り違えを作らないため）。 */
+      var moto = function (t) { return String(t || "").split("（")[0].split("(")[0].trim(); };
+      var atari = null;
+      DATA.CROPS.forEach(function (c) { if (!atari && c.name === x.na) atari = c; });
+      if (!atari) {
+        var ki = moto(x.na);
+        var kouho = DATA.CROPS.filter(function (c) { return ki && moto(c.name) === ki; });
+        if (kouho.length === 1) atari = kouho[0];
+        else if (kouho.length > 1) {
+          /* 括弧の中の言葉が一部でも合うものがあれば、それを採る */
+          var naka = String(x.na).replace(/^[^（(]*[（(]?/, "").replace(/[）)]\s*$/, "");
+          var shibori = kouho.filter(function (c) { return naka && c.name.indexOf(naka) > -1; });
+          if (shibori.length === 1) atari = shibori[0];
+        }
+      }
+      if (!atari) { atarazu.push(x.na); return; }
+      items.push({
+        cropId: atari.id,
+        area10a: x.mensekiA != null ? Math.round(x.mensekiA / 10 * 100) / 100 : 0,
+        qty: x.shuukakuKg != null ? x.shuukakuKg : 0,
+        sales: x.uriage != null ? x.uriage : 0,
+        direct: 0,
+      });
+    });
+
+    annual[nen] = Object.assign({}, ima, {
+      year: kessanKekka.nen,
+      items: items.length ? items : (ima.items || []),
+      expenses: Object.assign({}, ima.expenses || {}, keihi),
+      kessanshoKara: {
+        hanbai: kessanKekka.shuunyuu.hanbai,
+        zatsu: kessanKekka.shuunyuu.zatsu,
+        shotoku: kessanKekka.shotoku,
+        yomitoriAt: new Date().toISOString(),
+        mihon: !!kessanKekka.mihon,
+      },
+    });
+    CORE.store.save("annual", annual);
+
+    var st = $("kessanJotai");
+    if (st) {
+      st.textContent = nen + "年の実績に入れました。"
+        + (atarazu.length ? "（一覧に無い品目：" + atarazu.join("・") + "）" : "");
+    }
+    var b4 = $("btnKessanIreru");
+    if (b4) { b4.disabled = true; b4.textContent = "入れました"; }
+
+    var tsugi = document.createElement("a");
+    tsugi.className = "btn";
+    tsugi.href = "checkup.html";
+    tsugi.textContent = "実績の診断で確かめる";
+    tsugi.style.marginLeft = "8px";
+    if (b4 && b4.parentElement) b4.parentElement.appendChild(tsugi);
+  }
 
   function kekkaWoDasu(res) {
     kekka = res;

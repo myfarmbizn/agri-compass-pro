@@ -104,6 +104,71 @@
   }
 
   /* ============================================================
+     1-2. 決算書の読み取り（段2・段3）
+     ============================================================ */
+  /* 決算書には日付の付いた行が無いので、記録としては読み取れない。
+     1年ぶんの数字（収入・経費8分類・所得・品目の面積と収穫量）として読み取り、
+     実績の診断へ渡す。 */
+  var KEIHI_MIDASHI = ["種苗", "肥料", "農薬", "資材", "動力光熱", "出荷運賃手数料", "雇人費", "その他"];
+
+  function kazu(v) {
+    var n = Number(v);
+    return isFinite(n) ? n : null;
+  }
+
+  function kessanshoWoTashikameru(o) {
+    if (!o || typeof o !== "object") throw new Error("決算書の読み取りの結果がありません");
+    var keihi = {};
+    KEIHI_MIDASHI.forEach(function (k) {
+      var v = kazu(o.keihi && o.keihi[k]);
+      if (v != null && v >= 0) keihi[k] = v;
+    });
+    var hinmoku = [];
+    (Array.isArray(o.hinmoku) ? o.hinmoku : []).slice(0, 20).forEach(function (x) {
+      var na = String((x && x.na) || "").slice(0, 40);
+      if (!na) return;
+      hinmoku.push({
+        na: na, mensekiA: kazu(x.mensekiA), shuukakuKg: kazu(x.shuukakuKg), uriage: kazu(x.uriage),
+      });
+    });
+    var nen = kazu(o.nen);
+    return {
+      nen: (nen && nen >= 1990 && nen <= 2100) ? Math.round(nen) : null,
+      shuunyuu: {
+        hanbai: kazu(o.shuunyuu && o.shuunyuu.hanbai),
+        zatsu: kazu(o.shuunyuu && o.shuunyuu.zatsu),
+      },
+      keihi: keihi,
+      shotoku: kazu(o.shotoku),
+      hinmoku: hinmoku,
+      mihon: !!o.mihon,
+    };
+  }
+
+  function kessansho(files) {
+    if (!tsunagatteiru()) return Promise.resolve(mihonKessansho(files));
+    var nakami = files.map(function (f) {
+      return { namae: f.namae, shurui: f.shurui, moji: f.moji || null, data: f.data || null };
+    });
+    return awsWoYobu("kessansho", { files: nakami })
+      .then(kessanshoWoTashikameru)
+      .catch(function (e) {
+        var r = mihonKessansho(files);
+        r.shippai = e.message;
+        return r;
+      });
+  }
+
+  function mihonKessansho(files) {
+    return {
+      nen: null, shuunyuu: { hanbai: null, zatsu: null }, keihi: {}, shotoku: null,
+      hinmoku: [], mihon: true,
+      shirase: "サーバがまだ設定されていないため、読み取りは行っていません。"
+             + "ファイル " + (files ? files.length : 0) + "件は送られていません。",
+    };
+  }
+
+  /* ============================================================
      2. 計画の直しどころ（段6）
      ============================================================ */
   /* 打ち手の型。AIはこの中からしか選べない。
@@ -231,6 +296,8 @@
     setteiWoKaku: setteiWoKaku,
     tsunagatteiru: tsunagatteiru,
     yomitori: yomitori,
+    kessansho: kessansho,
+    KEIHI_MIDASHI: KEIHI_MIDASHI.slice(),
     naoshidokoro: naoshidokoro,
     yomiawase: yomiawase,
     kiteiNoAn: kiteiNoAn,
@@ -239,6 +306,7 @@
     /* 検証だけ外から使えるようにしておく（試験のため） */
     _tashikameru: {
       yomitori: yomitoriWoTashikameru,
+      kessansho: kessanshoWoTashikameru,
       naoshidokoro: naoshidokoroWoTashikameru,
       yomiawase: yomiawaseWoTashikameru,
     },

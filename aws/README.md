@@ -92,6 +92,17 @@ aws lambda invoke --function-name <移行を当てる役> --payload '{"inspect":
 受け口の住所は `https://m4vxi8w3zj.execute-api.ap-northeast-1.amazonaws.com/nonprod`。
 これを `assets/js/saba_settei.js` の `url` に入れてある。
 
+## WAGRI（農業データ連携基盤）
+
+段1（`tools/hinmoku.html`）で圃場を選んで面積を取る道。WAGRIを呼ぶのは `assets/js/wagri.js` だけで、
+鍵が空のあいだは見本の圃場を返し、画面にも見本だと出す。本物への切り替えは次の3行。
+
+1. `assets/js/wagri.js` 先頭の `SETTEI.riyousha` に利用者ID、`SETTEI.himitsu` にクライアントシークレットを入れる
+2. 同じ `SETTEI.michi` に、ID付与済み筆ポリゴン取得API v3 の道（`GetByLocalGovernmentCd`・`GetDistance`）を入れる
+3. 同じ `SETTEI.kou` に、返ってくる項目の名（ID・面積・市区町村コード・緯度・経度）を仕様ページのとおり入れる
+
+2と3は手順書に載っていない（未確定）。鍵と一緒に届く仕様ページで確かめる。画面側は直さなくてよい。
+
 ## まだ決めていないこと
 
 - AIを呼ぶ費用の上限と、1人あたりの回数

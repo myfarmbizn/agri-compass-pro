@@ -34,6 +34,13 @@
 .ima-gyou .tani { color: var(--ink-3); font-size: 13px; }
 .ima-gyou .hazusu { background: none; border: 0; color: var(--ink-3);
   text-decoration: underline; cursor: pointer; font-size: 13px; min-height: 42px; }
+/* 地図から取った圃場を選ぶところ */
+.hojou-gyou { display: flex; gap: 9px; align-items: center; flex-wrap: wrap;
+  border-bottom: 1px solid var(--hairline); padding: 9px 2px; font-size: 13.5px; }
+.hojou-gyou:last-child { border-bottom: 0; }
+.hojou-gyou input[type="checkbox"] { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--accent); }
+.hojou-gyou .men { font-weight: 700; font-variant-numeric: tabular-nums; }
+.hojou-gyou .soe { color: var(--ink-3); font-size: 12px; }
 .ima-kekka { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 12px 0 0; }
 .ima-kekka .m { border: 1px solid var(--hairline); border-radius: 11px; padding: 11px 13px; background: var(--inset); }
 .ima-kekka .m .l { font-size: 12px; color: var(--ink-3); }
@@ -85,6 +92,9 @@
       面積はアール（a）で入れます。1反＝10a、1haは100aです。</p>
 
     <div id="imaList"></div>
+
+    <!-- 地図から取った圃場を選ぶところ。押されるまで出さない -->
+    <div id="imaChizu" class="hide"></div>
 
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0 0">
       <select id="imaSel" style="min-height:44px;font-size:15px;padding:6px 10px;border:1px solid var(--hairline-strong);border-radius:8px;min-width:12em"></select>
@@ -274,6 +284,7 @@
 <script src="../assets/js/charts.js"></script>
 <script src="../assets/js/sim_engine.js"></script>
 <script src="../assets/js/uchite.js"></script>
+<script src="../assets/js/wagri.js"></script>
 <script>
 CORE.renderTopbar("hinmoku", "../");
 document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
@@ -1003,6 +1014,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
           + '<input type="number" min="0" step="1" inputmode="numeric" data-i="' + i + '" value="'
           + (r.areaA ? imaEsc(String(r.areaA)) : "") + '" aria-label="' + imaEsc(imaCropName(r.cropId)) + 'の面積">'
           + '<span class="tani">a</span>'
+          + '<button class="btn ghost sm" type="button" data-chizu="' + i + '">地図から面積を取る</button>'
           + '<button class="hazusu" type="button" data-del="' + i + '">この品目を外す</button>'
           + "</div>";
       }).join("");
@@ -1017,10 +1029,14 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
         imaKekkaRender();
       });
     });
+    list.querySelectorAll("button[data-chizu]").forEach(function (el) {
+      el.addEventListener("click", function () { chizuHiraku(+el.getAttribute("data-chizu")); });
+    });
     list.querySelectorAll("button[data-del]").forEach(function (el) {
       el.addEventListener("click", function () {
         var rs = imaYomu();
         rs.splice(+el.getAttribute("data-del"), 1);
+        chizuTojiru();
         imaKaku(rs);
         imaRender();
         imaKekkaRender();
@@ -1038,6 +1054,117 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     });
     if (DATA.KIBI && !aru.kibi) opts.push('<option value="kibi">さとうきび（分蜜糖）</option>');
     sel.innerHTML = opts.join("");
+  }
+
+  /* ============================================================
+     地図から面積を取る（WAGRIのID付与済み筆ポリゴン取得API v3）。
+     WAGRIを呼ぶのは assets/js/wagri.js の1本だけ。ここは選ばせて足すところ。
+     鍵がまだ無いあいだは見本の圃場が返る。そのときは必ず画面に見本だと出す。
+     ============================================================ */
+  var chizuGyou = -1;    /* 面積を入れる先の行 */
+  var chizuErabi = {};   /* 選んだ圃場。ID → 面積（平方メートル） */
+
+  function chizuTojiru() {
+    var box = document.getElementById("imaChizu");
+    if (!box) return;
+    box.classList.add("hide");
+    box.innerHTML = "";
+    chizuGyou = -1;
+    chizuErabi = {};
+  }
+
+  function chizuHako(nakami) {
+    var box = document.getElementById("imaChizu");
+    if (!box) return null;
+    box.classList.remove("hide");
+    box.innerHTML = '<div class="card" style="margin:10px 0 0;padding:14px 16px">' + nakami + "</div>";
+    return box;
+  }
+
+  function chizuHiraku(i) {
+    var rows = imaYomu();
+    if (!rows[i]) return;
+    chizuGyou = i;
+    chizuErabi = {};
+    chizuHako('<p class="small muted" style="margin:0">圃場を読んでいます。少しお待ちください。</p>');
+    if (!window.MFK_WAGRI) {
+      chizuHako('<p class="small muted" style="margin:0">圃場を取る口が読み込めませんでした。面積は手で入れてください。</p>'
+        + '<div style="margin-top:10px"><button class="btn ghost sm" type="button" id="chizuToji">閉じる</button></div>');
+      chizuBotanBind();
+      return;
+    }
+    MFK_WAGRI.hojouIchiran().then(function (r) {
+      if (chizuGyou !== i) return;
+      chizuKaku(r, imaCropName(rows[i].cropId));
+    });
+  }
+
+  function chizuKaku(r, hinmokuNa) {
+    var hojou = (r && Array.isArray(r.hojou)) ? r.hojou : [];
+    var h = "";
+    if (r && r.dami) {
+      h += '<div class="advice warn" style="margin:0 0 12px"><div class="a-icon">！</div><div>'
+        + '<div class="a-title">見本の圃場です</div>'
+        + '<div class="a-body">これは見本の圃場です。WAGRIの鍵がまだ無いため、実在の農地ではありません'
+        + (r.riyuu ? "<br>" + imaEsc(r.riyuu) : "") + "</div></div></div>";
+    }
+    h += '<div style="font-weight:700;margin:0 0 4px">' + imaEsc(hinmokuNa) + "の圃場を選ぶ</div>";
+    h += '<p class="small muted" style="margin:0 0 8px">選んだ圃場の面積を合計して、上の面積の欄に入れます。'
+      + "1つの品目を何枚かの畑で作っているときは、まとめて選んでください。</p>";
+    if (!hojou.length) {
+      h += '<p class="small muted" style="margin:0">圃場が1枚も返りませんでした。面積は手で入れてください。</p>';
+    } else {
+      h += hojou.map(function (x, i) {
+        var a = MFK_WAGRI.aNiNaosu(x.mensekiM2);
+        return '<label class="hojou-gyou">'
+          + '<input type="checkbox" data-hojou="' + i + '">'
+          + '<span class="men">' + a.toFixed(1) + " a</span>"
+          + '<span class="soe">' + CORE.fmt.num(x.mensekiM2) + "平方メートル ／ 筆ポリゴンID "
+          + imaEsc(x.id) + (x.shikuchosonCd ? " ／ 市区町村コード " + imaEsc(x.shikuchosonCd) : "") + "</span>"
+          + "</label>";
+      }).join("");
+      h += '<div id="chizuGoukei" style="margin:10px 0 0;font-weight:700">選んだ面積の合計 0.0 a</div>';
+    }
+    h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0">'
+      + '<button class="btn ghost sm" type="button" id="chizuIreru">この面積を入れる</button>'
+      + '<button class="btn ghost sm" type="button" id="chizuToji">閉じる</button></div>';
+    chizuHako(h);
+    var box = document.getElementById("imaChizu");
+    box.querySelectorAll("input[data-hojou]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        var x = hojou[+el.getAttribute("data-hojou")];
+        if (!x) return;
+        if (el.checked) chizuErabi[x.id] = Number(x.mensekiM2) || 0;
+        else delete chizuErabi[x.id];
+        var g = document.getElementById("chizuGoukei");
+        if (g) g.textContent = "選んだ面積の合計 " + MFK_WAGRI.aNiNaosu(chizuGoukei()).toFixed(1) + " a";
+      });
+    });
+    chizuBotanBind();
+  }
+
+  function chizuGoukei() {
+    var g = 0;
+    Object.keys(chizuErabi).forEach(function (k) { g += Number(chizuErabi[k]) || 0; });
+    return g;
+  }
+
+  function chizuBotanBind() {
+    var toji = document.getElementById("chizuToji");
+    if (toji) toji.addEventListener("click", chizuTojiru);
+    var ireru = document.getElementById("chizuIreru");
+    if (ireru) ireru.addEventListener("click", chizuIreru);
+  }
+
+  /* 選んだ合計を、その品目の面積の欄へ入れる。
+     入れたあとは手で打ったときと同じ扱いにするため、input の出来事を出す */
+  function chizuIreru() {
+    var i = chizuGyou;
+    var el = document.querySelector('#imaList input[data-i="' + i + '"]');
+    if (!el) { chizuTojiru(); return; }
+    el.value = MFK_WAGRI.aNiNaosu(chizuGoukei()).toFixed(1);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    chizuTojiru();
   }
 
   function imaKekkaRender() {
