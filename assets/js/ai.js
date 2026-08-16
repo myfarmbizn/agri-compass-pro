@@ -43,6 +43,17 @@
   }
   function tsunagatteiru() { return !!settei(); }
 
+  /* AIに頼む前に、まだ迎え入れられていなければ迎え入れる。
+     記録の画面から入った人は、まだ何も保存していないので迎え入れが済んでいない。
+     そのままだと本物のAIにつながらず、見本の受け答えが返ってしまう
+     （2026-08-16に公開先で実測）。ファイルを送るのは十分に意味のある行いなので、
+     ここで迎え入れてよい。住所が決まっていなければ何もしない。 */
+  function mazuTsunagu() {
+    if (settei()) return Promise.resolve(true);
+    if (!window.MFK_DB || !MFK_DB.kiteiNoUrl || !MFK_DB.kiteiNoUrl()) return Promise.resolve(false);
+    return MFK_DB.mukaeireru().then(function (st) { return !!st; }).catch(function () { return false; });
+  }
+
   /* AWSのAIを呼ぶ。呼び先は受け口の /compass/ai。
      返すのは必ずオブジェクト。中身の検証は下の各関数で行う。 */
   function awsWoYobu(shurui, zairyou) {
@@ -90,7 +101,13 @@
   }
 
   function yomitori(files) {
-    if (!tsunagatteiru()) return Promise.resolve(mihonYomitori(files));
+    return mazuTsunagu().then(function (tsuita) {
+      if (!tsuita) return mihonYomitori(files);
+      return yomitoriWoOkuru(files);
+    });
+  }
+
+  function yomitoriWoOkuru(files) {
     var nakami = files.map(function (f) {
       return { namae: f.namae, shurui: f.shurui, moji: f.moji || null, data: f.data || null };
     });
@@ -146,7 +163,13 @@
   }
 
   function kessansho(files) {
-    if (!tsunagatteiru()) return Promise.resolve(mihonKessansho(files));
+    return mazuTsunagu().then(function (tsuita) {
+      if (!tsuita) return mihonKessansho(files);
+      return kessanshoWoOkuru(files);
+    });
+  }
+
+  function kessanshoWoOkuru(files) {
     var nakami = files.map(function (f) {
       return { namae: f.namae, shurui: f.shurui, moji: f.moji || null, data: f.data || null };
     });
@@ -215,7 +238,13 @@
   }
 
   function naoshidokoro(zairyou) {
-    if (!tsunagatteiru()) return Promise.resolve(mihonNaoshidokoro(zairyou));
+    return mazuTsunagu().then(function (tsuita) {
+      if (!tsuita) return mihonNaoshidokoro(zairyou);
+      return naoshidokoroWoOkuru(zairyou);
+    });
+  }
+
+  function naoshidokoroWoOkuru(zairyou) {
     return awsWoYobu("naoshidokoro", zairyou)
       .then(naoshidokoroWoTashikameru)
       .catch(function (e) {
@@ -244,7 +273,13 @@
   }
 
   function yomiawase(keikaku) {
-    if (!tsunagatteiru()) return Promise.resolve(mihonYomiawase(keikaku));
+    return mazuTsunagu().then(function (tsuita) {
+      if (!tsuita) return mihonYomiawase(keikaku);
+      return yomiawaseWoOkuru(keikaku);
+    });
+  }
+
+  function yomiawaseWoOkuru(keikaku) {
     return awsWoYobu("yomiawase", keikaku)
       .then(yomiawaseWoTashikameru)
       .catch(function (e) {
