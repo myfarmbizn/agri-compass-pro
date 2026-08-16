@@ -124,6 +124,12 @@ def main():
                     route.abort()
             pg.route('**/*', michibiki)
 
+            # この検査は「住所が決まっていないとき」と「合言葉を手で入れたとき」を見る。
+            # 実機の住所が入ったままだと自動で迎え入れに行くので、住所の決めだけ空に差し替える
+            pg.route('**/saba_settei.js', lambda route: route.fulfill(
+                status=200, content_type='text/javascript; charset=utf-8',
+                body="window.MFK_SABA_SETTEI = { url: '', namae: 'ためし' };"))
+
             # ---- 1. 合言葉が無いときは、外へ送らない ----
             hairu(pg, 'tools/hinmoku.html')
             pg.evaluate("() => localStorage.clear()")
@@ -191,7 +197,8 @@ def main():
               CORE.store.save('simPlan', plan);
               CORE.store.save('nozomi', nozomi);
             }""", [PLAN, NOZOMI])
-            pg.wait_for_timeout(4500)
+            # 送るまでの待ち（3秒）に加えて、2つぶんの送りが終わるまで余裕を見る
+            pg.wait_for_timeout(7000)
             azu = azukari_wo_yomu()
             check('計画がサーバへ届く', 'simPlan' in azu['azukari'])
             check('なりたい姿がサーバへ届く', 'nozomi' in azu['azukari'])

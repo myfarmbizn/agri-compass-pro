@@ -17,9 +17,8 @@
    置いたあとに直すときは、このファイルだけを直す。
    ============================================================ */
 window.MFK_SABA_SETTEI = {
-  /* 例: "https://xxxxxxxx.execute-api.ap-northeast-1.amazonaws.com"
-     2026年8月16日の時点では空。実機へ受け口を置いたら、ここに入れる。
-     置き方は sagyou/aws/README.md を読むこと。 */
-  url: "",
+  /* のうきろくと同じ基盤の受け口（AWS 586481703889）。2026年8月16日に置いた。
+     ここを空にすると、端末の中だけで動く状態に戻る。 */
+  url: "https://m4vxi8w3zj.execute-api.ap-northeast-1.amazonaws.com/nonprod",
   namae: "コンパスから",
 };

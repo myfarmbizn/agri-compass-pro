@@ -186,10 +186,23 @@ def main():
             nise = ("window.MFK_SABA_SETTEI = { url: '" + SABA + "', namae: 'ためし' };")
             pg.route('**/saba_settei.js', lambda route: route.fulfill(
                 status=200, content_type='text/javascript; charset=utf-8', body=nise))
-            hairu(pg, 'tools/hinmoku.html', 3000)
+            hairu(pg, 'tools/hinmoku.html', 2500)
+
+            # 開いただけでは迎え入れない（公開の画面なので、通りすがりで空の農園を作らない）
+            st0 = pg.evaluate(f"() => localStorage.getItem('{NS}:sabaSetting')")
+            check('開いただけでは迎え入れない', not st0, str(st0)[:40])
+            azu0 = azukari_wo_yomu()
+            check('開いただけではサーバに何も作らない', not azu0.get('mukaeireta'),
+                  json.dumps(azu0.get('mukaeireta'), ensure_ascii=False))
+
+            # 何かを入れた最初の1回で迎え入れる
+            v1 = pg.eval_on_selector('#imaSel', 'e => e.options[1].value')
+            pg.select_option('#imaSel', v1)
+            pg.click('#imaAdd')
+            pg.wait_for_timeout(2500)
 
             st = pg.evaluate(f"() => JSON.parse(localStorage.getItem('{NS}:sabaSetting') || 'null')")
-            check('何もしなくても迎え入れられる', bool(st and st.get('aikotoba')),
+            check('何かを入れると、農家は何もしなくても迎え入れられる', bool(st and st.get('aikotoba')),
                   json.dumps(st, ensure_ascii=False) if st else 'null')
             check('自動で迎え入れた印が残る', bool(st and st.get('jidou')))
             azu = azukari_wo_yomu()
@@ -204,10 +217,6 @@ def main():
                   'マイファームのサーバ' in annai, annai[:70])
 
             # 入れたものが届くか
-            v2 = pg.eval_on_selector('#imaSel', 'e => e.options[1].value')
-            pg.select_option('#imaSel', v2)
-            pg.click('#imaAdd')
-            pg.wait_for_timeout(300)
             pg.fill('.ima-gyou input', '25')
             pg.wait_for_timeout(4500)
             azu = azukari_wo_yomu()

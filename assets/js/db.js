@@ -159,6 +159,12 @@
     matsu[kagi] = true;
     jotai.machi = Object.keys(matsu).length;
     shirase();
+    /* まだ迎え入れていなければ、ここで迎え入れる。
+       その人が初めて何かを入れた瞬間で、預かる中身ができたところである */
+    if (!settei() && kiteiNoUrl()) {
+      mukaeireru().then(function (st) { if (st) okuru(); });
+      return;
+    }
     if (tokei) clearTimeout(tokei);
     tokei = setTimeout(okuru, MATSU_BYOU * 1000);
   }
@@ -353,12 +359,13 @@
   setTimeout(shiraseToAnnai, 300);
   setInterval(shiraseToAnnai, 5000);
 
-  /* 開いたら、まだ迎え入れていなければ迎え入れて、そのあと取り合わせる。
-     住所が決まっていなければ、どちらも何もしない（端末の中だけで動く） */
+  /* 開いたときは、すでに迎え入れ済みのときだけ取り合わせる。
+     開いただけでは迎え入れない。公開の画面なので、通りすがりに開かれるたびに
+     空の農園が1軒できてしまうため。迎え入れるのは、その人が何かを入れた最初の1回
+     （下の tsumu から呼ぶ）。 */
   setTimeout(function () {
     if (hikiawaseta) return;
-    if (settei()) { hikiawaseru(); return; }
-    mukaeireru().then(function (st) { if (st) hikiawaseru(); });
+    if (settei()) hikiawaseru();
   }, 200);
 
   window.MFK_DB = {
