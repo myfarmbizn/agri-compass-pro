@@ -43,6 +43,21 @@
   }
   function tsunagatteiru() { return !!settei(); }
 
+  /* 見本に落ちたとき、その理由を見出しの1文にする。
+     以前はどんな理由でも画面が「サーバがまだ設定されていないため」と決め打ちで出していた。
+     AIに聞ける回数の上限に達したときも同じ文が出て、本当の理由が農家に伝わらなかった。 */
+  function mihonNoWake(r, e) {
+    var m = String((e && e.message) || "");
+    r.shippai = m;
+    if (m.indexOf("上限") > -1) {
+      r.midashi = "AIに聞ける回数の上限に達したため、見本の受け答えです";
+    } else if (m) {
+      r.midashi = "AIを呼びましたが返ってこなかったため、見本の受け答えです";
+    }
+    if (m) r.shirase = m;
+    return r;
+  }
+
   /* AIに頼む前に、まだ迎え入れられていなければ迎え入れる。
      記録の画面から入った人は、まだ何も保存していないので迎え入れが済んでいない。
      そのままだと本物のAIにつながらず、見本の受け答えが返ってしまう
@@ -114,9 +129,7 @@
     return awsWoYobu("yomitori", { files: nakami })
       .then(yomitoriWoTashikameru)
       .catch(function (e) {
-        var r = mihonYomitori(files);
-        r.shippai = e.message;
-        return r;
+        return mihonNoWake(mihonYomitori(files), e);
       });
   }
 
@@ -179,9 +192,7 @@
     return awsWoYobu("kessansho", { files: nakami })
       .then(kessanshoWoTashikameru)
       .catch(function (e) {
-        var r = mihonKessansho(files);
-        r.shippai = e.message;
-        return r;
+        return mihonNoWake(mihonKessansho(files), e);
       });
   }
 
@@ -251,9 +262,7 @@
     return awsWoYobu("naoshidokoro", zairyou)
       .then(naoshidokoroWoTashikameru)
       .catch(function (e) {
-        var r = mihonNaoshidokoro(zairyou);
-        r.shippai = e.message;
-        return r;
+        return mihonNoWake(mihonNaoshidokoro(zairyou), e);
       });
   }
 
@@ -286,9 +295,7 @@
     return awsWoYobu("yomiawase", keikaku)
       .then(yomiawaseWoTashikameru)
       .catch(function (e) {
-        var r = mihonYomiawase(keikaku);
-        r.shippai = e.message;
-        return r;
+        return mihonNoWake(mihonYomiawase(keikaku), e);
       });
   }
 

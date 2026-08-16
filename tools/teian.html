@@ -214,12 +214,12 @@
   }
 
   /* ---------- 結果を描く ---------- */
-  function renderKekka(list, moto, nozomi, shirase) {
+  function renderKekka(list, moto, nozomi, shirase, midashi) {
     var box = $("kekka");
     var h = "";
 
     if (shirase) {
-      h += '<div class="mihon"><b>見本の受け答えです。</b> ' + esc(shirase) + "</div>";
+      h += '<div class="mihon"><b>' + esc(midashi || "見本の受け答えです。") + '</b> ' + esc(shirase) + "</div>";
     }
 
     var todoku = list.filter(function (a) { return a.hantei.todoku === true; });
@@ -358,9 +358,9 @@
 
       var shirase = "";
       if (r && r.mihon) shirase = r.shirase || "AIの受け口がまだ設定されていません。";
-      if (r && r.shippai) shirase += "（AIを呼びましたが返ってきませんでした：" + r.shippai + "）";
-
-      renderKekka(deta, z.plan, z.nozomi, shirase);
+      /* 見本になった理由は ai.js が見出しにして返す（回数の上限に達したときなど）。
+         無ければ、これまでどおり「見本の受け答えです」と出す */
+      renderKekka(deta, z.plan, z.nozomi, shirase, (r && r.midashi) || "");
       var nokosu = deta.map(function (x) {
         return { namae: x.namae, teate: x.teate, finalIncome: x.kekka.finalIncome, roudou: x.kekka.roudou };
       });

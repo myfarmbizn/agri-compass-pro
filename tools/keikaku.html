@@ -929,11 +929,11 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
       return out;
     }
 
-    function render(shiteki, shirase) {
+    function render(shiteki, shirase, midashi) {
       var box = document.getElementById("yomiKekka");
       var kataCls = { "数字が合っていない": "k1", "手間が現実的でない": "k2", "根拠が無い": "k3", "窓口で聞かれる": "k4" };
       var h = "";
-      if (shirase) h += '<div class="yomi-mihon"><b>見本の受け答えです。</b> ' + esc2(shirase) + "</div>";
+      if (shirase) h += '<div class="yomi-mihon"><b>' + esc2(midashi || "見本の受け答えです。") + '</b> ' + esc2(shirase) + "</div>";
       if (!shiteki.length) {
         h += '<p class="small" style="margin:10px 0 0">機械で分かる範囲では、書きもれと食い違いは見つかりませんでした。'
           + "見落としが無いとは言えません。窓口でもお確かめください。</p>";
@@ -969,9 +969,8 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
           shirase = (r.shirase || "AIの受け口がまだ設定されていません。")
             + " 下に出ているのは、機械で分かる範囲の指摘だけです。";
         }
-        if (r && r.shippai) shirase += "（AIを呼びましたが返ってきませんでした：" + r.shippai + "）";
-
-        render(deta, shirase);
+        /* 見本になった理由は ai.js が見出しにして返す（回数の上限に達したときなど） */
+        render(deta, shirase, (r && r.midashi) || "");
         st.textContent = "読み合わせました（" + deta.length + "件）";
         btn.disabled = false;
         btn.textContent = "もう一度読み合わせる";

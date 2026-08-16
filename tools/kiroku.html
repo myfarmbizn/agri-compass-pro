@@ -537,7 +537,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
 
     if (res.mihon) {
       h += '<div class="advice warn"><div class="a-icon">！</div><div>'
-        + '<div class="a-title">サーバがまだ設定されていないため、見本の受け答えです</div>'
+        + '<div class="a-title">' + esc(res.midashi || "サーバがまだ設定されていないため、見本の受け答えです") + '</div>'
         + '<div class="a-body">' + esc(res.shirase || "") + " これは本物の読み取り結果ではありません。</div></div></div>";
     }
     if (res.shippai) {
@@ -695,7 +695,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     var w = [];
     if (res.mihon) {
       w.push('<div class="advice warn"><div class="a-icon">！</div><div>' +
-        '<div class="a-title">サーバがまだ設定されていないため、見本の受け答えです</div>' +
+        '<div class="a-title">' + esc(res.midashi || "サーバがまだ設定されていないため、見本の受け答えです") + '</div>' +
         '<div class="a-body">' + esc(res.shirase || "") +
         ' これは本物の読み取り結果ではありません。下の「サーバの設定」を入れると、送ったファイルをAIが実際に読み取ります。</div></div></div>');
     } else if (res.shirase) {
