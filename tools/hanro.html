@@ -284,7 +284,8 @@
   var saved = CORE.store.load("hanroLast", null);
 
   var state = {
-    cropId: (saved && saved.cropId) || (profile.crops[0] && profile.crops[0].cropId) || CROPS[0].id,
+    cropId: (saved && saved.cropId) || (profile.crops[0] && profile.crops[0].cropId)
+      || (CROPS[0] && CROPS[0].id) || null,
     region: (saved && saved.region) || profile.region || "本島南部",
     vol: (saved && saved.vol) || 500,
     shizai: (saved && saved.shizai != null) ? saved.shizai : T.feeDefaults.shizai.v,
@@ -296,7 +297,7 @@
   };
   var ok = false;
   for (var ci = 0; ci < CROPS.length; ci++) if (CROPS[ci].id === state.cropId) ok = true;
-  if (!ok) state.cropId = CROPS[0].id;
+  if (!ok) state.cropId = (CROPS[0] && CROPS[0].id) || null;
   if (REGIONS.indexOf(state.region) < 0) state.region = "本島南部";
 
   function initChannelState() {

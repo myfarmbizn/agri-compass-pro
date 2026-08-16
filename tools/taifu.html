@@ -393,8 +393,10 @@
     }
     var c = cropById(id);
     if (!c) return 0;
-    if (c.yieldHon10a) return c.yieldHon10a.v * c.priceYenHon.v;
-    return c.yieldKg10a.v * c.priceYenKg.v;
+    /* 地域によっては単収も単価も収録が無い品目がある。無いまま掛けると落ちる */
+    var atai = function (x) { return (x && x.v != null) ? x.v : 0; };
+    if (c.yieldHon10a) return atai(c.yieldHon10a) * atai(c.priceYenHon);
+    return atai(c.yieldKg10a) * atai(c.priceYenKg);
   }
   // 台風の被害割合の初期値（品目マスタの typhoonExp・仮）。台風以外では使わない
   function defaultExp(id) {

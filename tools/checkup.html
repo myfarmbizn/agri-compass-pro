@@ -231,8 +231,12 @@
   /* ---------- マスタ参照 ---------- */
   var CROP_BY_ID = {};
   DATA.CROPS.forEach(function (c) { CROP_BY_ID[c.id] = c; });
-  function refYield(c) { return c.yieldKg10a || c.yieldHon10a; }
-  function refPrice(c) { return c.priceYenKg || c.priceYenHon; }
+  /* 単収と単価は、地域によっては収録が無い品目がある（福岡・埼玉・大阪で実測）。
+     無いまま掛け算すると画面ごと落ちるので、無いときは「0で仮」を返す。
+     0を返すと計算には効かず、画面の表では「―（要確認）」になる。 */
+  var KARA = { v: 0, kari: true, nashi: true };
+  function refYield(c) { return (c && (c.yieldKg10a || c.yieldHon10a)) || KARA; }
+  function refPrice(c) { return (c && (c.priceYenKg || c.priceYenHon)) || KARA; }
   function cropUnit(c) { return c.yieldHon10a ? "本" : "kg"; }
 
   var EXP_CATS = ["種苗", "肥料", "農薬", "資材", "動力光熱", "出荷運賃手数料", "雇人費", "その他"];
