@@ -614,7 +614,40 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
       '<div class="dc-note">計画開始時の手元資金 ' + fmt.num(st.cashStartMan) + "万円・自分・家族への給与（家計へ渡すお金） 月" + st.livingMan + "万円からの積み上げです。</div>" +
       '<div class="tblx"><table><thead><tr><th>年</th><th class="num">農業所得(万円)</th><th class="num">＋減価償却</th><th class="num">＋借入・補助金の入金</th><th class="num">−設備などの支払い</th><th class="num">−借入の返済</th><th class="num">−自分・家族への給与</th><th class="num">年末の手元資金</th></tr></thead><tbody>' +
       cfRows + "</tbody></table></div>" +
-      '<div class="dc-note">' + minLine + " 月ごとの支払いの波はこの表に出ないため、月単位は資金繰りカレンダーで確認します。</div>";
+      '<div class="dc-note">' + minLine + " 月ごとの支払いの波はこの表に出ないため、月単位は資金繰りカレンダーで確認します。</div>" +
+      tsukiNoYama();
+
+    /* ---- 資金繰りカレンダーで作った月ごとの見通しを、1行だけ持ってくる ----
+       段4で月ごとの資金繰りを作っても、計画書に1行も出ていなかった。
+       表そのものは大きいので、いちばん薄くなる月と額だけを載せる */
+    function tsukiNoYama() {
+      var cf = CORE.store.load("cashflow", null);
+      if (!cf || !cf.incomes || !cf.incomes.length) return "";
+      var MAN = 10000;
+      var zan = cf.cashStart || 0;
+      var deru = (cf.living || 0) + (cf.keihi != null ? cf.keihi : 0);
+      (cf.extraExpenses || []).forEach(function (x) { deru += (x.man || 0) * MAN; });
+      (cf.loans || []).forEach(function (l) { deru += (l.monthly != null ? l.monthly : (l.amount || 0)); });
+      var hairu = [0,0,0,0,0,0,0,0,0,0,0,0];
+      cf.incomes.forEach(function (r) {
+        var toshi = r.annualYen || 0;
+        for (var m = 0; m < 12; m++) hairu[m] += toshi / 12;
+      });
+      var yasui = null, yasuiTsuki = null;
+      for (var k = 0; k < 12; k++) {
+        var mo = ((cf.startMonth || 1) - 1 + k) % 12 + 1;
+        var ooguchi = 0;
+        (cf.bigPays || []).forEach(function (b) { if (+b.month === mo) ooguchi += b.amount || 0; });
+        zan += hairu[mo - 1] - deru - ooguchi;
+        if (yasui === null || zan < yasui) { yasui = zan; yasuiTsuki = mo; }
+      }
+      if (yasui === null) return "";
+      return '<div class="dc-note">月ごとに見ると、手元資金がいちばん薄くなるのは ' + yasuiTsuki
+        + "月で、" + fmt.man(Math.round(yasui)) + "円の計算です"
+        + (yasui < 0 ? "（マイナスになります）" : "")
+        + "。入金は品目の年間売上を12か月に等分して置いた概算です。"
+        + "くわしくは資金繰りカレンダーで確かめてください。</div>";
+    }
 
     /* ---- 8. 前提が悪い方に振れたときの試算 ---- */
     var wfRows = wf.map(function (row, i) {
@@ -805,8 +838,11 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
       if (plan && plan.items) {
         plan.items.forEach(function (it) {
           var o = (cc && cc.overrides && cc.overrides[it.cropId]) || null;
-          var tanka = o && o.priceYenKg;
-          var ari = tanka && typeof tanka === "object" && (tanka.jisseki || tanka.kiroku || tanka.jibun);
+          /* 本で数える品目（花きなど）は priceYenHon に入る。
+             kgだけを見ていると、自分の数字を入れていても根拠なしに数えてしまう */
+          var tanka = (o && (o.priceYenKg || o.priceYenHon)) || null;
+          var ari = (typeof tanka === "number")
+            || (tanka && typeof tanka === "object" && (tanka.jisseki || tanka.kiroku || tanka.jibun));
           if (ari) konkyoAri++; else konkyoNashi++;
         });
       }

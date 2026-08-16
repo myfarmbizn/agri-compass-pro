@@ -155,7 +155,7 @@
     <div class="card mt16 fade-up d3" id="cropCard">
       <h3>うちの品目と収穫前の期間</h3>
       <div id="cropBadgeHost"></div>
-      <p class="sub">作付けの決定で決めた計画（無ければ、はじめの3問）の品目が入っています（どちらも無ければ例の品目）。面積と被害の割合は自分の畑に合わせて直してください。ここでの「被害の割合」は、直撃したときに収穫予定の売上が減る割合（％）を指します（ハウス等の設備の損害や復旧の費用は含みません。設備は下の「補強への投資」で別に扱います）。</p>
+      <p class="sub">作付けの決定で決めた計画（無ければ、段1「品目と単価」）の品目が入っています（どちらも無ければ例の品目）。面積と被害の割合は自分の畑に合わせて直してください。ここでの「被害の割合」は、直撃したときに収穫予定の売上が減る割合（％）を指します（ハウス等の設備の損害や復旧の費用は含みません。設備は下の「補強への投資」で別に扱います）。</p>
       <div class="tbl-wrap">
         <table class="tbl" id="cropTbl">
           <thead><tr><th>品目</th><th class="num">面積（a）</th><th class="num">想定売上/年</th><th class="num">被害の割合<span id="expHead"></span></th><th></th></tr></thead>
@@ -503,7 +503,7 @@
   }
 
   /* ---------- 品目行の初期化 ----------
-     優先順: このページの保存（taifuLocal）→ 作付けの決定（plan）→ はじめの3問（profile）→ 例の品目。
+     優先順: このページの保存（taifuLocal）→ 作付けの決定（plan）→ 段1「品目と単価」（profile）→ 例の品目。
      rowsSrc は出所バッジの表示に使う（plan/profile/null） */
   var rowsSrc = null;
   function _idsOf(arr, key) {
@@ -552,8 +552,8 @@
     CORE.sourceBadge($("cropBadgeHost"), "この品目は、作付けの決定で決めた計画から反映しています",
       [{ label: "→ 作付けの決定を開く", href: "sakutsuke.html" }]);
   } else if (rowsSrc === "profile") {
-    CORE.sourceBadge($("cropBadgeHost"), "この品目は、はじめの3問から反映しています",
-      [{ label: "→ 3問を直す", href: "../index.html" }]);
+    CORE.sourceBadge($("cropBadgeHost"), "この品目は、段1「品目と単価」から反映しています",
+      [{ label: "→ 品目と単価で直す", href: "hinmoku.html?back=taifu" }]);
   }
   CORE.cropAddLink($("cropAddHost"), "taifu");
 
@@ -1022,7 +1022,7 @@
       '<div class="note">入金は被災の <input type="number" id="stDelay" min="0" max="6" value="' + st.delay + '" style="width:52px;text-align:right"> か月後と仮定（仮・編集可）</div></div>' +
       "</div>" +
       '<div class="viz mt16" id="vizStress"></div>' +
-      '<p class="src">簡易計算です。入金＝品目の入金月に年間売上を等分して置いたもの。被災あり線＝被災月以降の入金を品目ごとの被害の割合' + (kariExpAny() ? "（仮）" : "") + 'だけ減らし、復旧支出と共済金の入金遅れを重ねたもの。被害の割合が未入力の品目は減収0として計算します。自分・家族への給与・大口支払い・返済は資金繰りカレンダーの保存値。</p>';
+      '<p class="src">簡易計算です。入金＝品目の入金月に年間売上を等分して置いたもの。被災あり線＝被災月以降の入金を品目ごとの被害の割合' + (kariExpAny() ? "（仮）" : "") + 'だけ減らし、復旧支出と共済金の入金遅れを重ねたもの。被害の割合が未入力の品目は減収0として計算します。自分・家族への給与・毎月の農業経費・その他の毎月の支出・大口支払い・返済は、資金繰りカレンダーの保存値をそのまま使います。</p>';
 
     function draw() {
       // 月別入金（品目の入金月に等分）
@@ -1051,13 +1051,18 @@
       var loansMonthly = 0;
       (cf.loans || []).forEach(function (ln) { loansMonthly += (ln.monthly != null ? ln.monthly : (ln.amount || 0)); });
       var living = cf.living || 0;
+      /* 毎月の農業経費と、その他の毎月の支出も引く。
+         引かないと、資金繰りカレンダーより残高が甘く出る（同じ保存値から違う線が出る） */
+      var keihiMonthly = (cf.keihi != null) ? cf.keihi : 0;
+      var extraMonthly = 0;
+      (cf.extraExpenses || []).forEach(function (x) { extraMonthly += (x.man || 0) * 10000; });
       var labels = [], b1 = [], b2 = [], bal1 = st.cash, bal2 = st.cash;
       for (var k = 0; k < 6; k++) {
         var mo = ((st.month - 1 + k) % 12) + 1;
         labels.push(mo + "月");
         var big = 0;
         (cf.bigPays || []).forEach(function (bp) { if (bp.month === mo) big += bp.amount || 0; });
-        var out = living + loansMonthly + big;
+        var out = living + loansMonthly + big + keihiMonthly + extraMonthly;
         bal1 += incNormal[mo - 1] - out;
         var inHit = incHit[mo - 1];
         var extra = 0;

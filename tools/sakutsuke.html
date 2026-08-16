@@ -288,7 +288,10 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
   // さとうきび（分蜜糖）: さとうきびデータのある地域（沖縄）だけ1行で扱えるようにする
   if (DATA.KIBI) (function () {
     var K = DATA.KIBI;
-    var y = K.yield.r5.kei;                                  // 5,020kg/10a（R5・県計）
+    /* 直近の公表値（R6県計 6,267kg/10a）にそろえる。
+       以前はここだけR5県計（5,020）を使っており、同じ計画なのに
+       収支・資金繰り・災害への備えと2割ほど違う金額が出ていた（2026-08-16に実測） */
+    var y = K.yield.r6kei;
     var pYenKg = K.tedori.totalYenT.v / 1000;                // トン当たり手取り→円/kg
     var sales10a = y.v * pYenKg;
     var keihi10a = K.seisanhi.buzaihi.v + K.seisanhi.koyoRodo.v; // 物財費＋雇用労働費
@@ -468,7 +471,8 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     cap: (draft && draft.cap) || 160,
     view: (draft && draft.view) || 0,
     yearMode: (draft && draft.yearMode) || "normal",
-    saveSel: 1,
+    /* どの案で決めるか。開き直したときに戻らないよう、下書きに含める */
+    saveSel: (draft && draft.saveSel != null) ? draft.saveSel : 1,
     incomeAll: false   // 「入金がある月」カードのタブ。既定は単案表示（保存対象外）
   };
   // 復元データの品目IDが消えていた場合の防御
@@ -505,7 +509,8 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
           jisseki: it.jisseki, jissekiYear: it.jissekiYear };
       }) };
     });
-    store.save("sakutsukeDraft", { plans: plans, fam: state.fam, cap: state.cap, view: state.view, yearMode: state.yearMode });
+    store.save("sakutsukeDraft", { plans: plans, fam: state.fam, cap: state.cap, view: state.view,
+      yearMode: state.yearMode, saveSel: state.saveSel });
   }
 
   /* ============================================================
@@ -948,7 +953,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     }
     update();
   });
-  CORE.bindSeg(document.getElementById("segSave"), function (v) { state.saveSel = +v; });
+  CORE.bindSeg(document.getElementById("segSave"), function (v) { state.saveSel = +v; persist(); });
 
   // segの初期選択を状態に合わせる
   setSegOn("segYear", state.yearMode);
@@ -1067,15 +1072,15 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
       '<a href="taifu.html" style="font-weight:700">→ 災害への備えを開く</a></p>';
   }
 
-  /* ---------- 出所バッジ: 現状案がはじめの3問の品目と一致しているとき ---------- */
+  /* ---------- 出所バッジ: 現状案が段1「品目と単価」の品目と一致しているとき ---------- */
   (function () {
     var host = document.getElementById("planBadgeHost");
     if (!host || !profile.crops || !profile.crops.length) return;
     var pIds = profile.crops.map(function (c) { return c.cropId; }).sort().join(",");
     var gIds = state.plans[0].items.map(function (it) { return it.cropId; }).sort().join(",");
     if (pIds === gIds) {
-      CORE.sourceBadge(host, "「現状」の品目と面積は、はじめの3問から反映しています",
-        [{ label: "→ 3問を直す", href: "../index.html" }]);
+      CORE.sourceBadge(host, "「現状」の品目と面積は、段1「品目と単価」から反映しています",
+        [{ label: "→ 品目と単価で直す", href: "hinmoku.html?back=sakutsuke" }]);
     }
   })();
 

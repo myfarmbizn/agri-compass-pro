@@ -59,8 +59,23 @@
     hinmoku: { page: "hinmoku", title: "品目と単価", min: "5分", required: true,
       mission: "いま作っている品目に印を付けて、面積を入れてください。単価か単収に自分の値があれば、その場で直せます。",
       benefit: "ここで決めた数字が、この先の作付け・収支・資金繰り・計画書のすべての計算のもとになります。",
-      done: function () { return changed("cropCustom"); },
-      evid: function () { var c = store.load("cropCustom", null); if (!c) return ""; var n = Object.keys(c.overrides || {}).length + (c.custom || []).length; return n ? "自分の値 " + n + "件" : ""; } },
+      /* 段1の本体は「品目に印を付けて面積を入れる」ことで、そのとき書かれるのは simPlan。
+         cropCustom は単価や単収を直したときにしか変わらないので、これだけで見ていると、
+         段1を済ませても未完了のままになる（2026-08-16に実測） */
+      done: function () {
+        var p = store.load("simPlan", null);
+        return !!(p && p.items && p.items.length) || changed("cropCustom");
+      },
+      evid: function () {
+        var p = store.load("simPlan", null);
+        var kazu = (p && p.items) ? p.items.length : 0;
+        var c = store.load("cropCustom", null);
+        var jibun = c ? (Object.keys(c.overrides || {}).length + (c.custom || []).length) : 0;
+        var t = [];
+        if (kazu) t.push("品目 " + kazu + "件");
+        if (jibun) t.push("自分の値 " + jibun + "件");
+        return t.join("・");
+      } },
     kiroku: { page: "kiroku", title: "記録を入れる", min: "5分", required: false, skippable: true,
       mission: "手元にある出荷伝票・ノートの写真・記録ツールの書き出し・決算書を、そのまま送ってください。1枚からで構いません。",
       benefit: "送った記録から、単価や単収が自分の数字になります。手で打ち直す必要がなくなります。",
@@ -75,8 +90,14 @@
       title: "計画を作る", min: "20分", required: true,
       mission: "作付けの案を組み、数年先の収支と資金繰りを確かめます。投資や災害への備えも、必要なら同じ段で見られます。",
       benefit: "計画の弱い前提と、手元のお金が薄くなる時期が先に分かります。",
-      done: function () { return changed("plan") || changed("simPlan") || changed("cashflow"); },
-      evid: function () { var p = store.load("plan", null); if (p && p.name) return "決定: " + String(p.name).slice(0, 14); return (changed("simPlan") || changed("cashflow")) ? "試算あり" : ""; } },
+      /* simPlan は段1（品目と単価）でも書かれるため、ここでは見ない。
+         見ると、段1で面積を入れただけでこの段が終わったことになる */
+      done: function () { return changed("plan") || changed("cashflow") || changed("taifuLocal"); },
+      evid: function () {
+        var p = store.load("plan", null);
+        if (p && p.name) return "決定: " + String(p.name).slice(0, 14);
+        return (changed("cashflow") || changed("taifuLocal")) ? "試算あり" : "";
+      } },
     nozomi: { page: "nozomi", title: "なりたい姿", min: "5分", required: true,
       mission: "何年後に、農業所得をいくらにしたいか。1年の働く時間をどれくらいにしたいか。手放したくないものはどれか。この3つを入れてください。",
       benefit: "次の段で、この条件に合う直しどころだけが出ます。",
@@ -99,7 +120,8 @@
       evid: function () { return changed("konkyo") ? "出どころの記入あり" : ""; } },
   };
   /* 現役農家版の順路は1本。設計の段1〜段7に合わせてある。
-     根拠しらべ（konkyo）は任意なので順路には入れず、上のナビからいつでも開ける。 */
+     根拠しらべ（konkyo）は任意なので順路には入れず、
+     ページ一覧の「そのほかの道具」から開ける。 */
   var ROUTES = {
     genneki: ["hinmoku", "kiroku", "kessan", "keikakuzukuri", "nozomi", "teian", "katachi"],
   };
@@ -532,6 +554,8 @@
            左の縦一覧に出ていて、この一覧に出てこないページがあると探せなくなるため */
         if (pages.length > 1) {
           pages.forEach(function (pg) {
+            /* 段の見出し行が、その段の代表ページを指している。同じ行き先を2回並べない */
+            if (pg === step.page) return;
             var sa = document.createElement("a");
             sa.href = relRoot() + pg + ".html";
             sa.className = "nm-sub" + (pg === PAGE ? " active" : "");
@@ -543,6 +567,30 @@
       if (rest.length) {
         head("必要なときに使うページ");
         rest.forEach(function (a) { a.textContent = a.dataset.baseLabel; menu.appendChild(a); });
+      }
+
+      /* 上のナビに出ないページ（core.js の TOOLS で hidden にしてあるもの）も、
+         ここからは開けるようにする。順路にも上のナビにも出ないと、
+         見取り図を経由しないと辿り着けなくなる（2026-08-16に実測） */
+      var hoka = [];
+      ((window.CORE && CORE.TOOLS) || []).forEach(function (t) {
+        if (!t.hidden) return;
+        var pg = String(t.href || "").split("/").pop().replace(".html", "");
+        if (!pg || routePages.indexOf(pg + ".html") > -1) return;
+        for (var k = 0; k < rest.length; k++) {
+          if ((rest[k].getAttribute("href") || "").indexOf(pg + ".html") > -1) return;
+        }
+        hoka.push({ pg: pg, label: t.label || pageLabel(pg) });
+      });
+      if (hoka.length) {
+        head("そのほかの道具");
+        hoka.forEach(function (x) {
+          var a = document.createElement("a");
+          a.href = relRoot() + x.pg + ".html";
+          a.className = "nm-sub" + (x.pg === PAGE ? " active" : "");
+          a.textContent = x.label;
+          menu.appendChild(a);
+        });
       }
 
       var g = document.createElement("a");

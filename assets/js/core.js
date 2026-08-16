@@ -584,15 +584,19 @@
     bar.className = "wipe-bar no-print";
     const bstyle = "";
     const bl = document.createElement("button");
-    bl.textContent = "操作ログを書き出す（授業の振り返り・改良用）";
+    bl.textContent = "操作の記録を書き出す（作りの改良用）";
     bl.addEventListener("click", exportLog);
     bar.appendChild(bl);
     const b = document.createElement("button");
-    b.textContent = "この端末の入力データをすべて消す（共有パソコンでの授業終了時）";
+    b.textContent = "この端末に残った入力を消す（共有のパソコンを使ったとき）";
     b.addEventListener("click", wipeAll);
     bar.appendChild(b);
     const note = document.createElement("div");
-    note.textContent = "操作の記録（どのボタンを押したか・どの項目を操作したか）は、この端末の中にだけ残ります。外へは送っていません。入力した数値・文字そのもの（氏名・住所・経営の数字など）も、もちろん送っていません。記録は下の「書き出す」で取り出せます。";
+    /* この文は db.js が、サーバに預かる作りかどうかで書き替える。
+       ここに置くのは、まだ預かる先が決まっていないときの文。
+       事実と違う文を既定にしない（以前は「外へは送っていません」を既定にしていた） */
+    note.className = "hozon-annai";
+    note.textContent = "入力した数字は、この端末の中に残ります。操作の記録（どのボタンを押したか）も同じくこの端末の中だけです。";
     note.style.cssText = "font-size:11px;color:var(--ink-4);margin-top:10px;max-width:640px;margin-left:auto;margin-right:auto;line-height:1.75;";
     bar.appendChild(note);
     const op = document.createElement("div");

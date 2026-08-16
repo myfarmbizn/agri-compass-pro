@@ -440,7 +440,7 @@
     if (x && x.kiroku) return "自分の記録から機械が数えた値"
       + (x.mai ? "（" + x.mai + "件" + (x.nen ? "・" + x.nen + "年" : "") + "）" : "")
       + (x.note ? "。" + x.note : "");
-    if (x && x.jibun) return "自分で入力した値（この端末にだけ保存）" + (x.note ? "。" + x.note : "");
+    if (x && x.jibun) return "自分で入力した値" + (x.note ? "。" + x.note : "");
     const s = srcOf(x);
     if (!s) return x && x.kari ? "仮定値（出典なし・要確認、実態に合わせて修正してください）" : "";
     return `${s.name}（${x.year || s.year}）` + flagLabel(x);

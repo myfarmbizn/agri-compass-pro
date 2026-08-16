@@ -79,10 +79,23 @@
   <div class="advice info mt16 fade-up d2" data-hozon-annai="1">
     <div class="a-icon">💾</div>
     <div>
-      <div class="a-title">保存先はこの端末だけです</div>
-      <div class="a-body">直した値・追加した品目はこのブラウザの中（localStorage）にだけ保存され、サーバーには送られず、他の人からは見えません。そのかわり、ブラウザの閲覧データを削除すると消えます。大事な値は下の「控えを取る・読み込む」でJSONファイルに書き出して控えを残してください。上書き・追加した値は統計値ではなく、利用者の責任で使う「自分の値」です。</div>
+      <div class="a-title">入れた数字の保存先</div>
+      <div class="a-body">直した値・追加した品目は、この端末のブラウザ（localStorage）に保存されます。上書き・追加した値は統計値ではなく、利用者の責任で使う「自分の値」です。控えは下の「控えを取る・読み込む」からJSONファイルに書き出せます。</div>
     </div>
   </div>
+
+  <!-- どの県の数字を土台にするか。これを選ばないと品目の一覧が沖縄のままになる。
+       以前は ?r= の付いたURLでしか変えられず、画面からは選べなかった -->
+  <section class="card mt16 fade-up d2" aria-labelledby="chiikiTitle">
+    <h2 id="chiikiTitle" style="margin:0 0 6px">どの県の数字を土台にするか</h2>
+    <p class="small muted" style="margin:0 0 12px">
+      選んだ県の公表値（収量・単価・経費率・労働時間）が、この先の計算の初期値になります。
+      自分の数字を入れたところは、そちらが優先されます。</p>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <select id="chiikiSel" style="min-height:44px;font-size:15px;padding:6px 10px;border:1px solid var(--hairline-strong);border-radius:8px;min-width:14em"></select>
+      <span class="small muted" id="chiikiNote"></span>
+    </div>
+  </section>
 
   <!-- 段1の本体。いま作っている品目と面積を入れると、その場で1年の見通しが出る -->
   <section class="card mt16 fade-up d2" id="cardIma" aria-labelledby="imaTitle">
@@ -1202,6 +1215,42 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     });
     imaRender();
     imaKekkaRender();
+
+    /* ---- どの県の数字を土台にするか ----
+       品目マスタは読み込みのときに決まるので、選び直したら読み込み直す。
+       入れた品目や自分の数字は端末に残るので消えない */
+    (function chiiki() {
+      var sel = document.getElementById("chiikiSel");
+      var note = document.getElementById("chiikiNote");
+      if (!sel || !window.MFK_REGIONS) return;
+      var ima = CORE.store.load("mfkRegion", null) || "okinawa";
+      var ids = Object.keys(window.MFK_REGIONS);
+      var opt = [];
+      ids.forEach(function (id) {
+        var d = window.MFK_REGIONS[id] || {};
+        var kazu = (d.crops || []).length;
+        opt.push('<option value="' + imaEsc(id) + '"' + (id === ima ? " selected" : "") + ">"
+          + imaEsc(d.label || id) + (kazu ? "（品目 " + kazu + "件）" : "（収録なし）")
+          + "</option>");
+      });
+      sel.innerHTML = opt.join("");
+
+      function noteWoKaku() {
+        if (!note) return;
+        var d = window.MFK_REGIONS[sel.value] || {};
+        var t = [];
+        if (d.asOf) t.push("収録は" + d.asOf);
+        if (!(d.crops || []).length) t.push("この県はまだ品目を収録していないため、自分で品目を足して使います");
+        note.textContent = t.join("。");
+      }
+      noteWoKaku();
+
+      sel.addEventListener("change", function () {
+        CORE.store.save("mfkRegion", sel.value);
+        noteWoKaku();
+        location.reload();
+      });
+    })();
   })();
 
 </script>

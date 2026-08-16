@@ -35,7 +35,7 @@
       </div>
       <div>
         <h3 style="margin:0 0 6px; font-size:12.5px; color:var(--accent)">他のページとのつながり</h3>
-        <p class="small muted" style="margin:0">単独で使えます。品目と地域はホームで入れた畑の情報を使います。</p>
+        <p class="small muted" style="margin:0">単独で使えます。品目と地域は段1「品目と単価」で入れた畑の情報を使います。</p>
       </div>
     </div>
   </div>
@@ -192,6 +192,16 @@
   var REGIONS = ["本島北部", "本島中部", "本島南部", "宮古", "八重山", "久米島", "その他離島"];
   // kg単価を持つ品目だけ（小ギクは本数単位のため対象外）
   var CROPS = DATA.CROPS.filter(function (c) { return c.priceYenKg; });
+  if (!CROPS.length) {
+    document.addEventListener("DOMContentLoaded", function () {
+      var m = document.querySelector("main") || document.body;
+      m.innerHTML = '<div class="card mt16"><h2 style="margin:0 0 6px">この地域では、まだ使えません</h2>'
+        + '<p class="sub">出荷先の比べ方は、kg当たりの単価が分かる品目でしか計算できません。'
+        + 'いま選んでいる地域には、その品目がまだ収録されていません。</p>'
+        + '<p><a class="btn ghost sm" href="hinmoku.html?back=hanro">→ 品目と単価へ戻る</a></p></div>';
+    });
+    return;
+  }
 
   /* ---------- 1kg手取りの計算（純粋関数・検算対象） ---------- */
   /*CALC-START*/
@@ -226,7 +236,9 @@
   function isIsland() { return state.region.indexOf("本島") !== 0; }
   function curCrop() {
     for (var i = 0; i < CROPS.length; i++) if (CROPS[i].id === state.cropId) return CROPS[i];
-    return CROPS[0];
+    /* kg単価を持つ品目が1つも無い地域（埼玉県・大阪府）では一覧が空になる。
+       そのまま CROPS[0] を返すと undefined になり、この先で画面ごと止まる */
+    return CROPS[0] || null;
   }
   function fmtYK(v) {
     if (v == null || isNaN(v)) return "―";

@@ -1051,7 +1051,7 @@
   }
 
   /* ---------- 年度切替 ---------- */
-  var srcBadge = null; // 「はじめの3問から反映」の出所バッジ（品目行の直上）
+  var srcBadge = null; // 「品目と単価から反映」の出所バッジ（品目行の直上）
   function updateSrcBadge(hasSaved) {
     if (!srcBadge) return;
     var prof = CORE.getProfile();
@@ -1179,7 +1179,7 @@
     $("defaultSrc").textContent =
       "行の初期値は県平均の単収 × 平均単価から計算した目安（計算値・編集前提）。" +
       "品目ごとの出典は下の県平均比較に表示します。";
-    srcBadge = CORE.sourceBadge($("cropSrcHost"), "この品目と面積は、はじめの3問から反映しています。", [{ label: "→ 3問を直す", href: "../index.html" }]);
+    srcBadge = CORE.sourceBadge($("cropSrcHost"), "この品目と面積は、段1「品目と単価」から反映しています。", [{ label: "→ 品目と単価で直す", href: "hinmoku.html?back=checkup" }]);
     if (srcBadge) srcBadge.style.display = "none";
     CORE.cropAddLink($("cropRows").parentElement, "checkup");
     bindKibi();

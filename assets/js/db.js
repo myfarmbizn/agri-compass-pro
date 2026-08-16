@@ -44,6 +44,8 @@
     "plan", "cashflow", "keikakuDraft", "konkyo", "taifuLocal", "insurance",
     "damageLog", "kiroku", "teian", "toushiMemo", "hanroLast", "kibiSettings",
     "sakutsukeDraft", "smartDraft", "gyakusan",
+    /* どの県の数字を土台にするか。端末を替えても同じ県で開けるようにする */
+    "mfkRegion",
   ];
 
   function azukaruKagi(k) { return AZUKARU.indexOf(k) > -1; }
@@ -152,10 +154,11 @@
   var tokei = null;
   var MATSU_BYOU = 3;
 
-  var jotai = { okutteiru: false, saigo: null, shippai: null, machi: 0 };
+  var jotai = { okutteiru: false, saigo: null, shippai: null, machi: 0, hozonShita: false };
 
   function tsumu(kagi) {
     if (!azukaruKagi(kagi)) return;
+    jotai.hozonShita = true;
     matsu[kagi] = true;
     jotai.machi = Object.keys(matsu).length;
     shirase();
@@ -303,6 +306,13 @@
   function shirase() {
     var el = document.querySelector(".saved-note, #savedNote, [data-saved-note]");
     if (!el) return;
+    /* まだ一度も保存していないうちは何も出さない。
+       開いただけの画面に「保存」と出ていると、何かを保存したように見える */
+    if (!jotai.hozonShita) {
+      el.textContent = "";
+      el.title = "";
+      return;
+    }
     if (!tsunagatteiru()) {
       el.textContent = "✓ この端末に保存";
       el.title = "サーバには預けていません。記録の画面の設定で合言葉を入れると、預けられます";
@@ -326,6 +336,7 @@
      画面には静かに「保存先はこの端末だけです」と書いてある。
      サーバへ預かるようになったら、そのままでは嘘になるので、ここで書き替える。 */
   function annai() {
+    shitaObiNoAnnai();
     var el = document.querySelector("[data-hozon-annai]");
     if (!el) return;
     var midashi = el.querySelector(".a-title");
@@ -352,6 +363,29 @@
       return;
     }
     /* 住所がまだ決まっていないとき。元の文のままにしておく（嘘にならない） */
+  }
+
+  /* 全ページの下に出る帯の中の1文も書き替える。
+     ここは core.js が描くので、預かる作りかどうかを知らない。
+     直さないでおくと、預かっているのに「この端末の中だけ」と書いたままになる。 */
+  function shitaObiNoAnnai() {
+    var el = document.querySelector(".wipe-bar .hozon-annai");
+    if (!el) return;
+    if (tsunagatteiru()) {
+      el.textContent =
+        "入れた数字は、この端末のブラウザと、マイファームのサーバの両方に保存されます。"
+        + "端末を替えても続きから使えます。預かった数字は、農家の経営を良くするための"
+        + "当社の調べものに使います。操作の記録（どのボタンを押したか）は、この端末の中だけです。";
+      return;
+    }
+    if (kiteiNoUrl()) {
+      el.textContent =
+        "入れた数字は、この端末のブラウザに残ります。"
+        + "マイファームのサーバへも預かる決まりですが、いまはつながっていません。"
+        + "つながり次第、あとから預かります。操作の記録はこの端末の中だけです。";
+      return;
+    }
+    /* 住所がまだ決まっていないときは、core.js が置いた文のままにしておく */
   }
 
   /* 帯はあとから描かれるので、少し待ってから1回、そのあと時々書き替える */

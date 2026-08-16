@@ -510,7 +510,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     var prof = CORE.getProfile();
     if (prof.crops && prof.crops.length) {
       S.incomes = prof.crops.map(function (c) { return { id: c.cropId, area10a: c.area10a, annualYen: null }; });
-      incomeSourceLabel = "はじめの3問で入れた品目を読み込みました";
+      incomeSourceLabel = "段1「品目と単価」で入れた品目を読み込みました";
       incomeSourceKind = "profile";
       mergeSavedExtras();
       return;
@@ -1090,7 +1090,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
   (function () {
     var links = [];
     if (incomeSourceKind === "plan") links.push({ label: "→ 作付けの決定で直す", href: "sakutsuke.html" });
-    if (incomeSourceKind === "profile" || incomeSourceKind === "example") links.push({ label: "→ はじめの3問を直す", href: "../index.html" });
+    if (incomeSourceKind === "profile" || incomeSourceKind === "example") links.push({ label: "→ 品目と単価で直す", href: "hinmoku.html?back=shikin" });
     if (CORE.sourceBadge) CORE.sourceBadge($("incomeCard"), incomeSourceLabel, links);
     if (CORE.cropAddLink) CORE.cropAddLink($("cropAddHost"), "shikin");
     /* 保存済みデータを表示中でも、作付けの決定で計画を決め直した場合に読み込み直せる導線 */

@@ -117,7 +117,10 @@
     <div class="a-icon">💾</div>
     <div>
       <div class="a-title">送ったファイルの扱いと、保存先</div>
-      <div class="a-body">送ったファイルは読み取りのためだけにAIへ渡され、読み取った結果はこの端末のブラウザ（localStorage）にだけ保存されます。ほかの人からは見えません。ブラウザの閲覧データを削除すると消えます。<b>AIが読み取った内容は、あなたが確かめて「確定する」を押すまで、どこにも保存されません。</b></div>
+      <div class="a-body">送ったファイルは読み取りのためだけにAIへ渡され、読み取ったあとは残しません。
+      読み取った結果は、この端末のブラウザと、マイファームのサーバの両方に保存されます。
+      サーバに預かるのは数字と品目名で、ファイルそのものではありません。ほかの農家からは見えません。
+      <b>AIが読み取った内容は、あなたが確かめて「確定する」を押すまで、どこにも保存されません。</b></div>
     </div>
   </div>
 
@@ -1029,7 +1032,7 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     setJoutai();
     errBox($("setErr"), []);
     $("setJoutai").insertAdjacentHTML("beforeend",
-      '<p class="src">保存しました。この端末のブラウザにだけ残ります。</p>');
+      '<p class="src">保存しました。この設定そのものは、この端末のブラウザにだけ残ります。</p>');
   });
   $("btnSetClear").addEventListener("click", function () {
     if (!confirm("サーバの設定を消します。以後は端末の中だけで動き、見本の受け答えに戻ります。よろしいですか？")) return;
