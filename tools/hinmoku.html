@@ -1013,10 +1013,43 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     return ' <span class="' + cls + '">' + imaEsc(l) + "</span>";
   }
 
+  /* この品目が、いま選んでいる県の一覧にあるか */
+  function imaCropAri(id) {
+    var c = (window.DATA && DATA.CROPS) || [];
+    for (var i = 0; i < c.length; i++) if (c[i].id === id) return true;
+    return false;
+  }
+
   function imaRender() {
     var rows = imaYomu();
     var list = document.getElementById("imaList");
     if (!list) return;
+
+    /* 県を選び直すと品目の一覧がその県のものに入れ替わる。
+       前の県で入れた品目はこの一覧に無いので、名前も単価も引けない。
+       残しておくとIDのまま画面に出て、見通しの計算も止まる（2026-08-16に実測）。
+       ここで外して、外したことを画面に出す。 */
+    var hazureta = [];
+    rows = rows.filter(function (r) {
+      if (imaCropAri(r.cropId)) return true;
+      hazureta.push(r.cropId);
+      return false;
+    });
+    if (hazureta.length) {
+      imaKaku(rows);
+      var shirase = document.getElementById("imaHazureta");
+      if (!shirase) {
+        shirase = document.createElement("div");
+        shirase.id = "imaHazureta";
+        shirase.className = "advice warn";
+        list.parentElement.insertBefore(shirase, list);
+      }
+      shirase.innerHTML = '<div class="a-icon">！</div><div>'
+        + '<div class="a-title">別の県で入れた品目 ' + hazureta.length + '件を外しました</div>'
+        + '<div class="a-body">いま選んでいる県の一覧に無い品目でした。'
+        + '県が違うと単価も収量も別の数字になるため、そのまま計算に使えません。'
+        + '下から選び直してください。</div></div>';
+    }
 
     if (!rows.length) {
       list.innerHTML = '<p class="small muted" style="margin:0">まだ入っていません。下から品目を足してください。</p>';
@@ -1180,10 +1213,65 @@ document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
     chizuTojiru();
   }
 
+  /* 経費率が県の資料に無い品目を拾う。
+     兵庫県・福岡県のように、売上の目安はあるが経費率と労働時間が原典に無い県がある。
+     この品目は計算に入れられないので、何が足りないかを画面で言う（2026-08-16に実測） */
+  function imaTarinai(rows) {
+    var reg = simBuildRegistry(DATA);
+    var nashi = [];
+    rows.forEach(function (r) {
+      if (!(Number(r.areaA) > 0)) return;
+      var c = null;
+      for (var i = 0; i < reg.length; i++) if (reg[i].id === r.cropId) c = reg[i];
+      if (!c) return;
+      var cr = c.costRateObj && c.costRateObj.v;
+      if (cr == null) nashi.push(imaCropName(r.cropId));
+    });
+    return nashi;
+  }
+
+  /* 経費率が無くても、売上だけは出せる（面積 × 単収 × 単価） */
+  function imaUriageDake(rows) {
+    var reg = simBuildRegistry(DATA);
+    var goukei = 0;
+    var atta = false;
+    rows.forEach(function (r) {
+      var a = Number(r.areaA) || 0;
+      if (!(a > 0)) return;
+      var c = null;
+      for (var i = 0; i < reg.length; i++) if (reg[i].id === r.cropId) c = reg[i];
+      if (!c) return;
+      var y = c.yieldObj && c.yieldObj.v;
+      var pr = c.priceObj && c.priceObj.v;
+      if (y == null || pr == null) return;
+      goukei += (a / 10) * y * pr;
+      atta = true;
+    });
+    return atta ? goukei : null;
+  }
+
   function imaKekkaRender() {
     var box = document.getElementById("imaKekka");
     if (!box) return;
-    var r = imaKeisan(imaYomu());
+    var gyou = imaYomu();
+    var tarinai = imaTarinai(gyou);
+    var r = imaKeisan(gyou);
+    if (!r && tarinai.length) {
+      /* 経費率が無いせいで計算できない。売上だけ出して、足りないものを言う */
+      var uri = imaUriageDake(gyou);
+      box.innerHTML = (uri != null
+        ? '<div class="ima-kekka"><div class="m"><div class="l">1年の売上</div><div class="v">'
+          + CORE.fmt.manUnit(uri) + "</div></div></div>"
+        : "")
+        + '<div class="advice warn" style="margin-top:12px"><div class="a-icon">！</div><div>'
+        + '<div class="a-title">この県の資料に経費率が無いため、所得と働く時間はまだ出せません</div>'
+        + '<div class="a-body">' + imaEsc(tarinai.join("・")) + "は、"
+        + "県の公表資料に売上の目安しか載っていない品目です。"
+        + "自分の経費率を入れると、その場で所得と働く時間が出ます。"
+        + '<br><a href="checkup.html">→ 実績の診断で、去年の決算書から入れる</a>'
+        + ' ／ <a href="simulator.html">→ 経営シミュレーターで直接入れる</a></div></div></div>';
+      return;
+    }
     if (!r) {
       box.innerHTML = '<p class="small muted" style="margin:12px 0 0">品目と面積を入れると、ここに1年の見通しが出ます。</p>';
       return;
