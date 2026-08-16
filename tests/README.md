@@ -1,45 +1,66 @@
-# 検証スクリプト（実ブラウザの通し検査）
+# 検査（実際にブラウザで押して回るもの）
 
-公開前に、実ブラウザ（Microsoft Edge）でページをまたぐ動きを自動確認するためのスクリプト集。
-構文が正しいことと数字が正しく連携することは別、という前提で、利用者の操作の通り道を実際に踏んで確かめる。
+構文が正しいことと、画面が動くことは別である。
+書類の検査では出ない不具合が実機で出る、というのを何度も踏んでいるので、
+ここの検査はすべて本物のブラウザでページを開き、利用者と同じ道を押して回る。
+
+前の版（AIC版）の検査は `aic版の検査_この版では使わない\` に移してある。
+Microsoft Edge と puppeteer-core を前提にしていたもので、この版では動かない。
 
 ## 前提
 
-- Windows＋Microsoft Edge（スクリプト内の実行ファイルのパスは
-  `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`。環境が違う場合は書き換える）
-- Node.js と puppeteer-core（`npm install puppeteer-core` を実行した作業フォルダから動かす）
-- サイト本体をローカル配信しておく（file:// 直開きでは検証にならない）:
-  リポジトリ直下で `node tests/serve.js`（ポート8123）
-  ※旧手順の `python -m http.server 8123` は連続E2Eで接続リセットが頻発し、
-  JS読み込みが欠けて無関係のFAILを生むため使わない（2026-07-31に置き換え）
+- Python 3.11 と Playwright（`pip install playwright` → `playwright install chromium`）
+- Node.js（検査の中で配信を立てるのに使う）
+- 配信は検査が自分で立てるので、`tests/serve.js` を先に動かす必要は無い
 
-## 実行
+実機（AWS）につなぐ検査は、証明書束を渡してから走らせる。
 
 ```
-node tests/e2e_v1.js      # 再構築v1の31項目（ライト固定・進行帯・決定→資金繰り→計画書の通し・印刷・転送・授業モード・スマホ幅）
-node tests/e2e_v2.js      # UI改善v2の27項目（開いただけで完了にならない・ナビ番号・名称統一・品目追加往復ほか）
-node tests/e2e_v3.js      # v3の12項目（従業員入力・入金月の書き戻し・給与表記・在圃グラフ常時表示）
-node tests/e2e_scroll.js  # 入力中にページが勝手にスクロールしないこと（5ページ）
-node tests/e2e_regions6.js # 6府県データ（兵庫・福岡・島根・埼玉・京都・大阪）の36項目（品目数・NaNなし・品質ラベル・地域品目への上書き反映・既存地域の不変）
-node tests/e2e_audit_fixes.js # 公開前総点検の修正13項目（免責・窓口の地域出し分け・kibiガード・投資→資金繰りの引き継ぎ・実績単価の再反映）
-node tests/verify_entries.js  # 3校対応第1弾の20項目（guide・学校入口・kentou順路・例題読み込み）
-node tests/verify_schools.js  # 3校対応第2弾の24項目（逆算・独立雇用くらべ・根拠しらべ・学びはじめチェック・予測→確認ワーク・例題くらべ表）
-node tools/verify_presets.js  # 例題8件の計算検算（ブラウザ不要のnode単体）
-node tests/verify_narabi.js   # 左の進め方一覧と、上の「ページ一覧」の並び順・番号・完了印が一致すること（立場4つ×4項目）
-node tests/verify_iriguchi.js # 学校の入口3ページ（農の学校・みらい農業学校・AIC）の段の一覧・上のナビ・スマホ幅と、入口へ戻れること
-node tests/verify_ibasho.js   # 全17ページ×立場4つの居場所表示の一巡（いまここが1つ・位置づけの枠・JSエラー・スマホ幅）
+export AWS_CA_BUNDLE="$HOME/.aws/corp-ca-bundle.pem"
+export AWS_PROFILE=nokiroku-prod
 ```
 
-- 各スクリプトは PASS/FAIL を1行ずつ出し、不合格が1件でもあれば終了コード1で終わる
-- localStorage を書き換えて立場・地域を作るため、検証は普段使いのプロファイルと分けたブラウザで行うのが安全
-- 期待値（何をもって合格とするか）は各スクリプト内の ok(...) の条件がそのまま仕様
+## 手元で完結するもの（実機につながない）
 
-## 運用の約束
+| 走らせ方 | 何を見るか | 件数 |
+|---|---|---|
+| `node tests/verify_uchite.js` | 打ち手の機械の検算。1年目の売上・所得・年間の労働時間を手計算と突き合わせる | 32 |
+| `python tests/try_gamen.py` | 全17ページを開いて押して回る。エラー・ナビ・消したページへの案内・3つの幅・進む道・日本語の作り | 185 |
+| `python tests/try_chiiki.py` | 地域を切り替えても実績が計算の前提に書き戻るか。品目を持つ11県すべてを開く | 181 |
+| `python tests/try_kakuteishinkoku.py` | 確定申告の数字を通したときの計算 | 90 |
+| `python tests/try_naoshi.py` | NMの指摘3件（保存先の案内・段1の反映・自分の数字は任意）の直り | 24 |
+| `python tests/try_saba.py` | サーバへ預ける道（偽の受け口を立てて確かめる） | 26 |
+| `python tests/try_hinmokugai_shuunyuu.py` | 家事消費・雑収入が実績の診断の所得に入るか | 17 |
+| `python tests/try_hozon_wo_yomikaesu.py` | 保存したのに読み返す場所が無かった3つ（資金繰り・入れた案・3案の比較） | 14 |
+| `python tests/try_ken_wo_erabinaosu.py` | 県を選び直したときに、前の県の品目をどう扱うか | 16 |
+| `python tests/try_mihon_ni_ochita_wake.py` | 見本の受け答えに落ちた理由（回数の上限・返ってこない・未設定）が伝わるか | 10 |
 
-- 公開（push）前に5本すべてを回し、全合格を確認してから push する
-- 仕様を変えたときは、対応する ok(...) の期待値も同じコミットで更新する
-- 最終実行日と結果は commit メッセージに書く
-- ローカル配信（python -m http.server）はまれに接続リセットで読込が欠け、無関係のFAILが出る。
-  FAILが出たら同じスクリプトをもう一度回し、再現するものだけを実害として扱う
+## 公開先（本物のURL）を開くもの
 
-最終実行: 2026-07-19（5本とも全合格・この日のコミットに記録）
+手元では通るのに公開先では通らない、という食い違いを捕まえる。
+
+| 走らせ方 | 何を見るか | 件数 |
+|---|---|---|
+| `python tests/try_koukai_isshuu.py` | 段1から段7まで押して一周する | 16 |
+| `python tests/try_koukai_haba.py` | 電話・板・机の3つの幅で、押したいものに手が届くか | 33 |
+| `python tests/try_kami_ni_dasu.py` | 紙（A4）に出したときに崩れていないか | 10 |
+
+## 実機（AWS）につなぐもの
+
+⚠実機のAIを呼ぶものは、その農園の回数を消費する（1軒あたりの上限は30回）。
+⚠走らせるたびに、試しの農園が1軒増える。名前に「試し」が入る。
+
+| 走らせ方 | 何を見るか | 件数 |
+|---|---|---|
+| `python tests/try_koukai_yomitori.py` | 公開先の画面から、実物の写真と決算書を実機のAIへ | 13 |
+| `python tests/try_koukai_dan6.py` | 公開先の段6から実機のAIを呼び、案を計画に入れて計画書まで | 8 |
+| `python tests/try_tanmatsu_wo_kaeru.py` | 端末を替えても、サーバに預けたものから続きが使えるか | 9 |
+
+サーバの側（受け口・データベース）の検査は、この置き場ではなく
+`ツール本体\platform\api\test\` と `ツール本体\scripts\` にある。
+
+## 見本の材料
+
+実機の読み取りに使う見本（伝票の写真・作業ノートの写真・収支内訳書のPDF）は
+`ツール本体\scripts\tsukuru_mihon_denpyou.py` が作る。実在の農家のものではない。
+中身をこちらが知っているので、読み取れたかどうかを機械で突き合わせられる。
