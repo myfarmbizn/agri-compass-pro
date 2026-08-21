@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>目標から逆算｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<script>document.documentElement.classList.add("light");</script>
+<link rel="stylesheet" href="../assets/css/app.css">
+<style>
+  .gy-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .gy-table th, .gy-table td { border:1px solid var(--hairline); padding:8px 10px; text-align:right; white-space:nowrap; }
+  .gy-table th { font-weight:650; }
+  .gy-table td.nm { text-align:left; white-space:normal; }
+  .gy-table tr.over td { background:rgba(230,208,36,.08); }
+  .gy-flag { font-size:11px; opacity:.7; display:block; white-space:normal; }
+  .gy-go { font:inherit; font-size:12px; padding:5px 12px; border-radius:999px; cursor:pointer;
+           border:1.5px solid var(--accent-2); background:none; color:var(--accent); font-weight:650; }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="page-head fade-up">
+    <h1>目標の金額から、<span class="grad-text">必要な規模</span>を逆算する</h1>
+    <p class="lede">「農業でいくら稼ぎたいか」を先に決めると、品目ごとに「どれくらいの面積が必要か」「働く時間はどれくらいか」の目安が出ます。品目や面積がまだ決まっていない人の、最初の見当づけのページです。</p>
+  </div>
+
+  <div class="card fade-up d1">
+    <h3>目標とする農業所得（1年間）</h3>
+    <div class="sub">農業所得＝売上−経費（税金・社会保険料を払う前）。ここから税・保険料と生活費を払うので、目標は生活費の年額より多めに置くのが普通です。</div>
+    <div class="field" style="max-width:420px;">
+      <label>年間の目標 <span class="val" id="tgtVal">200万円</span></label>
+      <input type="range" id="tgt" min="50" max="1000" step="10" value="200">
+    </div>
+    <div class="sub" id="livingNote"></div>
+  </div>
+
+  <div class="card fade-up d2">
+    <h3>品目ごとの「必要な面積」の目安（それぞれ単独で作る場合）</h3>
+    <div class="sub">下の面積は、その品目だけで目標の全部をまかなう前提の数です。品目をまたいだ合計ではありません。満作のとき（作り始めの立ち上がり期間を過ぎたあと）の計算です。複数品目の組み合わせは「作付けの決定」で試せます。</div>
+    <div class="tblx" style="margin-top:10px;"><div id="tbl"></div></div>
+    <p class="small" id="capNote" style="margin-top:8px;"></p>
+    <ul class="small" style="line-height:2;margin-top:8px;">
+      <li>10a＝1反＝1,000平方メートルです。100a＝1haです。</li>
+      <li>1年目は立ち上がり（作り始めは収量が少ない）でこの表より所得が下がります。年ごとの動きは「試す」ボタンでシミュレーターに読み込んで確かめてください。</li>
+      <li>単収・単価・経費率は行ごとのラベルの出どころによる値です。（仮）や（計算値）は目安にとどめ、産地の実際の数字は普及指導センター・JA・先輩農家に確かめてください。</li>
+    </ul>
+  </div>
+
+  <div class="card fade-up d3">
+    <h3>次にやること</h3>
+    <ul class="small" style="line-height:2">
+      <li>気になる品目が見つかったら、行の「試す」でシミュレーターに読み込み、立ち上がり・投資・借入まで入れて確かめる</li>
+      <li>品目の単価・収量を自分の想定に直すのは「品目と単価」のページ</li>
+      <li>複数品目の組み合わせと月別の忙しさは「作付けの決定」のページ</li>
+    </ul>
+  </div>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/sim_engine.js"></script>
+<script>
+(function () {
+  "use strict";
+  CORE.renderTopbar("gyakusan", "../");
+  document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+  var store = CORE.store;
+  var fmt = CORE.fmt;
+
+  var REG = simBuildRegistry(DATA);
+  var saved = store.load("gyakusan", null) || { targetMan: 200 };
+
+  var tgt = document.getElementById("tgt");
+  tgt.value = saved.targetMan || 200;
+  document.getElementById("tgtVal").textContent = tgt.value + "万円";
+
+  /* 家族労働のキャパシティの目安（プロフィールの人数×月160時間（仮）） */
+  var prof = CORE.getProfile();
+  var famPeople = prof.laborFamily || 2;
+  var famCapH = famPeople * 160 * 12;
+
+  function rowsFor(targetMan) {
+    var targetYen = targetMan * 10000;
+    var rows = [];
+    REG.forEach(function (c) {
+      var y = c.yieldObj && c.yieldObj.v, p = c.priceObj && c.priceObj.v;
+      var cr = c.costRateObj ? c.costRateObj.v : null;
+      if (!y || !p || cr == null) return;   // 数字がそろわない品目は出さない（推測で埋めない）
+      var per10a = y * p * (1 - cr);        // 10a当たりの所得（満作時・円）
+      if (per10a <= 0) return;
+      var units = targetYen / per10a;       // 必要な10aの数
+      var areaA = units * 10;
+      var laborH = units * (c.laborObj ? c.laborObj.v : 0);
+      var flags = DATA.flagLabel(c.yieldObj) + DATA.flagLabel(c.priceObj) + DATA.flagLabel(c.costRateObj);
+      rows.push({ c: c, per10a: per10a, areaA: areaA, laborH: laborH, flags: flags });
+    });
+    rows.sort(function (a, b) { return a.areaA - b.areaA; });
+    return rows;
+  }
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]; }); }
+
+  function render() {
+    var targetMan = +tgt.value || 200;
+    var rows = rowsFor(targetMan);
+    if (!rows.length) {
+      document.getElementById("tbl").innerHTML =
+        '<p class="small">この地域の収録データがまだありません。段1「品目と単価」のページでご自身の品目と数字を登録すると、ここに出ます。</p>';
+      document.getElementById("capNote").textContent = "";
+      return;
+    }
+    var h = '<table class="gy-table"><tr><th style="text-align:left">品目</th><th>10a当たりの所得<br>（満作時）</th><th>必要な面積<br><span style="font-weight:500;font-size:10.5px;">この品目だけで作る場合</span></th><th>年間の労働時間<br>の目安</th><th></th></tr>';
+    rows.forEach(function (r, i) {
+      var over = r.laborH > famCapH;
+      var areaTxt = r.areaA >= 100
+        ? Math.round(r.areaA).toLocaleString() + "a（" + (r.areaA / 100).toFixed(1) + "ha）"
+        : Math.round(r.areaA * 10) / 10 + "a";
+      var laborTxt = r.laborH > 0
+        ? Math.round(r.laborH / 10) * 10 + "時間（月およそ" + Math.round(r.laborH / 12) + "時間）"
+        : "―（労働時間の収録なし）";
+      h += '<tr class="' + (over ? "over" : "") + '">' +
+        '<td class="nm">' + esc(r.c.name) + (r.c.cat && r.c.cat !== "演習用" ? '<span class="gy-flag">' + esc(r.c.cat) + "</span>" : "") +
+        (r.flags ? '<span class="gy-flag">' + esc(r.flags) + "</span>" : "") + "</td>" +
+        "<td>" + fmt.manUnit(r.per10a) + "</td>" +
+        "<td><b>" + areaTxt + "</b></td>" +
+        "<td>" + laborTxt + (over ? '<span class="gy-flag">家族だけの目安を超えます</span>' : "") + "</td>" +
+        '<td><button class="gy-go" data-crop="' + esc(r.c.id) + '" data-area="' + Math.max(1, Math.round(r.areaA)) + '">試す</button></td>' +
+        "</tr>";
+    });
+    h += "</table>";
+    document.getElementById("tbl").innerHTML = h;
+    document.getElementById("capNote").textContent =
+      "色つきの行は、年間の労働時間が「家族" + famPeople + "人×月160時間（仮の目安）＝年" + famCapH.toLocaleString() +
+      "時間」を超える計算です。その規模で営農する場合は、人を雇うか、面積・品目の組み合わせの見直しが要ります。";
+
+    document.querySelectorAll(".gy-go").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var c = REG.filter(function (x) { return x.id === b.dataset.crop; })[0];
+        if (!c) return;
+        var item = {
+          cropId: c.id, area: +b.dataset.area,
+          yieldV: c.yieldObj.v, priceV: c.priceObj.v, costRate: c.costRateObj.v,
+          laborH10a: c.laborObj ? c.laborObj.v : 0, typhoonExp: c.typhoonExp || 0
+        };
+        var old = store.load("simPlan", null);
+        if (old && old.items && old.items.length) {
+          if (!confirm("シミュレーターに保存済みの計画があります。品目の構成を「" + c.name + " " + b.dataset.area + "a」に置き換えてよいですか？（投資・借入などの他の入力は残ります）")) return;
+        }
+        var plan = Object.assign({}, old || {}, { items: [item], targetMan: +tgt.value || 200 });
+        store.save("simPlan", plan);
+        CORE.opLog("click", "逆算→シミュレーターへ", c.id);
+        location.href = "simulator.html";
+      });
+    });
+  }
+
+  CORE.bindRange(tgt, function (v) {
+    document.getElementById("tgtVal").textContent = v + "万円";
+    store.save("gyakusan", { targetMan: +v });
+    render();
+  });
+
+  /* 生活費との関係の一言（シミュレーターに入力済みならその値で具体化） */
+  (function () {
+    var sp = store.load("simPlan", null);
+    var el = document.getElementById("livingNote");
+    if (sp && sp.livingMan) {
+      el.textContent = "参考: シミュレーターに入力済みの家計へ渡すお金は月" + sp.livingMan + "万円＝年" + (sp.livingMan * 12) + "万円です。目標がこれを下回ると、農業所得だけでは家計が回らない計算になります。";
+    } else {
+      el.textContent = "";
+    }
+  })();
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数字の根拠しらべ｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<script>document.documentElement.classList.add("light");</script>
+<link rel="stylesheet" href="../assets/css/app.css">
+<style>
+  .kn-row { border-bottom:1px dashed rgba(128,128,128,.3); padding:12px 0; }
+  .kn-row:last-child { border-bottom:none; }
+  .kn-name { font-size:13.5px; font-weight:650; }
+  .kn-val { font-variant-numeric:tabular-nums; }
+  .kn-hint { font-size:11.5px; opacity:.7; }
+  .kn-ctrl { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; align-items:center; }
+  .kn-ctrl select, .kn-ctrl input { font:inherit; font-size:12.5px; padding:6px 8px; border:1px solid var(--hairline-strong);
+    border-radius:8px; background:#fff; color:inherit; }
+  .kn-ctrl input { flex:1 1 220px; min-width:180px; }
+  .kn-thin { border-left:3px solid #a07500; padding-left:10px; background:rgba(230,208,36,.05); }
+  .kn-list-item { padding:7px 0; border-bottom:1px dashed rgba(128,128,128,.25); font-size:13px; line-height:1.8; }
+  .kn-list-item a { color:var(--accent); font-weight:650; }
+  @media print { .no-print { display:none !important; } }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="page-head fade-up">
+    <h1>計画の数字の<span class="grad-text">根拠</span>をしらべる</h1>
+    <p class="lede">計画に入っている一つひとつの数字について、「どこから来た数字か」を自分で確かめるページです。結果の良し悪しよりも、根拠がまだ薄い数字を見つけて、次に調べること・指導者に相談することの一覧にするのが目的です。</p>
+  </div>
+
+  <div class="card fade-up d1 no-print" id="emptyCard" style="display:none;">
+    <h3>まず計画を作ってください</h3>
+    <div class="sub" style="line-height:1.9">このページは、経営シミュレーターに入っている計画の数字を一つずつ確かめるページです。まだ計画がない場合は、先に次のどちらかをどうぞ。</div>
+    <ul class="small" style="line-height:2;margin-top:8px;">
+      <li><a href="simulator.html" style="color:var(--accent);font-weight:650;">経営シミュレーター</a> で自分の計画を作る（品目・面積・投資・借入）</li>
+      <li>まだ計画を作っていない場合は、段1「品目と単価」から順に進めてから、このページに戻る</li>
+    </ul>
+  </div>
+
+  <div id="mainArea" style="display:none;">
+    <div class="card fade-up d1">
+      <h3>品目ごとの数字</h3>
+      <div class="sub">それぞれの数字について「どこから来たか」を選んでください。人に聞いた・資料で調べた場合は、誰に聞いたか・どの資料かをメモに残すと、あとで見直せます。</div>
+      <div id="cropRows"></div>
+    </div>
+
+    <div class="card fade-up d2">
+      <h3>品目ごとの売り先と価格の種類</h3>
+      <div class="sub">同じ「単価」でも、農家が受け取る金額か、店頭に並ぶときの金額かで計画の意味が変わります。どこに売るつもりで、どの種類の価格を入れているかをはっきりさせておきましょう。</div>
+      <div id="hanroRows"></div>
+    </div>
+
+    <div class="card fade-up d2">
+      <h3>計画全体の数字</h3>
+      <div id="planRows"></div>
+    </div>
+
+    <div class="card fade-up d3" id="summaryCard">
+      <h3>根拠がまだ薄い数字（指導者・普及員との相談リスト）</h3>
+      <div class="sub no-print">「仮のまま」の数字と、まだ確かめていない数字の一覧です。この紙を持って、指導者・普及指導センター・先輩農家に確かめに行くのが次の一歩です。</div>
+      <div id="thinList"></div>
+      <div id="allList" style="margin-top:14px;"></div>
+      <div class="mt8 no-print"><button class="btn primary" id="btnPrint">この一覧をA4で印刷する（相談に持っていく紙）</button></div>
+    </div>
+  </div>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/sim_engine.js"></script>
+<script>
+(function () {
+  "use strict";
+  CORE.renderTopbar("konkyo", "../");
+  document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+  var store = CORE.store;
+
+  var REG = simBuildRegistry(DATA);
+  function regById(id) { return REG.filter(function (c) { return c.id === id; })[0] || null; }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]; }); }
+
+  var plan = store.load("simPlan", null);
+  if (!plan || !plan.items || !plan.items.length) {
+    document.getElementById("emptyCard").style.display = "";
+    return;
+  }
+  document.getElementById("mainArea").style.display = "";
+
+  /* 保存形: { marks: { キー: {src, memo} }, hanro: { cropId: {type, memo} } }
+     src: jisseki=自分の実績・記録 / kiita=人に聞いた / shirabeta=資料で調べた / kari=仮のまま */
+  var saved = store.load("konkyo", null) || { marks: {}, hanro: {} };
+  saved.marks = saved.marks || {}; saved.hanro = saved.hanro || {};
+
+  var SRC_CHOICES = [
+    ["", "（まだ選んでいない）"],
+    ["jisseki", "自分の実績・記録から"],
+    ["kiita", "人に聞いた"],
+    ["shirabeta", "資料で調べた"],
+    ["kari", "仮のまま（まだ根拠なし）"]
+  ];
+  var SRC_WORD = { jisseki: "自分の実績・記録から", kiita: "人に聞いた", shirabeta: "資料で調べた", kari: "仮のまま" };
+
+  /* 確かめる数字の一覧を組み立てる（値は simPlan の現物。推測で行を足さない） */
+  var ENTRIES = [];
+  plan.items.forEach(function (it, idx) {
+    var c = regById(it.cropId);
+    var nm = c ? c.name : it.cropId;
+    var uY = c ? c.unitY : "kg/10a";
+    /* 収録値と同じかどうかのヒント（同じ=まだ自分の根拠にしていない可能性が高い） */
+    function hint(v, obj, label) {
+      if (!obj) return "";
+      if (obj.v === v) return "いまは" + label + "の収録値（" + (DATA.flagLabel(obj) || "収録値") + "）のままです";
+      return "収録値（" + obj.v + "）から自分で直した値です";
+    }
+    ENTRIES.push({ key: "it" + idx + ":yield", group: nm + "（" + it.area + "a）", name: "単収", val: it.yieldV + " " + uY, hint: c ? hint(it.yieldV, c.yieldObj, "地域") : "", fix: "hinmoku", fixName: "品目と単価" });
+    ENTRIES.push({ key: "it" + idx + ":price", group: nm, name: "単価", val: it.priceV + " " + (c ? c.unitP : "円/kg"), hint: c ? hint(it.priceV, c.priceObj, "地域") : "", fix: "hinmoku", fixName: "品目と単価" });
+    ENTRIES.push({ key: "it" + idx + ":cost", group: nm, name: "経費率", val: Math.round(it.costRate * 100) + "%", hint: c ? hint(it.costRate, c.costRateObj, "地域") : "", fix: "checkup", fixName: "実績の診断（経費のくわしい入力）" });
+    ENTRIES.push({ key: "it" + idx + ":labor", group: nm, name: "10a当たりの労働時間", val: (it.laborH10a || 0) + " 時間", hint: "", fix: "sakutsuke", fixName: "作付けの決定（月別労働）" });
+  });
+  ENTRIES.push({ key: "plan:living", group: "計画全体", name: "家計へ渡すお金", val: (plan.livingMan || 0) + " 万円/月", hint: "家計簿・通帳から出すのがいちばん確かです", fix: "simulator", fixName: "経営シミュレーター" });
+  ENTRIES.push({ key: "plan:fixed", group: "計画全体", name: "その他の固定費", val: (plan.fixedMan || 0) + " 万円/年", hint: "", fix: "simulator", fixName: "経営シミュレーター" });
+  ENTRIES.push({ key: "plan:cash", group: "計画全体", name: "始めるときの自己資金", val: (plan.cashStartMan || 0) + " 万円", hint: "", fix: "simulator", fixName: "経営シミュレーター" });
+  ENTRIES.push({ key: "plan:target", group: "計画全体", name: "目標の農業所得", val: (plan.targetMan || 0) + " 万円/年", hint: "生活費の年額とのつり合いで決めます", fix: "simulator", fixName: "経営シミュレーター" });
+  if (plan.loan && plan.loan.amountMan > 0) {
+    ENTRIES.push({ key: "plan:loan", group: "計画全体", name: "借入（" + plan.loan.amountMan + "万円・" + (plan.loan.termY || 1) + "年返済）", val: "金利 " + (plan.loan.ratePct || 0) + "%", hint: "実際の金利・据置は金融機関・公庫の窓口で確認します", fix: "simulator", fixName: "経営シミュレーター" });
+  }
+  (plan.invests || []).forEach(function (iv, i) {
+    if (!iv.amountMan && !iv.leaseMan) return;
+    ENTRIES.push({ key: "inv" + i, group: "計画全体", name: "投資: " + (iv.label || "（名前なし）"), val: (iv.kind === "lease" ? (iv.leaseMan || 0) + " 万円/年（リース）" : (iv.amountMan || 0) + " 万円"), hint: "見積書があるかどうかが根拠の分かれ目です", fix: "toushi", fixName: "投資・雇用" });
+  });
+
+  /* ---------- 行の描画 ---------- */
+  function rowHtml(e) {
+    var m = saved.marks[e.key] || {};
+    var thin = (!m.src || m.src === "kari");
+    var opts = SRC_CHOICES.map(function (c) {
+      return '<option value="' + c[0] + '"' + (m.src === c[0] ? " selected" : "") + ">" + c[1] + "</option>";
+    }).join("");
+    return '<div class="kn-row' + (thin ? " kn-thin" : "") + '" data-key="' + esc(e.key) + '">' +
+      '<div class="kn-name">' + esc(e.group ? e.group + "｜" : "") + esc(e.name) + '　<span class="kn-val">' + esc(e.val) + "</span></div>" +
+      (e.hint ? '<div class="kn-hint">' + esc(e.hint) + "</div>" : "") +
+      '<div class="kn-ctrl no-print">この数字は… <select data-k="src">' + opts + "</select>" +
+      '<input type="text" data-k="memo" placeholder="メモ（誰に聞いた・どの資料・いつの数字か）" value="' + esc(m.memo || "") + '"></div>' +
+      "</div>";
+  }
+  var cropEntries = ENTRIES.filter(function (e) { return e.key.indexOf("it") === 0; });
+  var planEntries = ENTRIES.filter(function (e) { return e.key.indexOf("it") !== 0; });
+  document.getElementById("cropRows").innerHTML = cropEntries.map(rowHtml).join("");
+  document.getElementById("planRows").innerHTML = planEntries.map(rowHtml).join("");
+
+  /* ---------- 売り先と価格の種類 ---------- */
+  var HANRO_TYPES = [
+    ["", "（まだ選んでいない）"],
+    ["uketori", "農家の受け取り価格（手数料を引いたあと）"],
+    ["ichiba", "市場・JAの精算価格"],
+    ["tentou", "店頭・直売所の販売価格"],
+    ["kari", "まだ決めていない（仮）"]
+  ];
+  var seenCrop = {};
+  document.getElementById("hanroRows").innerHTML = plan.items.map(function (it) {
+    if (seenCrop[it.cropId]) return "";
+    seenCrop[it.cropId] = true;
+    var c = regById(it.cropId);
+    var nm = c ? c.name : it.cropId;
+    var h = saved.hanro[it.cropId] || {};
+    var opts = HANRO_TYPES.map(function (t) {
+      return '<option value="' + t[0] + '"' + (h.type === t[0] ? " selected" : "") + ">" + t[1] + "</option>";
+    }).join("");
+    var warn = h.type === "tentou"
+      ? '<div class="kn-hint">店頭の価格には、直売所の手数料や持ち込みの手間が入っていません。計画に入れる単価は「自分が受け取る金額」に直すことをおすすめします（品目と単価のページで直せます）。</div>'
+      : "";
+    return '<div class="kn-row" data-crop="' + esc(it.cropId) + '">' +
+      '<div class="kn-name">' + esc(nm) + "</div>" +
+      '<div class="kn-ctrl no-print">入れている単価の種類: <select data-k="type">' + opts + "</select>" +
+      '<input type="text" data-k="memo" placeholder="売り先の予定（例: JA出荷が中心・直売所に少し）" value="' + esc(h.memo || "") + '"></div>' +
+      warn + "</div>";
+  }).join("");
+
+  /* ---------- 入力の保存 ---------- */
+  document.getElementById("mainArea").addEventListener("change", onEdit);
+  document.getElementById("mainArea").addEventListener("input", onEdit);
+  function onEdit(ev) {
+    var el = ev.target;
+    var row = el.closest("[data-key]"), crow = el.closest("[data-crop]");
+    if (row) {
+      var key = row.dataset.key;
+      var m = saved.marks[key] || (saved.marks[key] = {});
+      m[el.dataset.k] = el.value;
+      row.classList.toggle("kn-thin", !m.src || m.src === "kari");
+    } else if (crow) {
+      var cid = crow.dataset.crop;
+      var hh = saved.hanro[cid] || (saved.hanro[cid] = {});
+      hh[el.dataset.k] = el.value;
+    } else return;
+    store.save("konkyo", saved);
+    if (ev.type === "change") renderSummary();
+  }
+
+  /* ---------- 相談リスト ---------- */
+  function renderSummary() {
+    var thin = ENTRIES.filter(function (e) {
+      var m = saved.marks[e.key] || {};
+      return !m.src || m.src === "kari";
+    });
+    var tl = document.getElementById("thinList");
+    if (!thin.length) {
+      tl.innerHTML = "<p class='small' style='margin-top:8px;'>すべての数字に根拠の出どころが付きました。次は、その根拠がどれくらい確かか（いつの数字か・自分の畑にあてはまるか）を指導者と話すと、計画がさらに固くなります。</p>";
+    } else {
+      tl.innerHTML = thin.map(function (e) {
+        return '<div class="kn-list-item">□ ' + esc(e.group ? e.group + "｜" : "") + esc(e.name) + "　" + esc(e.val) +
+          '<br>　→ 確かめたら <a href="' + e.fix + '.html" class="no-print">' + esc(e.fixName) + '</a><span class="no-print"> で数字を直す</span></div>';
+      }).join("");
+    }
+    /* 印刷用の全数字一覧（出どころ・メモつき） */
+    var al = document.getElementById("allList");
+    al.innerHTML = "<h3 style='font-size:14px;'>全部の数字と出どころ（控え）</h3>" + ENTRIES.map(function (e) {
+      var m = saved.marks[e.key] || {};
+      return '<div class="kn-list-item">' + esc(e.group ? e.group + "｜" : "") + esc(e.name) + "　" + esc(e.val) +
+        "　—　" + (SRC_WORD[m.src] || "未選択") + (m.memo ? "（" + esc(m.memo) + "）" : "") + "</div>";
+    }).join("") + (function () {
+      var hs = Object.keys(saved.hanro).map(function (cid) {
+        var c = regById(cid), hh = saved.hanro[cid];
+        if (!hh || (!hh.type && !hh.memo)) return "";
+        var tw = (HANRO_TYPES.filter(function (t) { return t[0] === hh.type; })[0] || ["", "未選択"])[1];
+        return '<div class="kn-list-item">売り先｜' + esc(c ? c.name : cid) + "　—　" + esc(tw) + (hh.memo ? "（" + esc(hh.memo) + "）" : "") + "</div>";
+      }).join("");
+      return hs ? "<h3 style='font-size:14px;margin-top:10px;'>売り先と価格の種類（控え）</h3>" + hs : "";
+    })();
+  }
+  renderSummary();
+
+  document.getElementById("btnPrint").addEventListener("click", function () {
+    CORE.opLog("click", "根拠しらべ印刷", "");
+    window.print();
+  });
+})();
+</script>
+</body>
+</html>

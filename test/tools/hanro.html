@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>出荷先ごとの手取り比較｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+<style>
+  /* このページ内だけの補助スタイル（共通CSSは変更しない） */
+  .ch-off { opacity: .45; }
+  .ch-off input, .ch-off select { pointer-events: none; }
+  .ch-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<main class="shell">
+
+  <div class="page-head fade-up">
+    <div class="eyebrow">SALES CHANNELS</div>
+    <h1>出荷先ごとの<span class="grad-text">手取り比較</span></h1>
+    <p class="lede">JA共販・県外市場（航空/船便）・県内市場・直売所の出し先ごとに、販売単価から手数料・運賃・資材費を差し引いた1kg当たりの手取りを並べます。運賃は伝票の実額を入れてください。</p>
+  </div>
+
+  <div class="card fade-up d1">
+    <div class="grid c3">
+      <div>
+        <h3 style="margin:0 0 6px; font-size:12.5px; color:var(--accent)">できること</h3>
+        <p class="small muted" style="margin:0">出し先5つの1kg当たり手取りの順位表示、差し引きの内訳、県の輸送費補助の反映、損益分岐となる単価の表示。</p>
+      </div>
+      <div>
+        <h3 style="margin:0 0 6px; font-size:12.5px; color:var(--accent)">使う場面</h3>
+        <p class="small muted" style="margin:0">出荷先を変えるかどうか検討するとき。伝票が1枚あれば使えます。</p>
+      </div>
+      <div>
+        <h3 style="margin:0 0 6px; font-size:12.5px; color:var(--accent)">他のページとのつながり</h3>
+        <p class="small muted" style="margin:0">単独で使えます。品目と地域は段1「品目と単価」で入れた畑の情報を使います。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 1. 前提 ========== -->
+  <div class="sec-title"><h2>1. 前提</h2><span class="hint">品目・島・月の出荷量・共通の控除</span></div>
+  <div class="card fade-up d1">
+    <div class="grid c3">
+      <div class="field">
+        <label>品目</label>
+        <select id="crop"></select>
+        <div class="note" id="cropNote"></div>
+      </div>
+      <div class="field">
+        <label>島・地区</label>
+        <select id="region"></select>
+        <div class="note">離島を選ぶと、県外向けの運賃が「島→那覇」「那覇→県外」の二段入力になります。</div>
+      </div>
+      <div class="field">
+        <label>月間出荷量 <span class="val" id="volVal"></span></label>
+        <input type="range" id="vol" min="50" max="3000" step="50" value="500">
+        <div class="note">月に出す量（kg）。手取り総額の計算に使います。</div>
+      </div>
+    </div>
+    <div class="grid c3 mt8">
+      <div class="field">
+        <label>出荷資材費（共通） <span class="provisional">（仮）</span></label>
+        <div class="input-unit"><input type="number" id="shizai" step="1" min="0"><span class="u">円/kg</span></div>
+        <div class="note" id="shizaiNote"></div>
+      </div>
+      <div class="field">
+        <label>県外出荷の輸送費補助</label>
+        <div class="seg" id="segSubsidy">
+          <button data-v="on">計算に入れる</button>
+          <button data-v="off">入れない</button>
+        </div>
+        <div class="note" id="subsidyNote"></div>
+      </div>
+      <div class="field">
+        <label>直販の手間（袋詰め・発送）</label>
+        <div class="seg" id="segLabor">
+          <button data-v="off">数えない</button>
+          <button data-v="on">控除に入れる</button>
+        </div>
+        <div id="laborInputs" class="mt8 hide">
+          <div class="grid c2">
+            <div class="field mt0">
+              <label>手間 <span class="provisional">（仮）</span></label>
+              <div class="input-unit"><input type="number" id="laborMin" step="0.5" min="0"><span class="u">分/kg</span></div>
+            </div>
+            <div class="field mt0">
+              <label>自分の時給の見立て</label>
+              <div class="input-unit"><input type="number" id="laborWage" step="50" min="0"><span class="u">円/時</span></div>
+            </div>
+          </div>
+          <div class="note">どちらも編集前提の入力初期値です。実績の診断で自分の時給が出ていれば、その値を入れると実感に近づきます。</div>
+        </div>
+      </div>
+    </div>
+    <p class="src" id="freightPolicy"></p>
+    <p class="src">小ギク（電照）は単価が本数単位のため、このkg建ての計算では扱いません（―・要確認）。</p>
+  </div>
+
+  <!-- ========== 2. 出し先ごとの条件 ========== -->
+  <div class="sec-title"><h2>2. 出し先ごとの条件</h2><span class="hint">単価・手数料・運賃。自分の伝票の値に直す</span></div>
+  <div class="grid c2 fade-up d2" id="channels"></div>
+
+  <!-- ========== 3. 結果 ========== -->
+  <div class="sec-title"><h2>3. 結果</h2><span class="hint">1kg当たり手取りの順位（大きい順）</span></div>
+
+  <div class="grid c3 fade-up d3">
+    <div class="kpi hero">
+      <div class="k-label">いちばん残る出し先</div>
+      <div class="k-value" id="kpiBest" style="font-size:21px">―</div>
+      <div class="k-delta flat" id="kpiBestSub"></div>
+    </div>
+    <div class="kpi">
+      <div class="k-label">その1kg手取り</div>
+      <div class="k-value" id="kpiTedori">―</div>
+      <div class="k-delta flat">単価−手数料−運賃−資材（＋補助）</div>
+    </div>
+    <div class="kpi">
+      <div class="k-label">月間の手取り総額</div>
+      <div class="k-value" id="kpiMonth">―</div>
+      <div class="k-delta" id="kpiDiff"></div>
+    </div>
+  </div>
+
+  <div class="card mt16 fade-up d4">
+    <div class="flex between wrap">
+      <div>
+        <h3>1kg手取りの並び</h3>
+        <div class="sub">棒にのせたときの内訳は下の表で確認できます。</div>
+      </div>
+      <button class="btn ghost sm no-print" id="btnPrint">印刷して持っていく</button>
+    </div>
+    <div id="warnBox"></div>
+    <div class="viz" id="rank"></div>
+    <div id="breakeven" class="mt16"></div>
+  </div>
+
+  <div class="card mt16 fade-up d5">
+    <h3>控除の内訳（円/kg）</h3>
+    <div class="sub">マイナスは出ていく分、プラスは戻る分。月間は「1kg手取り × 月間出荷量」。</div>
+    <div class="tbl-wrap"><table class="tbl" id="tbl"></table></div>
+    <p class="src" id="tblSrc"></p>
+  </div>
+
+  <!-- ========== 4. 参考：輸送費補助の基準額 ========== -->
+  <div class="sec-title"><h2>4. 参考：輸送費補助の基準額</h2><span class="hint">計算に使う値と、島別の参考値</span></div>
+  <div class="card fade-up d6">
+    <h3 id="refCurName"></h3>
+    <div class="sub">補助単価は「基準額」と「実費単価」の低い方。このページの計算もその式で引いています。</div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>区間・便</th><th class="num">青果（円/kg）</th><th class="num">花き（円/kg）</th></tr></thead>
+        <tbody id="refCurBody"></tbody>
+      </table>
+    </div>
+    <p class="src" id="refCurSrc"></p>
+    <h3 class="mt24">島別の参考値 <span class="provisional">（要確認・旧制度の基本額）</span></h3>
+    <div class="sub" id="refOldNote"></div>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>島</th><th class="num">基本額（円/kg・県外向け）</th></tr></thead>
+        <tbody id="refOldBody"></tbody>
+      </table>
+    </div>
+    <p class="src" id="refOldSrc"></p>
+  </div>
+
+  <div class="flex mt24 no-print">
+    <button class="btn ghost sm" id="btnReset">入力を初期値に戻す</button>
+    <span class="small muted">入力は自動で保存され、次に開いたとき復元されます。</span>
+  </div>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/charts.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  CORE.renderTopbar("hanro", "../");
+  document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var T = DATA.TRANSPORT;
+  var REGIONS = ["本島北部", "本島中部", "本島南部", "宮古", "八重山", "久米島", "その他離島"];
+  // kg単価を持つ品目だけ（小ギクは本数単位のため対象外）
+  var CROPS = DATA.CROPS.filter(function (c) { return c.priceYenKg; });
+  if (!CROPS.length) {
+    document.addEventListener("DOMContentLoaded", function () {
+      var m = document.querySelector("main") || document.body;
+      m.innerHTML = '<div class="card mt16"><h2 style="margin:0 0 6px">この地域では、まだ使えません</h2>'
+        + '<p class="sub">出荷先の比べ方は、kg当たりの単価が分かる品目でしか計算できません。'
+        + 'いま選んでいる地域には、その品目がまだ収録されていません。</p>'
+        + '<p><a class="btn ghost sm" href="hinmoku.html?back=hanro">→ 品目と単価へ戻る</a></p></div>';
+    });
+    return;
+  }
+
+  /* ---------- 1kg手取りの計算（純粋関数・検算対象） ---------- */
+  /*CALC-START*/
+  // price: 販売単価 円/kg / feePct: 手数料 % / fr1, fr2: 運賃 円/kg（fr2は離島の二段目）
+  // useLeg2: 二段目を使うか / shizai: 資材 円/kg / labor: 直販の手間 円/kg
+  // sub: 補助 円/kg（計算済みの値を渡す）
+  function tedoriParts(price, feePct, fr1, fr2, useLeg2, shizai, labor, sub) {
+    var fee = price * feePct / 100;
+    var freight = (fr1 || 0) + (useLeg2 ? (fr2 || 0) : 0);
+    var tedori = price - fee - freight - shizai - labor + sub;
+    return { fee: fee, freight: freight, shizai: shizai, labor: labor, sub: sub, tedori: tedori };
+  }
+  // 補助額 = min(基準額, 実費運賃)。基準額は S17（本島→県外）。
+  // 離島は「那覇→県外」の段にのみ本島基準額を当て、宮古の航空はさらに
+  // 「宮古→本島 航空」の基準額（S17）を島→那覇の段に当てる。
+  // それ以外の島の島→那覇分は基準額が未確認のため 0 とする（下の参考表を参照）。
+  function subsidyYen(mode, isIsland, region, isKaki, fr1, fr2, kijun) {
+    var base = mode === "air"
+      ? (isKaki ? kijun.hontoKengai.air.kaki : kijun.hontoKengai.air.seika)
+      : (isKaki ? kijun.hontoKengai.ship.kaki : kijun.hontoKengai.ship.seika);
+    var s;
+    if (isIsland) {
+      s = Math.min(base, fr2 || 0);
+      if (region === "宮古" && mode === "air") s += Math.min(kijun.miyakoHonto.air, fr1 || 0);
+    } else {
+      s = Math.min(base, fr1 || 0);
+    }
+    return s;
+  }
+  /*CALC-END*/
+
+  function isIsland() { return state.region.indexOf("本島") !== 0; }
+  function curCrop() {
+    for (var i = 0; i < CROPS.length; i++) if (CROPS[i].id === state.cropId) return CROPS[i];
+    /* kg単価を持つ品目が1つも無い地域（埼玉県・大阪府）では一覧が空になる。
+       そのまま CROPS[0] を返すと undefined になり、この先で画面ごと止まる */
+    return CROPS[0] || null;
+  }
+  function fmtYK(v) {
+    if (v == null || isNaN(v)) return "―";
+    return (Math.round(v * 10) / 10).toLocaleString(undefined, { maximumFractionDigits: 1 }) + "円";
+  }
+
+  /* ---------- 出し先の定義 ---------- */
+  var CH = [
+    {
+      id: "ja", label: "JA共販", feeDef: T.feeDefaults.jaKyohan.v * 100,
+      feeNote: T.feeDefaults.jaKyohan.note, sub: null,
+      legs: function () { return [{ key: "fr1", label: "精算で引かれる運賃ほか（円/kg）" }]; },
+      note: "JAの精算書がある人は、精算書の単価と控除をそのまま写すのが確実です。補助が団体経由で入る場合の扱いはJAに確認してください（要確認）。"
+    },
+    {
+      id: "kengai_air", label: "県外市場（航空）", feeDef: T.feeDefaults.ichiba.v * 100,
+      feeNote: T.feeDefaults.ichiba.note, sub: "air",
+      legs: function () {
+        return isIsland()
+          ? [{ key: "fr1", label: "島→那覇の運賃（円/kg）" }, { key: "fr2", label: "那覇→県外の運賃（円/kg）" }]
+          : [{ key: "fr1", label: "本島→県外の運賃（円/kg）" }];
+      },
+      note: "県外の市場単価はこのツールにデータがありません。初期値は県内卸売単価の流用なので、出荷先の市況・精算書の値に直してください（要編集）。"
+    },
+    {
+      id: "kengai_ship", label: "県外市場（船便）", feeDef: T.feeDefaults.ichiba.v * 100,
+      feeNote: T.feeDefaults.ichiba.note, sub: "ship",
+      legs: function () {
+        return isIsland()
+          ? [{ key: "fr1", label: "島→那覇の運賃（円/kg）" }, { key: "fr2", label: "那覇→県外の運賃（円/kg）" }]
+          : [{ key: "fr1", label: "本島→県外の運賃（円/kg）" }];
+      },
+      note: "単価は航空と同じく要編集。船便は安いぶん日数がかかるため、単価の下がり分も込みで単価欄に入れてください。"
+    },
+    {
+      id: "kennai", label: "県内市場", feeDef: T.feeDefaults.ichiba.v * 100,
+      feeNote: T.feeDefaults.ichiba.note, sub: null,
+      legs: function () {
+        return isIsland()
+          ? [{ key: "fr1", label: "島→那覇の運賃（円/kg）" }]
+          : [{ key: "fr1", label: "市場までの運賃（円/kg）" }];
+      },
+      note: "単価の初期値は県中央卸売市場の年間平均（下の出典）。"
+    },
+    {
+      id: "chokubai", label: "直売所・直販", feeDef: T.feeDefaults.chokubai.v * 100,
+      feeNote: T.feeDefaults.chokubai.note, sub: null,
+      legs: function () { return [{ key: "fr1", label: "宅配・持込の運賃（円/kg）" }]; },
+      note: "直売は自分で値付けできるぶん、袋詰め・発送の手間が増えます。上の「直販の手間」を控除に入れると比較が実態に近づきます。単価は要編集。"
+    }
+  ];
+
+  /* ---------- 状態 ---------- */
+  var profile = CORE.getProfile();
+  var saved = CORE.store.load("hanroLast", null);
+
+  var state = {
+    cropId: (saved && saved.cropId) || (profile.crops[0] && profile.crops[0].cropId)
+      || (CROPS[0] && CROPS[0].id) || null,
+    region: (saved && saved.region) || profile.region || "本島南部",
+    vol: (saved && saved.vol) || 500,
+    shizai: (saved && saved.shizai != null) ? saved.shizai : T.feeDefaults.shizai.v,
+    useSubsidy: saved ? !!saved.useSubsidy : true,
+    useLabor: saved ? !!saved.useLabor : false,
+    laborMin: (saved && saved.laborMin != null) ? saved.laborMin : 3,
+    laborWage: (saved && saved.laborWage != null) ? saved.laborWage : 1000,
+    ch: {}
+  };
+  var ok = false;
+  for (var ci = 0; ci < CROPS.length; ci++) if (CROPS[ci].id === state.cropId) ok = true;
+  if (!ok) state.cropId = (CROPS[0] && CROPS[0].id) || null;
+  if (REGIONS.indexOf(state.region) < 0) state.region = "本島南部";
+
+  function initChannelState() {
+    var crop = curCrop();
+    var sameCrop = saved && saved.cropId === state.cropId && saved.ch;
+    CH.forEach(function (ch) {
+      var sv = (saved && saved.ch && saved.ch[ch.id]) || null;
+      state.ch[ch.id] = {
+        price: sameCrop && sv && sv.price != null ? sv.price : crop.priceYenKg.v,
+        feePct: sv && sv.feePct != null ? sv.feePct : ch.feeDef,
+        fr1: sv && sv.fr1 != null ? sv.fr1 : 0,
+        fr2: sv && sv.fr2 != null ? sv.fr2 : 0
+      };
+    });
+  }
+  initChannelState();
+
+  /* ---------- 前提の描画 ---------- */
+  CROPS.forEach(function (c) {
+    var o = document.createElement("option");
+    o.value = c.id; o.textContent = c.name;
+    if (c.id === state.cropId) o.selected = true;
+    $("crop").appendChild(o);
+  });
+  REGIONS.forEach(function (r) {
+    var o = document.createElement("option");
+    o.value = r; o.textContent = r;
+    if (r === state.region) o.selected = true;
+    $("region").appendChild(o);
+  });
+  $("vol").value = state.vol;
+  $("shizai").value = state.shizai;
+  $("shizaiNote").textContent = T.feeDefaults.shizai.note + "。" + DATA.srcLine(T.feeDefaults.shizai);
+  $("laborMin").value = state.laborMin;
+  $("laborWage").value = state.laborWage;
+  $("subsidyNote").textContent = T.current.name + "の基準額で引きます（補助単価は基準額と実費の低い方）。" + DATA.srcLine(T.current);
+  $("freightPolicy").textContent = "運賃について：" + T.freightNote;
+
+  function setSeg(segId, v) {
+    var seg = $(segId);
+    var btns = seg.querySelectorAll("button");
+    for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("on", btns[i].dataset.v === v);
+  }
+  setSeg("segSubsidy", state.useSubsidy ? "on" : "off");
+  setSeg("segLabor", state.useLabor ? "on" : "off");
+  $("laborInputs").classList.toggle("hide", !state.useLabor);
+
+  /* ---------- 出し先カードの描画 ---------- */
+  function shipNG(crop) { return !(crop.transport && crop.transport.ship); }
+
+  function buildCards() {
+    var crop = curCrop();
+    var wrap = $("channels");
+    wrap.innerHTML = "";
+    CH.forEach(function (ch) {
+      var off = ch.id === "kengai_ship" && shipNG(crop);
+      var s = state.ch[ch.id];
+      var card = document.createElement("div");
+      card.className = "card" + (off ? " ch-off" : "");
+      card.style.marginTop = "0";
+      var priceSrc = ch.id === "kennai"
+        ? DATA.srcLine(crop.priceYenKg) + (crop.priceYenKg.note ? "。" + crop.priceYenKg.note : "")
+        : "初期値は県内卸売単価（" + DATA.srcLine(crop.priceYenKg) + "）の流用。実勢に直してください（要編集）。";
+      var html = "";
+      html += '<div class="ch-head"><h3 style="margin:0">' + ch.label + "</h3>";
+      if (off) html += '<span class="badge warn">船便の対象外</span>';
+      else if (ch.sub && state.useSubsidy) html += '<span class="badge accent">補助を差し引き</span>';
+      html += "</div>";
+      if (off) {
+        html += '<p class="small muted">' + crop.name + "は品目マスタで傷みやすい区分（航空向け）とされているため、船便の計算から外しています。実際に船便で出せる荷姿があれば、品目マスタの区分の見直しが必要です（要確認）。</p>";
+        card.innerHTML = html;
+        wrap.appendChild(card);
+        return;
+      }
+      html += '<div class="field"><label>販売単価</label>' +
+        '<div class="input-unit"><input type="number" step="1" min="0" id="p_' + ch.id + '" value="' + s.price + '"><span class="u">円/kg</span></div>' +
+        '<div class="note">' + priceSrc + "</div></div>";
+      html += '<div class="field"><label>手数料 <span class="provisional">（仮）</span></label>' +
+        '<div class="input-unit"><input type="number" step="0.5" min="0" max="100" id="f_' + ch.id + '" value="' + s.feePct + '"><span class="u">%</span></div>' +
+        '<div class="note">' + ch.feeNote + "。編集前提の初期値です。</div></div>";
+      ch.legs().forEach(function (leg) {
+        html += '<div class="field"><label>' + leg.label + "</label>" +
+          '<div class="input-unit"><input type="number" step="1" min="0" id="' + leg.key + "_" + ch.id + '" value="' + s[leg.key] + '"><span class="u">円/kg</span></div></div>';
+      });
+      html += '<p class="src">' + ch.note + "</p>";
+      card.innerHTML = html;
+      wrap.appendChild(card);
+    });
+    // 入力イベント
+    CH.forEach(function (ch) {
+      if (ch.id === "kengai_ship" && shipNG(crop)) return;
+      ["p", "f", "fr1", "fr2"].forEach(function (k) {
+        var el = $(k + "_" + ch.id);
+        if (!el) return;
+        el.addEventListener("input", function () {
+          var v = parseFloat(el.value);
+          if (isNaN(v) || v < 0) v = 0;
+          if (k === "p") state.ch[ch.id].price = v;
+          else if (k === "f") state.ch[ch.id].feePct = v;
+          else state.ch[ch.id][k] = v;
+          recalc();
+        });
+      });
+    });
+  }
+
+  /* ---------- 計算と結果描画 ---------- */
+  function recalc() {
+    var crop = curCrop();
+    var isKaki = crop.cat === "花卉";
+    var rows = [];
+    CH.forEach(function (ch) {
+      if (ch.id === "kengai_ship" && shipNG(crop)) {
+        rows.push({ ch: ch, off: true });
+        return;
+      }
+      var s = state.ch[ch.id];
+      var useLeg2 = ch.sub != null && isIsland(); // 二段運賃は県外向けの離島発のみ
+      var labor = (ch.id === "chokubai" && state.useLabor) ? state.laborMin / 60 * state.laborWage : 0;
+      var sub = 0;
+      if (ch.sub && state.useSubsidy) {
+        sub = subsidyYen(ch.sub, isIsland(), state.region, isKaki, s.fr1, s.fr2, T.current.kijun);
+      }
+      var p = tedoriParts(s.price, s.feePct, s.fr1, s.fr2, useLeg2, state.shizai, labor, sub);
+      rows.push({ ch: ch, off: false, price: s.price, parts: p });
+    });
+
+    var act = rows.filter(function (r) { return !r.off; });
+    act.sort(function (a, b) { return b.parts.tedori - a.parts.tedori; });
+
+    // KPI
+    var best = act[0], second = act[1];
+    $("kpiBest").textContent = best.ch.label;
+    $("kpiBestSub").textContent = curCrop().name + "・月" + CORE.fmt.num(state.vol) + "kgの場合";
+    CORE.countUp($("kpiTedori"), best.parts.tedori, function (v) { return fmtYK(v) + "/kg"; });
+    CORE.countUp($("kpiMonth"), best.parts.tedori * state.vol, function (v) { return CORE.fmt.manUnit(v); });
+    if (second) {
+      var d = (best.parts.tedori - second.parts.tedori) * state.vol;
+      $("kpiDiff").className = "k-delta " + (d > 0 ? "up" : "flat");
+      $("kpiDiff").textContent = "2番手（" + second.ch.label + "）より月 " + CORE.fmt.manUnit(d) + " 多い計算";
+    }
+
+    // 運賃未入力の注意
+    var kengaiNoFreight = act.some(function (r) { return r.ch.sub && r.parts.freight === 0; });
+    $("warnBox").innerHTML = kengaiNoFreight
+      ? '<div class="advice warn"><div class="a-icon">！</div><div><div class="a-title">県外向けの運賃が0円のままです</div><div class="a-body">いまの順位は運賃を入れていない状態の計算です。運賃を入れると順位が入れ替わることが多いため、航空・船便の伝票の実額（円/kg）を入れてから見てください。</div></div></div>'
+      : "";
+
+    // ランキング（横棒）
+    var anyNeg = act.some(function (r) { return r.parts.tedori < 0; });
+    VIZ.hbar($("rank"), {
+      rows: act.map(function (r, i) {
+        return {
+          label: r.ch.label,
+          value: Math.round(r.parts.tedori * 10) / 10,
+          color: r.parts.tedori < 0 ? "var(--s6)" : (i === 0 ? "var(--s2)" : "var(--s1)"),
+          note: "1kg手取り（単価" + fmtYK(r.price) + "−控除" + fmtYK(r.price - r.parts.tedori) + "）"
+        };
+      }),
+      fmt: fmtYK,
+      diverging: anyNeg,
+      padL: 150
+    });
+
+    // 損益分岐単価の一文（県内市場を物差しに、県外の航空・船便それぞれ）
+    var kennai = null;
+    for (var i = 0; i < act.length; i++) if (act[i].ch.id === "kennai") kennai = act[i];
+    var beHtml = "";
+    if (kennai) {
+      act.forEach(function (r) {
+        if (!r.ch.sub) return;
+        var f = state.ch[r.ch.id].feePct / 100;
+        if (f >= 1) return;
+        // 手取りが県内と並ぶ県外単価: p*(1-f) − 運賃 − 資材 + 補助 = 県内の1kg手取り
+        var pNeed = (kennai.parts.tedori + r.parts.freight + state.shizai - r.parts.sub) / (1 - f);
+        var diff = pNeed - state.ch.kennai.price;
+        var lead = r.ch.label + "は、単価が県内市場のいまの単価";
+        var tail = diff >= 0
+          ? "＋" + fmtYK(diff) + "/kg を超えるときだけ"
+          : "より " + fmtYK(-diff) + "/kg 安くても";
+        beHtml += '<div class="advice info"><div class="a-icon">⚖</div><div><div class="a-title">' +
+          lead + tail + "、県内より1kg手取りが増える計算です</div>" +
+          '<div class="a-body">いまの運賃・手数料・補助の入れ方が前提。運賃や手数料を直すとこの分岐点も動きます。</div></div></div>';
+      });
+    }
+    $("breakeven").innerHTML = beHtml;
+
+    // 内訳テーブル
+    var t = "<thead><tr><th>出し先</th><th class='num'>販売単価</th><th class='num'>手数料</th><th class='num'>運賃</th><th class='num'>資材</th><th class='num'>直販の手間</th><th class='num'>補助</th><th class='num'>1kg手取り</th><th class='num'>月間手取り</th></tr></thead><tbody>";
+    rows.forEach(function (r) {
+      if (r.off) {
+        t += "<tr><td class='muted'>" + r.ch.label + "</td><td colspan='7' class='muted small'>―（船便不可：品目マスタで航空向けの区分。理由は上のカード参照）</td><td class='num muted'>―</td></tr>";
+        return;
+      }
+      var p = r.parts;
+      t += "<tr><td>" + r.ch.label + "</td>" +
+        "<td class='num'>" + fmtYK(r.price) + "</td>" +
+        "<td class='num neg'>−" + fmtYK(p.fee) + "</td>" +
+        "<td class='num neg'>−" + fmtYK(p.freight) + "</td>" +
+        "<td class='num neg'>−" + fmtYK(p.shizai) + "</td>" +
+        "<td class='num" + (p.labor ? " neg" : " muted") + "'>" + (p.labor ? "−" + fmtYK(p.labor) : "―") + "</td>" +
+        "<td class='num" + (p.sub ? " pos" : " muted") + "'>" + (p.sub ? "＋" + fmtYK(p.sub) : (r.ch.sub && state.useSubsidy ? "0円" : "―")) + "</td>" +
+        "<td class='num'><b>" + fmtYK(p.tedori) + "</b></td>" +
+        "<td class='num'>" + CORE.fmt.manUnit(p.tedori * state.vol) + "</td></tr>";
+    });
+    t += "</tbody>";
+    $("tbl").innerHTML = t;
+    $("tblSrc").textContent = "手数料は（仮）の目安、資材費は（仮）の初期値、運賃は入力値。補助＝min(基準額, 実費運賃)。" +
+      (isIsland() ? "島→那覇の段の基準額は宮古（航空）以外は未確認のため0円で計算しています（下の参考表）。" : "");
+
+    save();
+  }
+
+  /* ---------- 参考表 ---------- */
+  function buildRef() {
+    var kj = T.current.kijun;
+    $("refCurName").textContent = T.current.name;
+    $("refCurBody").innerHTML =
+      "<tr><td>本島→県外（航空）</td><td class='num'>" + kj.hontoKengai.air.seika + "</td><td class='num'>" + kj.hontoKengai.air.kaki + "</td></tr>" +
+      "<tr><td>本島→県外（船便）</td><td class='num'>" + kj.hontoKengai.ship.seika + "</td><td class='num'>" + kj.hontoKengai.ship.kaki + "</td></tr>" +
+      "<tr><td>宮古→本島（航空）</td><td class='num'>" + kj.miyakoHonto.air + "</td><td class='num muted'>―（要確認）</td></tr>";
+    $("refCurSrc").textContent = "出典：" + DATA.srcLine(T.current) + "。" + T.current.note;
+
+    var names = { honto: "本島", miyako: "宮古", ishigaki: "石垣", kume: "久米島", daito: "大東", yonaguni: "与那国", tarama: "多良間" };
+    var rows = "";
+    Object.keys(T.old.kihon).forEach(function (k) {
+      rows += "<tr><td>" + (names[k] || k) + "</td><td class='num'>" + T.old.kihon[k] + "</td></tr>";
+    });
+    $("refOldBody").innerHTML = rows;
+    $("refOldNote").textContent = T.old.note + "。このページの計算には使っていません（参考掲示のみ）。";
+    $("refOldSrc").textContent = "出典：" + DATA.srcLine(T.old);
+  }
+
+  /* ---------- 保存 ---------- */
+  function save() {
+    CORE.store.save("hanroLast", {
+      cropId: state.cropId, region: state.region, vol: state.vol,
+      shizai: state.shizai, useSubsidy: state.useSubsidy, useLabor: state.useLabor,
+      laborMin: state.laborMin, laborWage: state.laborWage, ch: state.ch,
+      savedAt: new Date().toISOString()
+    });
+  }
+
+  /* ---------- イベント ---------- */
+  $("crop").addEventListener("change", function () {
+    state.cropId = $("crop").value;
+    var crop = curCrop();
+    CH.forEach(function (ch) { state.ch[ch.id].price = crop.priceYenKg.v; }); // 単価はDATA既定に戻す
+    $("cropNote").textContent = "単価の初期値：" + DATA.srcLine(crop.priceYenKg);
+    buildCards(); recalc();
+  });
+  $("region").addEventListener("change", function () {
+    state.region = $("region").value;
+    buildCards(); recalc();
+  });
+  CORE.bindRange($("vol"), function (v) { state.vol = v; $("volVal").textContent = CORE.fmt.num(v) + "kg"; recalc(); });
+  $("volVal").textContent = CORE.fmt.num(state.vol) + "kg";
+  $("shizai").addEventListener("input", function () {
+    var v = parseFloat($("shizai").value); state.shizai = isNaN(v) || v < 0 ? 0 : v; recalc();
+  });
+  CORE.bindSeg($("segSubsidy"), function (v) { state.useSubsidy = v === "on"; buildCards(); recalc(); });
+  CORE.bindSeg($("segLabor"), function (v) {
+    state.useLabor = v === "on";
+    $("laborInputs").classList.toggle("hide", !state.useLabor);
+    recalc();
+  });
+  $("laborMin").addEventListener("input", function () {
+    var v = parseFloat($("laborMin").value); state.laborMin = isNaN(v) || v < 0 ? 0 : v; recalc();
+  });
+  $("laborWage").addEventListener("input", function () {
+    var v = parseFloat($("laborWage").value); state.laborWage = isNaN(v) || v < 0 ? 0 : v; recalc();
+  });
+  $("btnPrint").addEventListener("click", function () { window.print(); });
+  $("btnReset").addEventListener("click", function () {
+    CORE.store.remove("hanroLast"); location.reload();
+  });
+
+  /* ---------- 初期描画 ---------- */
+  $("cropNote").textContent = "単価の初期値：" + DATA.srcLine(curCrop().priceYenKg);
+  buildCards();
+  buildRef();
+  recalc();
+})();
+</script>
+</body>
+</html>

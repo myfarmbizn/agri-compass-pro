@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>スマート農業申請｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+<style>
+/* このページ専用の追加スタイル（共通CSSは変更しない） */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  border: 1px solid var(--hairline-strong); background: var(--wash);
+  color: var(--ink-2); font-family: var(--font); font-size: 13px; font-weight: 650;
+  padding: 8px 14px; border-radius: 99px; cursor: pointer; transition: all .15s;
+}
+.chip:hover { color: var(--ink); background: var(--wash-strong); }
+.chip.on { background: rgba(143,195,32,.16); border-color: var(--accent); color: var(--accent); }
+.q-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.q-title .qn { color: var(--accent); margin-right: 6px; }
+.diag-num {
+  flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 13px; font-weight: 800;
+  background: rgba(143,195,32,.15); color: var(--accent); border: 1px solid var(--accent);
+}
+.check-line { display: flex; gap: 9px; align-items: flex-start; padding: 6px 0; font-size: 13px; color: var(--ink-2); }
+.check-line input { width: auto; margin-top: 3px; }
+ol.flow-list { list-style: none; counter-reset: fl; }
+ol.flow-list li { counter-increment: fl; display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--hairline); }
+ol.flow-list li:last-child { border-bottom: none; }
+ol.flow-list li::before {
+  content: counter(fl); flex: 0 0 24px; width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 12px; font-weight: 800;
+  background: var(--wash); border: 1px solid var(--hairline); color: var(--ink-2);
+}
+.auto-note { font-size: 11px; color: var(--warn); margin-top: 4px; }
+/* 印刷: 下書きシートだけをA4で出す */
+#printSheet { display: none; }
+@media print {
+  .app-only, .topbar { display: none !important; }
+  #printSheet { display: block !important; background: #fff; color: #111; font-size: 11.5pt; line-height: 1.6; }
+  #printSheet h2 { font-size: 15pt; margin-bottom: 4pt; }
+  #printSheet h3 { font-size: 12pt; margin: 12pt 0 3pt; border-bottom: 1px solid #999; padding-bottom: 2pt; }
+  #printSheet .ps-warn { border: 1px solid #999; padding: 6pt 9pt; font-size: 10pt; margin: 6pt 0 10pt; }
+  #printSheet .ps-meta { font-size: 9.5pt; color: #444; }
+  #printSheet .ps-body { white-space: pre-wrap; margin: 2pt 0 6pt; }
+  #printSheet table { border-collapse: collapse; width: 100%; font-size: 10.5pt; }
+  #printSheet td, #printSheet th { border: 1px solid #999; padding: 4pt 6pt; text-align: left; }
+}
+</style>
+</head>
+<body>
+<main class="shell">
+
+  <div class="page-head fade-up app-only">
+    <div class="eyebrow">SMART FARMING PLAN</div>
+    <h1>スマート農業の<span class="grad-text">計画認定</span>を申請する</h1>
+    <p class="lede">国の認定を受けると、公庫融資や税の特例の対象になりえます（融資・税制は別途の審査・要件があります）。制度の要点→現状の確認→診断→申請書（様式第2号）の下書きまで、この1ページで準備できます。</p>
+  </div>
+
+  <div class="card fade-up d1 app-only" style="padding:16px 20px">
+    <div class="grid c3">
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">できること</div>
+        <p class="small muted">制度の要点の確認、8問の現状チェック、そろっているもの・足りないものの診断、労働生産性の試算、申請書（様式第2号）の下書き作成・印刷・書き出し。</p>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">使う場面</div>
+        <p class="small muted">ドローンや自動操縦トラクタなどの導入を考え始めたとき、公庫融資・税の特例を使いたいとき、窓口相談の前。</p>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">他のページとのつながり</div>
+        <p class="small muted">実績の診断で保存した実績（売上・経費・労働時間）があれば、試算と下書きの初期値に自動で使われます。単独でも使えます。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex wrap mt16 app-only fade-up d2" style="gap:8px">
+    <span class="badge accent" id="asofBadge"></span>
+    <span class="badge neutral">認定の可否はこのページでは判定できません（最終判断は国の審査です）</span>
+  </div>
+
+  <!-- ステップ表示 -->
+  <div class="steps mt24 app-only fade-up d2" id="stepsBar">
+    <div class="st" data-step="1"><span class="n">1</span>制度の概要</div>
+    <div class="sep"></div>
+    <div class="st" data-step="2"><span class="n">2</span>現状の確認</div>
+    <div class="sep"></div>
+    <div class="st" data-step="3"><span class="n">3</span>診断結果</div>
+    <div class="sep"></div>
+    <div class="st" data-step="4"><span class="n">4</span>申請書の下書き</div>
+  </div>
+
+  <!-- ========== ステップ1: 制度の概要 ========== -->
+  <section id="panel1" class="app-only">
+    <div class="sec-title"><h2>制度の概要</h2><span class="hint">読むのは1回でかまいません。すぐ確認に進んでもよいです</span></div>
+    <div class="mb16"><button class="btn ghost sm" id="skipBtn">読み飛ばして「現状の確認」へ →</button></div>
+
+    <div class="card">
+      <h3 id="lawName"></h3>
+      <p class="sub" id="lawMeta"></p>
+      <p class="small" id="lawPurpose" style="color:var(--ink-2)"></p>
+    </div>
+
+    <div class="grid c2 mt16">
+      <div class="card">
+        <h3>計画認定とは</h3>
+        <p class="sub" id="planMeta"></p>
+        <div class="small" style="color:var(--ink-2)">
+          <p id="planApplicant"></p>
+          <p class="mt8" id="planAuthority"></p>
+          <p class="mt8" id="planSubmit"></p>
+          <p class="mt8" id="planStd"></p>
+          <p class="mt8 muted" id="planSolo"></p>
+        </div>
+        <div id="cannotBox" class="mt16"></div>
+      </div>
+      <div class="card">
+        <h3>要件の骨子</h3>
+        <p class="sub">計画に求められる中身（要約）</p>
+        <div class="small" style="color:var(--ink-2)">
+          <div id="reqActivity"></div>
+          <p class="mt8"><b style="color:var(--ink)">相当規模：</b><span id="reqScale"></span></p>
+          <p class="mt8"><b style="color:var(--ink)">目標：</b><span id="reqTarget"></span></p>
+          <p class="mt8 muted small" id="reqFormula"></p>
+          <p class="mt8"><b style="color:var(--ink)">期間：</b><span id="reqPeriod"></span></p>
+          <div class="mt8" id="reqOthers"></div>
+          <p class="mt8 muted small" id="reqKikai"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-title"><h2>認定されると使える特例</h2><span class="hint" id="benefitHint"></span></div>
+    <div class="grid c2" id="benefitCards"></div>
+
+    <div class="grid c2 mt16">
+      <div class="card">
+        <h3>対象になる技術・ならない技術（要領の実例）</h3>
+        <p class="sub" id="defText"></p>
+        <div class="small" style="color:var(--ink-2)"><b style="color:var(--ink)">対象の例：</b></div>
+        <div class="chips mt8" id="defOk"></div>
+        <div class="small mt16" style="color:var(--ink-2)"><b style="color:var(--ink)">対象にならない例：</b><span id="defNg" class="muted"></span></div>
+        <p class="src" id="defNote"></p>
+      </div>
+      <div class="card">
+        <h3>申請の流れ</h3>
+        <ol class="flow-list small" id="flowList" style="color:var(--ink-2)"></ol>
+        <div class="mt16 advice info" style="margin-bottom:0">
+          <div class="a-icon">🏢</div>
+          <div>
+            <div class="a-title">相談・申請窓口</div>
+            <div class="a-body" id="windowBody"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="src mt16" id="srcStep1"></p>
+    <div class="flex mt24" style="justify-content:flex-end">
+      <button class="btn primary" data-goto="2">現状の確認へ進む →</button>
+    </div>
+  </section>
+
+  <!-- ========== ステップ2: 現状アンケート ========== -->
+  <section id="panel2" class="app-only hide">
+    <div class="sec-title"><h2>現状の確認</h2><span class="hint">8問。あてはまるものを押すだけです（最初は仮の選択が入っています。自分に合わせて直してください）</span></div>
+    <div id="qBox"></div>
+    <div class="flex mt24 between wrap">
+      <button class="btn ghost" data-goto="1">← 制度の概要に戻る</button>
+      <button class="btn primary" data-goto="3">診断結果を見る →</button>
+    </div>
+  </section>
+
+  <!-- ========== ステップ3: 診断結果 ========== -->
+  <section id="panel3" class="app-only hide">
+    <div class="sec-title"><h2>診断結果</h2><span class="hint">認定の可否ではなく「準備の進み具合」の整理です</span></div>
+    <div id="diagSpecial"></div>
+    <div class="grid c2">
+      <div class="card">
+        <h3>そろっているもの</h3>
+        <p class="sub">回答から見て準備できていそうな点</p>
+        <div id="diagReady"></div>
+      </div>
+      <div class="card">
+        <h3>足りないもの・確認が要るもの</h3>
+        <p class="sub">それぞれ「なぜ要るか」を添えています</p>
+        <div id="diagLack"></div>
+      </div>
+    </div>
+
+    <div class="card mt16">
+      <h3>次にやること（順番つき）</h3>
+      <p class="sub">上から順に進めると、申請の準備が整っていきます</p>
+      <div id="diagActions"></div>
+      <div id="diagGoDraft" class="mt16"></div>
+    </div>
+
+    <div class="card mt16">
+      <h3>労働生産性の試算</h3>
+      <p class="sub" id="seisanFormula"></p>
+      <div class="grid c4">
+        <div class="field">
+          <label>営業利益（年）<span class="val" id="v-eigyo"></span></label>
+          <div class="input-unit"><input type="number" id="in-eigyo" step="10000"><span class="u">円</span></div>
+          <div class="note" id="note-eigyo"></div>
+        </div>
+        <div class="field">
+          <label>人件費（年）<span class="val" id="v-jinken"></span></label>
+          <div class="input-unit"><input type="number" id="in-jinken" step="10000"><span class="u">円</span></div>
+          <div class="note" id="note-jinken"></div>
+        </div>
+        <div class="field">
+          <label>減価償却費（年）<span class="val" id="v-genka"></span></label>
+          <div class="input-unit"><input type="number" id="in-genka" step="10000"><span class="u">円</span></div>
+          <div class="note">収支内訳書・決算書の減価償却費の欄から</div>
+        </div>
+        <div class="field">
+          <label>年間の総労働時間<span class="val" id="v-laborh"></span></label>
+          <div class="input-unit"><input type="number" id="in-laborh" step="10"><span class="u">時間</span></div>
+          <div class="note" id="note-laborh"></div>
+        </div>
+      </div>
+      <div class="grid c3 mt8">
+        <div class="kpi"><div class="k-label">付加価値額（計算値）</div><div class="k-value" id="k-fukaka">―</div></div>
+        <div class="kpi hero"><div class="k-label">労働生産性の現状値（計算値）</div><div class="k-value" id="k-now">―</div></div>
+        <div class="kpi"><div class="k-label">5%向上の目標値（計算値）</div><div class="k-value" id="k-goal">―</div></div>
+      </div>
+      <p class="src mt8" id="seisanSrc"></p>
+    </div>
+
+    <div class="flex mt24 between wrap">
+      <button class="btn ghost" data-goto="2">← 回答を直す</button>
+      <button class="btn primary" data-goto="4">申請書の下書きへ →</button>
+    </div>
+  </section>
+
+  <!-- ========== ステップ4: 申請書の下書き ========== -->
+  <section id="panel4" class="app-only hide">
+    <div class="sec-title"><h2>申請書の下書き</h2><span class="hint" id="formName"></span></div>
+
+    <div class="advice warn">
+      <div class="a-icon">✍</div>
+      <div>
+        <div class="a-title">これは下書きです</div>
+        <div class="a-body" id="draftWarn"></div>
+      </div>
+    </div>
+    <p class="src" id="autoDraftNote">プロフィール・実績の診断のデータがある項目は、自動で下書きした文です。実態に合わせて直してください。入力は自動で保存されます。</p>
+
+    <div class="card mt16">
+      <h3>1. 申請者の概要</h3>
+      <div class="grid c2">
+        <div class="field"><label>氏名または名称</label><input type="text" id="f-s1_name" placeholder="例: 農業 太郎"></div>
+        <div class="field"><label>代表者氏名（法人・団体の場合）</label><input type="text" id="f-s1_rep" placeholder="個人なら空欄でよい"></div>
+        <div class="field"><label>住所</label><input type="text" id="f-s1_addr" placeholder="例: ○○県○○市○○ 1-2-3"></div>
+        <div class="field"><label>連絡先（電話・メール・担当者名）</label><input type="text" id="f-s1_contact" placeholder="例: 090-xxxx-xxxx / xxx@example.com"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2. 促進に資する措置の有無</h3>
+      <div class="field">
+        <label>サービス事業者・食品等事業者を計画に含みますか</label>
+        <select id="f-s2_sonota">
+          <option value="含まない">含まない（農業者のみ）</option>
+          <option value="サービス事業者を含む">サービス事業者を含む（別紙2が必要）</option>
+          <option value="食品等事業者を含む">食品等事業者を含む（別紙3が必要）</option>
+          <option value="両方を含む">両方を含む（別紙2・3が必要）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>3. 特例措置の活用の有無</h3>
+      <p class="sub">使いたいものを選ぶ（ステップ2のQ7から仮選択しています）</p>
+      <div class="chips" id="f-s3_chips"></div>
+      <p class="src mt8" id="s3Caveat"></p>
+    </div>
+
+    <div class="card">
+      <h3>4-1. 農業経営の概況</h3>
+      <p class="sub">営農類型・経営規模・機械の状況・労働力・経営上の課題</p>
+      <div class="field"><textarea id="f-s41_gaikyo" rows="8"></textarea><div class="auto-note" data-auto="s41_gaikyo"></div></div>
+    </div>
+
+    <div class="card">
+      <h3>4-2. 実施期間</h3>
+      <div class="field"><input type="text" id="f-s42_kikan"><div class="note" id="s42Note"></div></div>
+    </div>
+
+    <div class="card">
+      <h3>4-3. 目標（労働生産性）</h3>
+      <p class="sub">ステップ3の試算値を引き継いでいます。数字は直せます</p>
+      <div class="grid c4">
+        <div class="field"><label>付加価値額・現状</label><div class="input-unit"><input type="number" id="f-s43_fuka_now" step="10000"><span class="u">円</span></div></div>
+        <div class="field"><label>付加価値額・目標</label><div class="input-unit"><input type="number" id="f-s43_fuka_goal" step="10000"><span class="u">円</span></div></div>
+        <div class="field"><label>労働時間・現状</label><div class="input-unit"><input type="number" id="f-s43_labor_now" step="10"><span class="u">時間</span></div></div>
+        <div class="field"><label>労働時間・目標</label><div class="input-unit"><input type="number" id="f-s43_labor_goal" step="10"><span class="u">時間</span></div></div>
+      </div>
+      <div id="s43Result" class="mt8"></div>
+    </div>
+
+    <div class="card">
+      <h3>4-4. 事業活動の内容</h3>
+      <div class="field"><label>A. 対象品目</label><input type="text" id="f-s44_a"><div class="auto-note" data-auto="s44_a"></div></div>
+      <div class="field"><label>B. スマート農業技術の活用内容</label><textarea id="f-s44_b" rows="4"></textarea><div class="auto-note" data-auto="s44_b"></div></div>
+      <div class="field">
+        <label>C. 新たな生産方式の分類（あてはまるものを選ぶ）</label>
+        <div class="chips" id="f-s44c_chips"></div>
+      </div>
+      <div class="field"><label>C. 新たな生産方式の内容</label><textarea id="f-s44_c" rows="4" placeholder="例: ほ場の形状や栽培方法をどう変えるか、出荷方法・データの使い方をどう変えるか"></textarea></div>
+      <div class="field"><label>D. BとCの関連性（技術の効果を新しい方式でどう引き出すか）</label><textarea id="f-s44_d" rows="3"></textarea></div>
+      <div class="field"><label>E. 計画参加者の内訳</label><input type="text" id="f-s44_e"><div class="auto-note" data-auto="s44_e"></div></div>
+    </div>
+
+    <div class="card">
+      <h3>4-5. 規模（おおむね過半の確認）</h3>
+      <p class="sub">取り組む品目の面積が経営全体のどれくらいを占めるか。プロフィールの品目から選ぶと自動計算します</p>
+      <div class="field"><label>取り組む品目（押して選ぶ）</label><div class="chips" id="f-s45_chips"></div><div class="note" id="s45ChipNote"></div></div>
+      <div class="grid c3">
+        <div class="field"><label>経営全体の面積</label><div class="input-unit"><input type="number" id="f-s45_total_a" step="1"><span class="u">a</span></div></div>
+        <div class="field"><label>取組の面積</label><div class="input-unit"><input type="number" id="f-s45_target_a" step="1"><span class="u">a</span></div></div>
+        <div class="field"><label>目標の経営面積（変える予定がなければ現状のまま）</label><div class="input-unit"><input type="number" id="f-s45_goal_a" step="1"><span class="u">a</span></div></div>
+      </div>
+      <div id="s45Result"></div>
+      <div class="field mt8"><label>費用の考え方（何にいくらかける予定か・調達方法）</label><textarea id="f-s45_hiyo" rows="3" placeholder="例: ドローン一式 ○○万円。公庫資金と自己資金でまかなう予定。資金計画は別表1に記載"></textarea></div>
+    </div>
+
+    <div class="card">
+      <h3>4-6. 所得の状況</h3>
+      <p class="sub" id="s46Req"></p>
+      <div class="field"><textarea id="f-s46_shotoku" rows="3"></textarea><div class="auto-note" data-auto="s46_shotoku"></div></div>
+    </div>
+
+    <div class="card">
+      <h3>5. 実施体制（誰が何を担うか）</h3>
+      <div class="field"><textarea id="f-s5_taisei" rows="4"></textarea><div class="auto-note" data-auto="s5_taisei"></div></div>
+    </div>
+
+    <div class="card">
+      <h3>7. 確認事項</h3>
+      <p class="sub">様式のチェック欄。内容を確認して押す</p>
+      <div id="f-s7_checks"></div>
+    </div>
+
+    <div class="card">
+      <h3>添付書類・認定後の手続き</h3>
+      <p class="small" style="color:var(--ink-2)" id="attachNote"></p>
+      <p class="small mt8 muted" id="afterNote"></p>
+    </div>
+
+    <div class="card" style="border-color:rgba(20,211,162,.35)">
+      <h3>下書きの出力</h3>
+      <p class="sub" id="outWarn"></p>
+      <div class="flex wrap">
+        <button class="btn primary" id="printBtn">🖨 印刷して持っていく（A4）</button>
+        <button class="btn ghost" id="copyBtn">全文をコピー</button>
+        <button class="btn ghost" id="exportBtn">JSONで書き出し</button>
+        <button class="btn ghost" id="importBtn">JSONを読み込み</button>
+        <input type="file" id="importFile" accept=".json,application/json" class="hide">
+      </div>
+      <p class="src mt8" id="copyMsg"></p>
+    </div>
+
+    <div class="flex mt24 between wrap">
+      <button class="btn ghost" data-goto="3">← 診断結果に戻る</button>
+    </div>
+  </section>
+
+  <!-- 印刷専用シート -->
+  <div id="printSheet"></div>
+
+  <div class="card mt32 app-only" style="background:var(--surface)">
+    <h3>このページの注意</h3>
+    <ul class="small" id="caveatList" style="color:var(--ink-2); padding-left:18px"></ul>
+    <p class="src mt8" id="srcBottom"></p>
+  </div>
+  <p class="src mt24 app-only" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/data_smart.js"></script>
+<script>
+(function () {
+  "use strict";
+  CORE.renderTopbar("smart", "../");
+  document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+  var S = window.SMART;
+  var store = CORE.store;
+  var fmt = CORE.fmt;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  /* ============ 保存データ（smartDraft） ============ */
+  var draft = store.load("smartDraft", null);
+  if (!draft || typeof draft !== "object") draft = {};
+  if (!draft.answers) draft.answers = {};
+  if (!draft.form) draft.form = {};
+  if (!draft.seisan) draft.seisan = {};
+  if (!draft.autoFlags) draft.autoFlags = {};
+  if (!draft.step) draft.step = 1;
+  function save() {
+    draft.updatedAt = new Date().toISOString();
+    store.save("smartDraft", draft);
+  }
+
+  /* ============ プロフィール・実績の診断データ ============ */
+  var profile = CORE.getProfile();
+  var CROP_BY_ID = {};
+  DATA.CROPS.forEach(function (c) { CROP_BY_ID[c.id] = c; });
+  function cropName(id) {
+    if (id === "kibi") return "さとうきび";
+    return CROP_BY_ID[id] ? CROP_BY_ID[id].name : id;
+  }
+  // 実績の診断（annual）の最新年
+  var ANNUAL = (function () {
+    var a = store.load("annual", null);
+    if (!a) return null;
+    var years = Object.keys(a).filter(function (y) { return a[y] && Array.isArray(a[y].items); }).sort();
+    if (!years.length) return null;
+    var y = years[years.length - 1];
+    var d = a[y];
+    var sales = 0;
+    d.items.forEach(function (it) { sales += Number(it.sales) || 0; });
+    var exp = 0, koyoHi = 0;
+    if (d.expenses) Object.keys(d.expenses).forEach(function (k) {
+      exp += Number(d.expenses[k]) || 0;
+      if (k.indexOf("雇") >= 0) koyoHi += Number(d.expenses[k]) || 0;
+    });
+    return {
+      year: y, items: d.items, sales: sales, expenses: exp,
+      income: sales - exp, koyoHi: koyoHi,
+      laborTotalH: Number(d.laborTotalH) || 0,
+    };
+  })();
+
+  /* ============ ステップ移動 ============ */
+  function gotoStep(n) {
+    n = Math.max(1, Math.min(4, n | 0));
+    draft.step = n;
+    [1, 2, 3, 4].forEach(function (i) {
+      $("panel" + i).classList.toggle("hide", i !== n);
+    });
+    var sts = document.querySelectorAll("#stepsBar .st");
+    sts.forEach(function (el) {
+      var k = +el.dataset.step;
+      el.classList.toggle("on", k === n);
+      el.classList.toggle("done", k < n);
+    });
+    if (n === 3) renderDiag();
+    if (n === 4) { prefillForm(); renderS43(); renderS45(); }
+    save();
+    window.scrollTo({ top: 0 });
+  }
+  document.querySelectorAll("#stepsBar .st").forEach(function (el) {
+    el.style.cursor = "pointer";
+    el.addEventListener("click", function () { gotoStep(+el.dataset.step); });
+  });
+  document.querySelectorAll("[data-goto]").forEach(function (b) {
+    b.addEventListener("click", function () { gotoStep(+b.dataset.goto); });
+  });
+  $("skipBtn").addEventListener("click", function () { gotoStep(2); });
+
+  /* ============ ステップ1: 制度の概要（SMARTの内容だけを表示） ============ */
+  $("asofBadge").textContent = S.asOf;
+  $("lawName").textContent = S.law.name;
+  $("lawMeta").textContent = "通称: " + S.law.shortName + "（" + S.law.number + "）｜" + S.law.promulgated + "・" + S.law.enforced;
+  $("lawPurpose").textContent = S.law.purpose;
+
+  $("planMeta").textContent = S.plan.name + "（" + S.plan.lawArticle + "）";
+  $("planApplicant").innerHTML = "<b style='color:var(--ink)'>誰が申請できるか：</b>" + esc(S.plan.applicant);
+  $("planAuthority").innerHTML = "<b style='color:var(--ink)'>誰が認定するか：</b>" + esc(S.plan.authority);
+  $("planSubmit").innerHTML = "<b style='color:var(--ink)'>出し方：</b>" + esc(S.plan.submitHow);
+  $("planStd").innerHTML = "<b style='color:var(--ink)'>審査の期間：</b>" + esc(S.plan.stdDays);
+  $("planSolo").textContent = S.plan.soloNote;
+  $("cannotBox").innerHTML = S.plan.cannotApply.map(function (t) {
+    return '<div class="advice warn" style="margin-bottom:8px"><div class="a-icon">⚠</div><div><div class="a-body">' + esc(t) + "</div></div></div>";
+  }).join("");
+
+  $("reqActivity").innerHTML = S.requirements.activity.map(function (t) {
+    return '<p class="mt8">' + esc(t) + "</p>";
+  }).join("");
+  $("reqScale").textContent = S.requirements.scale;
+  $("reqTarget").textContent = S.requirements.target;
+  $("reqFormula").textContent = S.requirements.targetFormula;
+  $("reqPeriod").textContent = S.requirements.period;
+  $("reqOthers").innerHTML = "<b style='color:var(--ink)'>そのほかの審査事項：</b>" +
+    S.requirements.others.map(function (t) { return '<p class="mt8">・' + esc(t) + "</p>"; }).join("");
+  $("reqKikai").textContent = S.requirements.kikaiNote;
+
+  $("benefitHint").textContent = S.asOf;
+  $("benefitCards").innerHTML = S.benefits.map(function (b) {
+    return '<div class="card"><h3>' + esc(b.name) + '</h3><p class="small" style="color:var(--ink-2)">' + esc(b.body) + "</p>" +
+      (b.caveat ? '<p class="src mt8"><span class="provisional">注：</span>' + esc(b.caveat) + "</p>" : "") + "</div>";
+  }).join("");
+
+  $("defText").textContent = S.definition.text;
+  $("defOk").innerHTML = S.definition.ok.map(function (t) {
+    return '<span class="chip" style="cursor:default">' + esc(t) + "</span>";
+  }).join("");
+  $("defNg").textContent = S.definition.ng.join("、");
+  $("defNote").textContent = S.definition.ngNote + "（" + S.asOf + "）";
+
+  $("flowList").innerHTML = S.flow.map(function (f) {
+    return "<li><div><b style='color:var(--ink)'>" + esc(f.step) + "</b><br>" + esc(f.body) + "</div></li>";
+  }).join("");
+  /* 窓口は地域で出し分ける（沖縄固有の窓口名を他県に出さない） */
+  var WIN = (CORE.REGION === "okinawa" || !CORE.REGION)
+    ? S.plan.okinawaWindow
+    : { name: "管轄の地方農政局のスマート農業担当窓口", tel: "", note: "お住まいの地域の窓口は、農水省の窓口一覧ページで確認してください" };
+  function winLine() { return WIN.tel ? WIN.name + "（電話 " + WIN.tel + "）" : WIN.name; }
+  $("windowBody").innerHTML = esc(winLine()) + "<br><span class='muted'>" +
+    esc(WIN.note) + "</span><br><span class='muted'>窓口一覧: " + esc(S.sources.contactPage.url) + "</span>";
+
+  $("srcStep1").textContent = "出典: " + S.sources.gaiyo.name + "・" + S.sources.youryo.name + "・" + S.sources.qa.name + "・" +
+    S.sources.egov.name + "。様式の入手: " + S.sources.formsPage.url + "（" + S.asOf + "）";
+
+  /* ============ ステップ2: 現状アンケート ============ */
+  var QDEF = [
+    { id: "q1", title: "導入したいスマート農業技術は決まっていますか", type: "single", def: "considering",
+      opts: [
+        { v: "decided", label: "決まっている" },
+        { v: "considering", label: "候補を検討中" },
+        { v: "none", label: "まだ何も" },
+        { v: "already", label: "導入済みの技術を計画にしたい" },
+      ] },
+    { id: "q2", title: "技術の種類はどれですか（あてはまるものすべて）", type: "multi", def: ["unknown"],
+      opts: S.definition.ok.map(function (t) { return { v: t, label: t }; }).concat([{ v: "unknown", label: "わからない", exclusive: true }]),
+      note: "対象・非対象の実例はステップ1参照。迷う場合は「わからない」でかまいません" },
+    { id: "q3", title: "取り組む品目の作付面積または売上は、経営全体の過半になりそうですか", type: "single", def: "unknown",
+      opts: [
+        { v: "naru", label: "過半になりそう" },
+        { v: "naranai", label: "ならなそう" },
+        { v: "unknown", label: "わからない" },
+      ] },
+    { id: "q4", title: "労働時間の記録はしていますか", type: "single", def: "gaisan",
+      opts: [
+        { v: "shiteiru", label: "している" },
+        { v: "gaisan", label: "概算ならできる" },
+        { v: "shitenai", label: "していない" },
+      ] },
+    { id: "q5", title: "決算書・収支内訳書（青色申告など）はありますか", type: "single", def: "aru",
+      opts: [
+        { v: "aru", label: "ある" },
+        { v: "nai", label: "ない" },
+      ] },
+    { id: "q6", title: "新しい生産方式（ほ場・栽培方法・出荷方法・データ活用の変更）を考えていますか", type: "single", def: "korekara",
+      opts: [
+        { v: "aru", label: "考えがある" },
+        { v: "korekara", label: "これから考える" },
+        { v: "nai", label: "ない（機械を入れるだけ）" },
+      ] },
+    { id: "q7", title: "使いたい特例はありますか（あてはまるものすべて）", type: "multi", def: ["mitei"],
+      opts: S.benefits.map(function (b) { return { v: b.key, label: b.name }; }).concat([{ v: "mitei", label: "未定", exclusive: true }]) },
+    { id: "q8", title: "申請の主体はどれですか", type: "single", def: "kojin",
+      opts: [
+        { v: "kojin", label: "個人単独" },
+        { v: "kazoku", label: "家族経営" },
+        { v: "renkei", label: "複数の農家で連携" },
+        { v: "hojin", label: "法人" },
+        { v: "ukeoi", label: "農作業の請負のみ" },
+      ] },
+  ];
+  var Q_BY_ID = {};
+  QDEF.forEach(function (q) { Q_BY_ID[q.id] = q; });
+  // 既定値を入れる（保存があれば保存値）
+  QDEF.forEach(function (q) {
+    if (draft.answers[q.id] == null) draft.answers[q.id] = q.type === "multi" ? q.def.slice() : q.def;
+  });
+  function optLabel(qid, v) {
+    var q = Q_BY_ID[qid];
+    for (var i = 0; i < q.opts.length; i++) if (q.opts[i].v === v) return q.opts[i].label;
+    return v;
+  }
+  function renderQuestions() {
+    var box = $("qBox");
+    box.innerHTML = "";
+    QDEF.forEach(function (q, qi) {
+      var card = document.createElement("div");
+      card.className = "card";
+      var html = '<div class="q-title"><span class="qn">Q' + (qi + 1) + "</span>" + esc(q.title) + "</div>" +
+        '<div class="chips" data-q="' + q.id + '">';
+      q.opts.forEach(function (o) {
+        var on = q.type === "multi"
+          ? draft.answers[q.id].indexOf(o.v) >= 0
+          : draft.answers[q.id] === o.v;
+        html += '<button type="button" class="chip' + (on ? " on" : "") + '" data-v="' + esc(o.v) + '">' + esc(o.label) + "</button>";
+      });
+      html += "</div>";
+      if (q.note) html += '<p class="src mt8">' + esc(q.note) + "</p>";
+      card.innerHTML = html;
+      box.appendChild(card);
+    });
+    box.querySelectorAll(".chips[data-q]").forEach(function (grp) {
+      var q = Q_BY_ID[grp.dataset.q];
+      grp.querySelectorAll(".chip").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var v = btn.dataset.v;
+          if (q.type === "single") {
+            draft.answers[q.id] = v;
+            grp.querySelectorAll(".chip").forEach(function (b) { b.classList.toggle("on", b.dataset.v === v); });
+          } else {
+            var cur = draft.answers[q.id].slice();
+            var opt = null;
+            q.opts.forEach(function (o) { if (o.v === v) opt = o; });
+            var idx = cur.indexOf(v);
+            if (idx >= 0) { cur.splice(idx, 1); }
+            else {
+              if (opt && opt.exclusive) cur = [v];
+              else {
+                cur = cur.filter(function (x) {
+                  var ex = false;
+                  q.opts.forEach(function (o) { if (o.v === x && o.exclusive) ex = true; });
+                  return !ex;
+                });
+                cur.push(v);
+              }
+            }
+            if (!cur.length) cur = [v]; // 全解除は最後の1つを残す
+            draft.answers[q.id] = cur;
+            grp.querySelectorAll(".chip").forEach(function (b) { b.classList.toggle("on", cur.indexOf(b.dataset.v) >= 0); });
+          }
+          save();
+        });
+      });
+    });
+  }
+  renderQuestions();
+
+  /* ============ ステップ3: 診断 ============ */
+  function diagnose() {
+    var a = draft.answers;
+    var ready = [];   // {t, d}
+    var lack = [];    // {t, d}
+    var actions = []; // {t, d, optional}
+    var ukeoi = a.q8 === "ukeoi";
+
+    // Q8 申請主体
+    if (ukeoi) {
+      lack.push({ t: "申請の主体", d: S.plan.cannotApply[0] + "。単独では計画の申請主体になれない可能性が高いため、農業者との連携の形を窓口に相談してください。" });
+    } else {
+      ready.push({ t: "申請の主体", d: "「" + optLabel("q8", a.q8) + "」は申請主体になれます（" + S.plan.applicant + "）。" });
+    }
+    // Q1 技術
+    if (a.q1 === "decided" || a.q1 === "already") {
+      ready.push({ t: "導入する技術", d: "技術が決まっている（" + optLabel("q1", a.q1) + "）。計画には技術の内容と使い方を書きます。" });
+    } else {
+      lack.push({ t: "導入する技術", d: "技術がまだ固まっていません（" + optLabel("q1", a.q1) + "）。計画には使う技術と活用内容を書く必要があります。" });
+      actions.push({ t: "技術の候補を絞る", d: "対象になる技術の例: " + S.definition.ok.join("、") + "。対象にならない例もあるため（ステップ1参照）、候補が出たら窓口（" + WIN.name + "）に該当するか確認してください。" });
+    }
+    // Q2 技術の種類
+    if (a.q2.indexOf("unknown") >= 0) {
+      lack.push({ t: "技術の種類", d: "種類が「わからない」のままです。該当・非該当は要領の実例で判断され、個別には柔軟に判断するとされています。" });
+      actions.push({ t: "技術が制度の対象か確かめる", d: "対象の例: " + S.definition.ok.join("、") + "。対象にならない例: " + S.definition.ng.slice(0, 4).join("、") + " など。迷ったら窓口（" + winLine() + "）へ。" });
+    } else {
+      ready.push({ t: "技術の種類", d: "選んだ技術（" + a.q2.join("、") + "）は要領の対象例に含まれています。個別の該当は窓口で確認してください。" });
+    }
+    // Q4 労働時間（最優先）
+    if (a.q4 === "shitenai") {
+      lack.push({ t: "労働時間の記録", d: "記録がないと労働生産性（付加価値額 ÷ 労働投入量）の現状値が出せず、5%向上の目標が立てられません。" });
+      actions.unshift({ t: "労働時間の記録から始める（最優先）", d: "まず年間の総労働時間をつかみます。実績の診断ページの概算入力（週何日 × 1日何時間 × 何か月）から始められます。" });
+    } else {
+      ready.push({ t: "労働時間の把握", d: a.q4 === "shiteiru" ? "記録があります。労働生産性の現状値の計算に使えます。" : "概算で出せます。まずは概算で現状値を計算し、今後は記録を残すとより確かになります。" });
+    }
+    // Q5 決算書類
+    if (a.q5 === "nai") {
+      lack.push({ t: "決算書・収支内訳書", d: "付加価値額（営業利益 ＋ 人件費 ＋ 減価償却費）の計算に、営業利益と減価償却費の数字が必要です。" });
+      actions.push({ t: "決算書類を整える", d: "収支内訳書か青色申告決算書を用意します。まだなければ、実績の診断ページに1年分の売上・経費を写すところから始められます。" });
+    } else {
+      ready.push({ t: "決算の数字", d: "決算書類があります。付加価値額の計算材料がそろっています。" });
+    }
+    // Q6 新たな生産方式
+    if (a.q6 === "nai") {
+      lack.push({ t: "新たな生産方式", d: "技術を導入するだけでは要件を満たしません。あわせて「新たな生産の方式」（ほ場・栽培方法、出荷方法、データの活用方法など）の導入が必要です。" });
+      actions.push({ t: "新たな生産方式を考える", d: S.requirements.activity[1] + "。技術と生産方式の組み合わせは窓口相談でも詰められます。" });
+    } else if (a.q6 === "korekara") {
+      lack.push({ t: "新たな生産方式", d: "構想はこれからです。計画には技術とセットで新たな生産方式（イ〜ニの分類）を書きます。" });
+      actions.push({ t: "新たな生産方式を具体化する", d: S.requirements.activity[1] });
+    } else {
+      ready.push({ t: "新たな生産方式", d: "考えがあります。下書きの4-4で イ・ロ・ハ・ニ のどれに当たるか整理しましょう。" });
+    }
+    // Q3 規模
+    if (a.q3 === "naru") {
+      ready.push({ t: "相当規模（おおむね過半）", d: "取り組む品目が経営全体の過半になる見込みです（" + S.requirements.scale + "）。" });
+    } else if (a.q3 === "naranai") {
+      lack.push({ t: "相当規模（おおむね過半）", d: "過半に届かない可能性があります。要件は「" + S.requirements.scale + "」です。" });
+      actions.push({ t: "対象品目の広げ方を検討する", d: "取り組みに含める品目・面積を広げれば過半に届くか、下書きステップの4-5で自動計算できます。線引きの考え方は窓口に相談してください。" });
+    } else {
+      lack.push({ t: "相当規模（おおむね過半）", d: "過半になるかまだわかりません。要件は「" + S.requirements.scale + "」です。" });
+      actions.push({ t: "面積・売上の割合を確かめる", d: "取り組む品目の面積（または売上）が経営全体の過半かどうか、下書きステップの4-5で自動計算できます。" });
+    }
+    // Q7 特例
+    if (a.q7.indexOf("mitei") >= 0) {
+      actions.push({ t: "使いたい特例を決める（任意）", d: "特例は5つあります（ステップ1参照）。融資・税制は認定とは別の審査・要件があるため、使うなら公庫・税理士への相談も並行してください。", optional: true });
+    } else {
+      var names = a.q7.map(function (k) {
+        var n = k;
+        S.benefits.forEach(function (b) { if (b.key === k) n = b.name; });
+        return n;
+      });
+      ready.push({ t: "使いたい特例", d: names.join("、") + " を想定しています。" });
+    }
+    // 常に最後: 事前相談
+    actions.push({ t: "窓口へ事前相談する", d: winLine() + "。" + S.plan.submitHow + "。" });
+
+    return { ready: ready, lack: lack, actions: actions, ukeoi: ukeoi };
+  }
+
+  function renderDiag() {
+    var d = diagnose();
+    // 請負のみの特別表示
+    $("diagSpecial").innerHTML = d.ukeoi
+      ? '<div class="advice critical mb16"><div class="a-icon">⚠</div><div><div class="a-title">農作業の請負のみでは申請できない可能性が高い</div><div class="a-body">' +
+        esc(S.plan.cannotApply[0]) + "。農業者との連携での参加など、取れる形を窓口（" +
+        esc(winLine()) + "）に相談してください。以下の診断は参考として表示しています。</div></div></div>"
+      : "";
+    $("diagReady").innerHTML = d.ready.length
+      ? d.ready.map(function (r) {
+          return '<div class="advice good"><div class="a-icon">✓</div><div><div class="a-title">' + esc(r.t) + '</div><div class="a-body">' + esc(r.d) + "</div></div></div>";
+        }).join("")
+      : '<p class="small muted">回答からは、そろっていると言える項目がまだありません。右の列と「次にやること」から進めてください。</p>';
+    $("diagLack").innerHTML = d.lack.length
+      ? d.lack.map(function (r) {
+          return '<div class="advice warn"><div class="a-icon">!</div><div><div class="a-title">' + esc(r.t) + '</div><div class="a-body">' + esc(r.d) + "</div></div></div>";
+        }).join("")
+      : '<p class="small muted">回答上は大きな抜けは見当たりません。最終確認は窓口で。</p>';
+    $("diagActions").innerHTML = d.actions.map(function (ac, i) {
+      return '<div class="advice info"><div class="diag-num">' + (i + 1) + '</div><div><div class="a-title">' + esc(ac.t) +
+        (ac.optional ? ' <span class="badge neutral">任意</span>' : "") + '</div><div class="a-body">' + esc(ac.d) + "</div></div></div>";
+    }).join("");
+    var allSet = !d.ukeoi && d.lack.length === 0;
+    $("diagGoDraft").innerHTML = allSet
+      ? '<button class="btn primary" id="goDraftBtn">準備はそろってきています。申請書の下書きを作る →</button>'
+      : '<p class="small muted">足りないものがあっても、下書きは先に作り始められます（書きながら足りない所がはっきりします）。</p>';
+    if (allSet) $("goDraftBtn").addEventListener("click", function () { gotoStep(4); });
+  }
+
+  /* ---- 労働生産性の試算 ---- */
+  $("seisanFormula").textContent = S.requirements.targetFormula;
+  $("seisanSrc").textContent = "式の出典: " + S.sources.kihonHoshin.name + "・" + S.sources.youryo.name + "（" + S.asOf + "）。目標は「計画全体で労働生産性を5%以上向上」です。";
+  (function initSeisan() {
+    var sz = draft.seisan;
+    if (sz.eigyo == null && ANNUAL) sz.eigyo = ANNUAL.income;
+    if (sz.jinken == null && ANNUAL) sz.jinken = ANNUAL.koyoHi;
+    if (sz.genka == null) sz.genka = 0;
+    if (sz.laborH == null && ANNUAL) sz.laborH = ANNUAL.laborTotalH;
+    $("in-eigyo").value = sz.eigyo != null ? sz.eigyo : "";
+    $("in-jinken").value = sz.jinken != null ? sz.jinken : "";
+    $("in-genka").value = sz.genka != null ? sz.genka : "";
+    $("in-laborh").value = sz.laborH != null ? sz.laborH : "";
+    $("note-eigyo").textContent = ANNUAL
+      ? "参考: 実績の診断 " + ANNUAL.year + "年の売上−経費 = " + fmt.manUnit(ANNUAL.income) + "（減価償却の扱いが違う場合があるため決算書で確認を）"
+      : "決算書・収支内訳書の数字を写してください（実績の診断ページに入れておくと自動で入ります）";
+    $("note-jinken").textContent = ANNUAL
+      ? "参考: 実績の診断 " + ANNUAL.year + "年の雇人費 = " + fmt.manUnit(ANNUAL.koyoHi) + "（家族専従者給与があれば足してください）"
+      : "雇人費・専従者給与など";
+    $("note-laborh").textContent = ANNUAL && ANNUAL.laborTotalH > 0
+      ? "初期値は実績の診断 " + ANNUAL.year + "年の総労働時間"
+      : "実績の診断ページの概算入力（週何日×何時間×何か月）で出せます";
+  })();
+  function calcSeisan() {
+    var e = +$("in-eigyo").value || 0;
+    var j = +$("in-jinken").value || 0;
+    var g = +$("in-genka").value || 0;
+    var h = +$("in-laborh").value || 0;
+    draft.seisan = { eigyo: e, jinken: j, genka: g, laborH: h };
+    var fukaka = e + j + g;
+    $("v-eigyo").textContent = fmt.manUnit(e);
+    $("v-jinken").textContent = fmt.manUnit(j);
+    $("v-genka").textContent = fmt.manUnit(g);
+    $("v-laborh").textContent = fmt.num(h) + "時間";
+    $("k-fukaka").textContent = fmt.manUnit(fukaka);
+    if (h > 0) {
+      var now = fukaka / h;
+      $("k-now").innerHTML = esc(fmt.yen(now)) + "<small>/時間</small>";
+      $("k-goal").innerHTML = esc(fmt.yen(now * 1.05)) + "<small>/時間</small>";
+    } else {
+      $("k-now").textContent = "―（要確認）";
+      $("k-goal").textContent = "―（要確認）";
+    }
+    save();
+  }
+  ["in-eigyo", "in-jinken", "in-genka", "in-laborh"].forEach(function (id) {
+    $(id).addEventListener("input", calcSeisan);
+  });
+  calcSeisan();
+
+  /* ============ ステップ4: 申請書の下書き ============ */
+  $("formName").textContent = S.form2.formName + "（" + S.form2.form1Name + " とセットで提出）";
+  $("draftWarn").textContent = "正式な様式は農水省ページ（" + S.sources.formsPage.url + "）からWord様式を入手して転記し、事前に窓口（" +
+    winLine() + "）へ相談してください。";
+  $("s3Caveat").textContent = "融資・税制には認定とは別の審査・要件があります（ステップ1の各特例の注を参照）。" + S.asOf + "。";
+  $("s42Note").textContent = S.requirements.period;
+  $("s46Req").textContent = S.form2.sections.filter(function (s) { return s.no === "4-6"; })[0].items[0];
+  $("attachNote").textContent = S.form2.attachments;
+  $("afterNote").textContent = S.form2.afterNote;
+  $("outWarn").textContent = "印刷した紙は窓口相談・家族との相談用の下書きです。提出は正式様式（Word）への転記が必要です。";
+
+  var TEXT_FIELDS = ["s1_name", "s1_rep", "s1_addr", "s1_contact", "s41_gaikyo", "s42_kikan",
+    "s44_a", "s44_b", "s44_c", "s44_d", "s44_e", "s45_hiyo", "s46_shotoku", "s5_taisei"];
+  var NUM_FIELDS = ["s43_fuka_now", "s43_fuka_goal", "s43_labor_now", "s43_labor_goal",
+    "s45_total_a", "s45_target_a", "s45_goal_a"];
+
+  function markAuto(key) {
+    draft.autoFlags[key] = true;
+    var el = document.querySelector('.auto-note[data-auto="' + key + '"]');
+    if (el) el.textContent = "自動で下書きした文です。実態に合わせて直してください。";
+  }
+  function refreshAutoNotes() {
+    document.querySelectorAll(".auto-note[data-auto]").forEach(function (el) {
+      el.textContent = draft.autoFlags[el.dataset.auto] ? "自動で下書きした文です。実態に合わせて直してください。" : "";
+    });
+  }
+
+  /* --- 自動下書きの文章生成（profile / annual から） --- */
+  function areaA(x10a) { return Math.round(x10a * 10); } // 10a単位 → a
+  function profileCropLines() {
+    return (profile.crops || []).map(function (c) {
+      return cropName(c.cropId) + " " + areaA(c.area10a) + "a";
+    });
+  }
+  function totalAreaA() {
+    var t = 0;
+    (profile.crops || []).forEach(function (c) { t += areaA(c.area10a); });
+    return t;
+  }
+  function autoGaikyo() {
+    var lines = [];
+    var cropLines = profileCropLines();
+    lines.push("【営農類型】" + (cropLines.length ? cropLines.map(function (s) { return s.split(" ")[0]; }).join("・") + " を中心とした経営" : "（品目を書いてください）"));
+    lines.push("【経営規模】" + (cropLines.length ? "合計 約" + totalAreaA() + "a（" + cropLines.join("、") + "）" : "（面積を書いてください）"));
+    if (ANNUAL) lines.push("【直近の実績】" + ANNUAL.year + "年 売上 " + fmt.manUnit(ANNUAL.sales) + "・農業所得 " + fmt.manUnit(ANNUAL.income) + "（実績の診断の入力値）");
+    lines.push("【労働力】家族 " + (profile.laborFamily || 0) + "人、常時雇用 " + (profile.laborHired || 0) + "人" +
+      (ANNUAL && ANNUAL.laborTotalH > 0 ? "（年間総労働時間 約" + fmt.num(ANNUAL.laborTotalH) + "時間）" : ""));
+    lines.push("【農業機械等の所有・活用状況】（お手持ちの機械・施設を書いてください）");
+    lines.push("【経営上の課題】（例: 収穫期に労働が集中する、人手の確保が難しい など、自分の言葉で）");
+    return lines.join("\n");
+  }
+  function autoKikan() {
+    var y = new Date().getFullYear() + 1;
+    var reiwa = y - 2018;
+    return y + "年（令和" + reiwa + "年）から5年間（予定）";
+  }
+  function q2TechNames() {
+    return (draft.answers.q2 || []).filter(function (v) { return v !== "unknown"; });
+  }
+  function autoS44b() {
+    var t = q2TechNames();
+    if (!t.length) return "";
+    return t.join("、") + " を導入し、（どの作業を・どう置き換え、労働時間や収量がどう変わる見込みかを書いてください）";
+  }
+  function autoS44e() {
+    var m = { kojin: "本人（個人単独）", kazoku: "本人および家族", renkei: "連携する農業者（氏名・役割を書いてください）", hojin: "法人（構成員・役割を書いてください）", ukeoi: "（要確認: 請負のみでは申請できない可能性が高い・窓口相談）" };
+    return m[draft.answers.q8] || "";
+  }
+  function autoS46() {
+    if (ANNUAL) {
+      return "実施期間の終了後も、計画全体の農業所得を実施前（参考: " + ANNUAL.year + "年 約" + fmt.manUnit(ANNUAL.income) + "）と比べて維持し、黒字を確保する計画とする。";
+    }
+    return "実施期間の終了後も、計画全体の農業所得を実施前と比べて維持し、黒字を確保する計画とする。（現状の所得額を書き添えてください）";
+  }
+  function autoS5() {
+    return "本人: スマート農業技術の導入・運用、計画全体の管理\n家族（" + (profile.laborFamily || 0) + "人）: （分担を書いてください）" +
+      ((profile.laborHired || 0) > 0 ? "\n常時雇用（" + profile.laborHired + "人）: （分担を書いてください）" : "");
+  }
+
+  /* --- 4-4 C の分類チップ --- */
+  var S44C_OPTS = [
+    { v: "イ", label: "イ: ほ場の形状・栽培方法・品種等" },
+    { v: "ロ", label: "ロ: 機械化体系に合わせた出荷方法" },
+    { v: "ハ", label: "ハ: データ共有等の活用方法" },
+    { v: "ニ", label: "ニ: その他不可欠な方式" },
+  ];
+  function renderS44cChips() {
+    var cur = draft.form.s44_c_type || [];
+    $("f-s44c_chips").innerHTML = S44C_OPTS.map(function (o) {
+      return '<button type="button" class="chip' + (cur.indexOf(o.v) >= 0 ? " on" : "") + '" data-v="' + o.v + '">' + esc(o.label) + "</button>";
+    }).join("");
+    $("f-s44c_chips").querySelectorAll(".chip").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var cur2 = draft.form.s44_c_type || [];
+        var i = cur2.indexOf(btn.dataset.v);
+        if (i >= 0) cur2.splice(i, 1); else cur2.push(btn.dataset.v);
+        draft.form.s44_c_type = cur2;
+        btn.classList.toggle("on");
+        save();
+      });
+    });
+  }
+
+  /* --- 3. 特例チップ --- */
+  function renderS3Chips() {
+    var cur = draft.form.s3_tokurei;
+    if (!cur) {
+      cur = (draft.answers.q7 || []).filter(function (v) { return v !== "mitei"; });
+      draft.form.s3_tokurei = cur;
+    }
+    $("f-s3_chips").innerHTML = S.benefits.map(function (b) {
+      return '<button type="button" class="chip' + (cur.indexOf(b.key) >= 0 ? " on" : "") + '" data-v="' + b.key + '">' + esc(b.name) + "</button>";
+    }).join("");
+    $("f-s3_chips").querySelectorAll(".chip").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var c = draft.form.s3_tokurei;
+        var i = c.indexOf(btn.dataset.v);
+        if (i >= 0) c.splice(i, 1); else c.push(btn.dataset.v);
+        btn.classList.toggle("on");
+        save();
+      });
+    });
+  }
+
+  /* --- 4-5 対象品目チップ --- */
+  function renderS45Chips() {
+    var crops = profile.crops || [];
+    if (!crops.length) {
+      $("f-s45_chips").innerHTML = "";
+      $("s45ChipNote").textContent = "段1「品目と単価」で品目を登録すると、ここから選んで自動計算できます。登録がなくても下の面積欄に直接入力すれば計算できます。";
+      return;
+    }
+    $("s45ChipNote").textContent = "";
+    var sel = draft.form.s45_crops || [];
+    $("f-s45_chips").innerHTML = crops.map(function (c) {
+      return '<button type="button" class="chip' + (sel.indexOf(c.cropId) >= 0 ? " on" : "") + '" data-v="' + esc(c.cropId) + '">' +
+        esc(cropName(c.cropId)) + "（" + areaA(c.area10a) + "a）</button>";
+    }).join("");
+    $("f-s45_chips").querySelectorAll(".chip").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var s = draft.form.s45_crops || [];
+        var i = s.indexOf(btn.dataset.v);
+        if (i >= 0) s.splice(i, 1); else s.push(btn.dataset.v);
+        draft.form.s45_crops = s;
+        btn.classList.toggle("on");
+        // 選択品目の面積を取組面積へ反映
+        var t = 0;
+        (profile.crops || []).forEach(function (c) { if (s.indexOf(c.cropId) >= 0) t += areaA(c.area10a); });
+        $("f-s45_target_a").value = t;
+        draft.form.s45_target_a = t;
+        renderS45();
+        save();
+      });
+    });
+  }
+  function renderS45() {
+    var total = +$("f-s45_total_a").value || 0;
+    var target = +$("f-s45_target_a").value || 0;
+    var box = $("s45Result");
+    if (total <= 0) { box.innerHTML = '<p class="small muted">経営全体の面積を入れると割合を計算します。</p>'; return; }
+    var share = target / total;
+    var over = share >= 0.5;
+    var salesLine = "";
+    if (ANNUAL && ANNUAL.sales > 0 && (draft.form.s45_crops || []).length) {
+      var ts = 0;
+      ANNUAL.items.forEach(function (it) { if ((draft.form.s45_crops || []).indexOf(it.cropId) >= 0) ts += Number(it.sales) || 0; });
+      if (ts > 0) salesLine = "売上の割合（実績の診断 " + ANNUAL.year + "年）: " + fmt.pct(ts / ANNUAL.sales) + "（" + fmt.manUnit(ts) + " ÷ " + fmt.manUnit(ANNUAL.sales) + "）。面積か売上のどちらかで過半なら要件に近づきます。";
+    }
+    box.innerHTML =
+      '<div class="meter mt8"><i style="width:' + Math.min(100, Math.round(share * 100)) + '%"></i></div>' +
+      '<p class="small mt8" style="color:var(--ink-2)">面積の割合: <b style="color:var(--ink)">' + fmt.pct(share) + "</b>（" + fmt.num(target) + "a ÷ " + fmt.num(total) + "a）。" +
+      (over
+        ? "おおむね過半（50%）を上回っており、相当規模の要件を満たせる可能性があります。最終判断は審査で行われます。"
+        : "おおむね過半（50%）を下回っています。対象品目の広げ方を検討し、窓口に相談してください。") +
+      "</p>" + (salesLine ? '<p class="small muted">' + esc(salesLine) + "</p>" : "") +
+      '<p class="src">要件: ' + esc(S.requirements.scale) + "</p>";
+  }
+  ["f-s45_total_a", "f-s45_target_a"].forEach(function (id) {
+    $(id).addEventListener("input", renderS45);
+  });
+
+  /* --- 4-3 目標欄 --- */
+  function renderS43() {
+    var fn = +$("f-s43_fuka_now").value || 0;
+    var fg = +$("f-s43_fuka_goal").value || 0;
+    var ln = +$("f-s43_labor_now").value || 0;
+    var lg = +$("f-s43_labor_goal").value || 0;
+    var box = $("s43Result");
+    if (fn > 0 && fg > 0 && ln > 0 && lg > 0) {
+      var rate = (fg / lg) / (fn / ln) - 1;
+      var ok = rate >= 0.05;
+      box.innerHTML = '<div class="advice ' + (ok ? "good" : "warn") + '" style="margin-bottom:0"><div class="a-icon">' + (ok ? "✓" : "!") + '</div><div><div class="a-title">労働生産性の変化率（計算値）: ' +
+        esc(fmt.pct(rate, 1)) + '</div><div class="a-body">' +
+        (ok ? "5%以上の向上という目標の水準に届いています（この入力値の場合）。"
+            : "5%以上の向上が要件です。付加価値額の目標を上げるか、労働時間の削減を織り込むか、計画の中身を見直してください。") +
+        " 現状 " + esc(fmt.yen(fn / ln)) + "/時間 → 目標 " + esc(fmt.yen(fg / lg)) + "/時間</div></div></div>";
+    } else {
+      box.innerHTML = '<p class="small muted">4つの数字がそろうと変化率を計算します（ステップ3の試算から自動で入ります）。</p>';
+    }
+  }
+  ["f-s43_fuka_now", "f-s43_fuka_goal", "f-s43_labor_now", "f-s43_labor_goal"].forEach(function (id) {
+    $(id).addEventListener("input", renderS43);
+  });
+
+  /* --- 7. 確認事項 --- */
+  var S7_ITEMS = S.form2.sections.filter(function (s) { return s.no === "7"; })[0].items;
+  function renderS7() {
+    var cur = draft.form.s7_checks || [];
+    $("f-s7_checks").innerHTML = S7_ITEMS.map(function (t, i) {
+      return '<label class="check-line"><input type="checkbox" data-i="' + i + '"' + (cur.indexOf(i) >= 0 ? " checked" : "") + ">" + esc(t) + "</label>";
+    }).join("");
+    $("f-s7_checks").querySelectorAll("input").forEach(function (cb) {
+      cb.addEventListener("change", function () {
+        var c = draft.form.s7_checks || [];
+        var i = +cb.dataset.i;
+        var at = c.indexOf(i);
+        if (cb.checked && at < 0) c.push(i);
+        if (!cb.checked && at >= 0) c.splice(at, 1);
+        draft.form.s7_checks = c;
+        save();
+      });
+    });
+  }
+
+  /* --- フォームの初期化・自動下書き・保存 --- */
+  var formPrefilled = false;
+  function prefillForm() {
+    // 保存値の復元（毎回）
+    TEXT_FIELDS.concat(NUM_FIELDS).forEach(function (k) {
+      var el = $("f-" + k);
+      if (el && draft.form[k] != null && el.value === "") el.value = draft.form[k];
+    });
+    if (draft.form.s2_sonota) $("f-s2_sonota").value = draft.form.s2_sonota;
+
+    if (!formPrefilled) {
+      // 空欄にだけ自動下書きを入れる（保存済みの手入力は上書きしない）
+      function autoFill(key, text) {
+        var el = $("f-" + key);
+        if (el && el.value === "" && text) { el.value = text; draft.form[key] = text; markAuto(key); }
+      }
+      if ($("f-s1_name").value === "" && profile.name) { $("f-s1_name").value = profile.name; draft.form.s1_name = profile.name; }
+      if ($("f-s1_addr").value === "" && profile.place) {
+        $("f-s1_addr").value = profile.place;
+        draft.form.s1_addr = $("f-s1_addr").value;
+        markAuto("s1_addr");
+      }
+      autoFill("s41_gaikyo", autoGaikyo());
+      autoFill("s42_kikan", autoKikan());
+      autoFill("s44_a", profileCropLines().map(function (s) { return s.split(" ")[0]; }).join("、"));
+      autoFill("s44_b", autoS44b());
+      autoFill("s44_e", autoS44e());
+      autoFill("s46_shotoku", autoS46());
+      autoFill("s5_taisei", autoS5());
+      // 4-3: ステップ3の試算から
+      var sz = draft.seisan || {};
+      var fukaka = (+sz.eigyo || 0) + (+sz.jinken || 0) + (+sz.genka || 0);
+      if ($("f-s43_fuka_now").value === "" && fukaka > 0) { $("f-s43_fuka_now").value = fukaka; draft.form.s43_fuka_now = fukaka; }
+      if ($("f-s43_fuka_goal").value === "" && fukaka > 0) { var g = Math.round(fukaka * 1.05); $("f-s43_fuka_goal").value = g; draft.form.s43_fuka_goal = g; }
+      if ($("f-s43_labor_now").value === "" && sz.laborH > 0) { $("f-s43_labor_now").value = sz.laborH; draft.form.s43_labor_now = sz.laborH; }
+      if ($("f-s43_labor_goal").value === "" && sz.laborH > 0) { $("f-s43_labor_goal").value = sz.laborH; draft.form.s43_labor_goal = sz.laborH; }
+      // 4-5: 面積
+      if ($("f-s45_total_a").value === "" && totalAreaA() > 0) { $("f-s45_total_a").value = totalAreaA(); draft.form.s45_total_a = totalAreaA(); }
+      if ($("f-s45_goal_a").value === "" && totalAreaA() > 0) { $("f-s45_goal_a").value = totalAreaA(); draft.form.s45_goal_a = totalAreaA(); }
+      renderS3Chips();
+      renderS44cChips();
+      renderS45Chips();
+      renderS7();
+      formPrefilled = true;
+      save();
+    }
+    refreshAutoNotes();
+  }
+  // 入力の自動保存
+  TEXT_FIELDS.forEach(function (k) {
+    var el = $("f-" + k);
+    if (el) el.addEventListener("input", function () {
+      draft.form[k] = el.value;
+      if (draft.autoFlags[k]) { delete draft.autoFlags[k]; refreshAutoNotes(); }
+      save();
+    });
+  });
+  NUM_FIELDS.forEach(function (k) {
+    var el = $("f-" + k);
+    if (el) el.addEventListener("input", function () { draft.form[k] = el.value === "" ? null : +el.value; save(); });
+  });
+  $("f-s2_sonota").addEventListener("change", function () { draft.form.s2_sonota = $("f-s2_sonota").value; save(); });
+
+  /* --- 下書きの全文テキスト --- */
+  function tokureNames() {
+    return (draft.form.s3_tokurei || []).map(function (k) {
+      var n = k;
+      S.benefits.forEach(function (b) { if (b.key === k) n = b.name; });
+      return n;
+    });
+  }
+  function draftText() {
+    var f = draft.form;
+    function v(k) { return (f[k] != null && f[k] !== "") ? String(f[k]) : "―（要確認）"; }
+    var fn = +f.s43_fuka_now || 0, fg = +f.s43_fuka_goal || 0, ln = +f.s43_labor_now || 0, lg = +f.s43_labor_goal || 0;
+    var rateLine = (fn > 0 && fg > 0 && ln > 0 && lg > 0)
+      ? "労働生産性: 現状 " + fmt.yen(fn / ln) + "/時間 → 目標 " + fmt.yen(fg / lg) + "/時間（変化率 " + fmt.pct((fg / lg) / (fn / ln) - 1, 1) + "）"
+      : "労働生産性: ―（要確認）";
+    var total = +f.s45_total_a || 0, target = +f.s45_target_a || 0;
+    var shareLine = total > 0 ? fmt.pct(target / total) + "（取組 " + target + "a ÷ 経営全体 " + total + "a）" : "―（要確認）";
+    var lines = [
+      S.form2.formName + "（下書き）",
+      "※これは下書きです。正式な様式は " + S.sources.formsPage.url + " から入手して転記し、窓口（" + winLine() + "）に事前相談してください。",
+      "※制度情報は " + S.asOf + "。",
+      "",
+      "1. 申請者の概要",
+      "  氏名または名称: " + v("s1_name"),
+      "  代表者氏名: " + (f.s1_rep ? f.s1_rep : "（個人のため該当なし）"),
+      "  住所: " + v("s1_addr"),
+      "  連絡先: " + v("s1_contact"),
+      "",
+      "2. 促進に資する措置の有無: " + (f.s2_sonota || "含まない（農業者のみ）"),
+      "",
+      "3. 特例措置の活用: " + (tokureNames().length ? tokureNames().join("、") : "―（要確認）"),
+      "",
+      "4-1. 農業経営の概況",
+      v("s41_gaikyo"),
+      "",
+      "4-2. 実施期間: " + v("s42_kikan"),
+      "",
+      "4-3. 目標",
+      "  付加価値額: 現状 " + (fn ? fmt.manUnit(fn) : "―（要確認）") + " → 目標 " + (fg ? fmt.manUnit(fg) : "―（要確認）"),
+      "  労働時間: 現状 " + (ln ? fmt.num(ln) + "時間" : "―（要確認）") + " → 目標 " + (lg ? fmt.num(lg) + "時間" : "―（要確認）"),
+      "  " + rateLine,
+      "",
+      "4-4. 事業活動の内容",
+      "  A. 対象品目: " + v("s44_a"),
+      "  B. スマート農業技術の活用内容: " + v("s44_b"),
+      "  C. 新たな生産方式（分類: " + ((f.s44_c_type || []).join("・") || "―（要確認）") + "）: " + v("s44_c"),
+      "  D. BとCの関連性: " + v("s44_d"),
+      "  E. 計画参加者の内訳: " + v("s44_e"),
+      "",
+      "4-5. 規模",
+      "  経営全体の面積: " + (total ? total + "a" : "―（要確認）") + " ／ 目標の経営面積: " + (f.s45_goal_a ? f.s45_goal_a + "a" : "―（要確認）"),
+      "  取組の面積: " + (target ? target + "a" : "―（要確認）") + " ／ 経営全体に占める割合: " + shareLine,
+      "  費用の考え方: " + v("s45_hiyo"),
+      "",
+      "4-6. 所得の状況",
+      v("s46_shotoku"),
+      "",
+      "5. 実施体制",
+      v("s5_taisei"),
+      "",
+      "7. 確認事項（確認済みの項目）",
+      S7_ITEMS.map(function (t, i) { return "  [" + ((f.s7_checks || []).indexOf(i) >= 0 ? "済" : "　") + "] " + t; }).join("\n"),
+      "",
+      "添付書類: " + S.form2.attachments,
+      "認定後: " + S.form2.afterNote,
+    ];
+    return lines.join("\n");
+  }
+
+  /* --- 印刷 --- */
+  function buildPrintSheet() {
+    var f = draft.form;
+    function pv(k) { return esc((f[k] != null && f[k] !== "") ? String(f[k]) : "―（要確認）"); }
+    var fn = +f.s43_fuka_now || 0, fg = +f.s43_fuka_goal || 0, ln = +f.s43_labor_now || 0, lg = +f.s43_labor_goal || 0;
+    var rate = (fn > 0 && fg > 0 && ln > 0 && lg > 0) ? fmt.pct((fg / lg) / (fn / ln) - 1, 1) : "―（要確認）";
+    var total = +f.s45_total_a || 0, target = +f.s45_target_a || 0;
+    var html = "<h2>" + esc(S.form2.formName) + "（下書き）</h2>" +
+      '<p class="ps-meta">' + esc(S.asOf) + "・マイファーム農業経営コンパスで作成した下書き</p>" +
+      '<div class="ps-warn">これは下書きです。正式な様式は農林水産省ページ（' + esc(S.sources.formsPage.url) + "）からWord様式を入手して転記し、事前に窓口（" +
+      esc(winLine()) + "）へ相談してください。認定の可否はこの下書きでは判断できません。</div>" +
+      "<h3>1. 申請者の概要</h3><table><tr><th style='width:30%'>氏名または名称</th><td>" + pv("s1_name") + "</td></tr>" +
+      "<tr><th>代表者氏名</th><td>" + (f.s1_rep ? esc(f.s1_rep) : "（個人のため該当なし）") + "</td></tr>" +
+      "<tr><th>住所</th><td>" + pv("s1_addr") + "</td></tr>" +
+      "<tr><th>連絡先</th><td>" + pv("s1_contact") + "</td></tr></table>" +
+      "<h3>2. 促進に資する措置の有無</h3><p class='ps-body'>" + esc(f.s2_sonota || "含まない（農業者のみ）") + "</p>" +
+      "<h3>3. 特例措置の活用の有無</h3><p class='ps-body'>" + (tokureNames().length ? esc(tokureNames().join("、")) : "―（要確認）") + "</p>" +
+      "<h3>4-1. 農業経営の概況</h3><p class='ps-body'>" + pv("s41_gaikyo") + "</p>" +
+      "<h3>4-2. 実施期間</h3><p class='ps-body'>" + pv("s42_kikan") + "</p>" +
+      "<h3>4-3. 目標</h3><table>" +
+      "<tr><th>項目</th><th>現状</th><th>目標</th></tr>" +
+      "<tr><td>付加価値額</td><td>" + (fn ? esc(fmt.manUnit(fn)) : "―（要確認）") + "</td><td>" + (fg ? esc(fmt.manUnit(fg)) : "―（要確認）") + "</td></tr>" +
+      "<tr><td>労働時間</td><td>" + (ln ? esc(fmt.num(ln)) + "時間" : "―（要確認）") + "</td><td>" + (lg ? esc(fmt.num(lg)) + "時間" : "―（要確認）") + "</td></tr>" +
+      "<tr><td>労働生産性の変化率</td><td colspan='2'>" + esc(rate) + "（要件: 5%以上の向上）</td></tr></table>" +
+      "<h3>4-4. 事業活動の内容</h3><table>" +
+      "<tr><th style='width:30%'>A. 対象品目</th><td>" + pv("s44_a") + "</td></tr>" +
+      "<tr><th>B. 技術の活用内容</th><td>" + pv("s44_b") + "</td></tr>" +
+      "<tr><th>C. 新たな生産方式（" + esc((f.s44_c_type || []).join("・") || "分類 要確認") + "）</th><td>" + pv("s44_c") + "</td></tr>" +
+      "<tr><th>D. BとCの関連性</th><td>" + pv("s44_d") + "</td></tr>" +
+      "<tr><th>E. 計画参加者</th><td>" + pv("s44_e") + "</td></tr></table>" +
+      "<h3>4-5. 規模</h3><p class='ps-body'>経営全体 " + (total ? total + "a" : "―（要確認）") +
+      " ／ 取組 " + (target ? target + "a" : "―（要確認）") +
+      " ／ 割合 " + (total > 0 ? esc(fmt.pct(target / total)) : "―（要確認）") + "（要件: おおむね過半）\n費用の考え方: " + pv("s45_hiyo") + "</p>" +
+      "<h3>4-6. 所得の状況</h3><p class='ps-body'>" + pv("s46_shotoku") + "</p>" +
+      "<h3>5. 実施体制</h3><p class='ps-body'>" + pv("s5_taisei") + "</p>" +
+      "<h3>7. 確認事項</h3><p class='ps-body'>" +
+      S7_ITEMS.map(function (t, i) { return "[" + ((f.s7_checks || []).indexOf(i) >= 0 ? "✓" : "　") + "] " + esc(t); }).join("<br>") + "</p>" +
+      '<p class="ps-meta">添付書類: ' + esc(S.form2.attachments) + "<br>認定後: " + esc(S.form2.afterNote) + "<br>" +
+      S.caveats.map(esc).join("<br>") + "</p>";
+    $("printSheet").innerHTML = html;
+  }
+  $("printBtn").addEventListener("click", function () {
+    buildPrintSheet();
+    window.print();
+  });
+
+  /* --- コピー・JSON書き出し/読み込み --- */
+  $("copyBtn").addEventListener("click", function () {
+    var text = draftText();
+    function done() { $("copyMsg").textContent = "コピーしました（" + new Date().toLocaleTimeString() + "）。メモ帳やメールに貼り付けられます。"; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+    } else { fallbackCopy(text); done(); }
+  });
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+  $("exportBtn").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "smart_shinsei_draft.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  $("importBtn").addEventListener("click", function () { $("importFile").click(); });
+  $("importFile").addEventListener("change", function () {
+    var file = $("importFile").files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var obj = JSON.parse(reader.result);
+        if (!obj || typeof obj !== "object" || (!obj.answers && !obj.form)) throw new Error("bad");
+        draft = obj;
+        if (!draft.answers) draft.answers = {};
+        if (!draft.form) draft.form = {};
+        if (!draft.seisan) draft.seisan = {};
+        if (!draft.autoFlags) draft.autoFlags = {};
+        save();
+        location.reload();
+      } catch (e) {
+        alert("読み込めませんでした。このページで書き出したJSONファイルを選んでください。");
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  /* ============ 下部の注意書き ============ */
+  $("caveatList").innerHTML = S.caveats.map(function (c) { return "<li>" + esc(c) + "</li>"; }).join("");
+  $("srcBottom").textContent = "制度情報の出典: " + Object.keys(S.sources).map(function (k) { return S.sources[k].name; }).join("／") + "。" + S.asOf + "。";
+
+  /* ============ 起動 ============ */
+  gotoStep(draft.step || 1);
+})();
+</script>
+</body>
+</html>

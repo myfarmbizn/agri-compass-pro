@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>計画書にまとめる ― 事業計画書｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+<style>
+  /* ---- このページ専用（共通CSSは変更しない） ---- */
+  .crow { border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 13px 14px 11px; background: var(--inset); margin-bottom: 11px; }
+  .crow .crow-head { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .crow .row-del { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--hairline); background: transparent; color: var(--ink-3); cursor: pointer; font-size: 13px; line-height: 1; }
+  .crow .row-del:hover { color: var(--critical); border-color: rgba(224,82,82,.45); }
+  .add-row { width: 100%; border: 1px dashed var(--hairline-strong); background: transparent; color: var(--ink-3); border-radius: var(--r-md); padding: 10px; cursor: pointer; font-family: var(--font); font-size: 12.5px; font-weight: 650; }
+  .add-row:hover { color: var(--accent); border-color: rgba(143,195,32,.5); }
+  .flag { font-size: 10.5px; font-weight: 700; color: var(--warn); margin-left: 4px; }
+  textarea { width: 100%; min-height: 76px; resize: vertical; }
+  .chk-line { display: flex; align-items: center; gap: 9px; font-size: 13px; cursor: pointer; }
+  .chk-line input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  /* ---- ページ内の印刷制御（計画書の紙面だけを印刷する） ---- */
+  @media print {
+    .topbar, .page-head, .no-print { display: none !important; }
+    body { background: #fff !important; }
+    body::before, body::after { display: none !important; }
+    .shell { max-width: none; padding: 0; }
+    #docArea { border: none !important; box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; }
+  }
+
+  /* 段7：読み合わせの結果 */
+  .yomi-shiteki { border:1px solid var(--hairline); border-radius:11px; padding:12px 14px; margin:9px 0; background:#fff; }
+  .yomi-shiteki .kata { display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px;
+    border-radius:99px; border:1px solid currentColor; margin-bottom:5px; }
+  .yomi-shiteki .kata.k1 { color:#c02f2f; background:#fbecec; }
+  .yomi-shiteki .kata.k2 { color:#8a6200; background:#faf5d1; }
+  .yomi-shiteki .kata.k3 { color:#b4513a; background:#fbeee9; }
+  .yomi-shiteki .kata.k4 { color:#2a78d6; background:#eef4fc; }
+  .yomi-shiteki .basho { font-size:12px; color:var(--ink-3); margin-left:8px; }
+  .yomi-shiteki .naiyou { font-size:13.5px; line-height:1.8; margin-top:3px; }
+  .yomi-mihon { border:1px solid #e6d024; background:#faf5d1; border-radius:11px;
+    padding:11px 14px; margin:10px 0; font-size:13px; }
+  .yomi-mihon b { color:#a07500; }
+</style>
+</head>
+<body>
+<main class="shell">
+
+  <div class="page-head fade-up">
+    <div class="eyebrow">BUSINESS PLAN</div>
+    <h1>自分の営農計画を<span class="grad-text">事業計画書</span>にまとめる</h1>
+    <p class="lede">経営シミュレーターでつくった計画を、まず自分の営農計画としてA4・数枚の事業計画書にまとめます。必要になれば、融資や市町村への相談にそのまま持って行けます。数字はすべてシミュレーターの計画と同じ計算式です。</p>
+  </div>
+
+  <!-- このページの説明（3列） -->
+  <div class="card fade-up d1 no-print">
+    <div class="grid c3">
+      <div>
+        <div class="small" style="color:var(--accent); font-weight:700; margin-bottom:6px">できること</div>
+        <div class="small muted" style="line-height:1.7">申込者の情報・使うお金とその用意のしかた・収支の計画・返済の計画・資金繰りの見通しを1つの計画書にまとめ、そのまま印刷（紙・PDF）や、印刷用ファイル（HTML）での保存ができます。</div>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent); font-weight:700; margin-bottom:6px">使う場面</div>
+        <div class="small muted" style="line-height:1.7">まず、自分の営農計画のまとめとして。就農や設備投資で借入を考えて公庫・JA・銀行などの窓口に相談へ行く前や、普及指導センター・市町村に計画を見てもらうときにも、そのまま使えます。</div>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent); font-weight:700; margin-bottom:6px">他のページとのつながり</div>
+        <div class="small muted" style="line-height:1.7">数字（作付け、投資、借入、自分・家族への給与）は経営シミュレーターの計画をそのまま使います。数字を直したいときは経営シミュレーターで直すと、この計画書も変わります。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 計画の読み込み状態と持ち込み前の確認 -->
+  <div class="fade-up d1 no-print" id="planStatus"></div>
+
+  <!-- ============ 記入欄 ============ -->
+  <div class="sec-title fade-up d2 no-print">
+    <h2>記入する（数字は自動で入ります）</h2>
+    <span class="hint">空欄のままでも作れます。空欄は印刷後に手書きで埋められます</span>
+  </div>
+
+  <div class="card fade-up d2 no-print">
+    <h3>申込者の情報</h3>
+    <div class="sub">金融機関の様式で最初に聞かれる項目です。書ける所だけで大丈夫です。</div>
+    <div class="grid c3">
+      <div class="field"><label>氏名</label><input type="text" id="inName" placeholder="例: 農業 太郎"></div>
+      <div class="field"><label>ふりがな</label><input type="text" id="inKana" placeholder="例: おきなわ たろう"></div>
+      <div class="field"><label>生年月日</label><input type="text" id="inBirth" placeholder="例: 1990年4月1日"></div>
+    </div>
+    <div class="grid c3">
+      <div class="field"><label>住所</label><input type="text" id="inAddr" placeholder="例: ○○県○○市○○ 1-2-3"></div>
+      <div class="field"><label>電話番号</label><input type="text" id="inTel" placeholder="例: 090-0000-0000"></div>
+      <div class="field"><label>就農（事業開始）の時期</label><input type="text" id="inStart" placeholder="例: 2027年4月（予定）"></div>
+    </div>
+    <div class="grid c3">
+      <div class="field"><label>家族構成・手伝える人</label><input type="text" id="inFamily" placeholder="例: 本人・妻（手伝い可）・子2人"></div>
+      <div class="field">
+        <label>認定の状況（わかれば）</label>
+        <select id="inNintei">
+          <option value="">（未記入）</option>
+          <option value="認定新規就農者（青年等就農計画の認定あり）">認定新規就農者（青年等就農計画の認定あり）</option>
+          <option value="認定農業者（農業経営改善計画の認定あり）">認定農業者（農業経営改善計画の認定あり）</option>
+          <option value="認定の申請を準備中">認定の申請を準備中</option>
+          <option value="認定なし">認定なし</option>
+        </select>
+        <div class="note">制度資金には認定が条件のものがあります。あてはまるか不明なときは市町村・普及指導センターに確認してください。</div>
+      </div>
+      <div></div>
+    </div>
+    <div class="field"><label>農業の経験・研修の経歴</label><textarea id="inCareer" placeholder="例: 2024年4月〜2026年3月 ○○農園で研修（ゴーヤー・オクラ）。前職は○○（10年）。"></textarea></div>
+  </div>
+
+  <div class="card fade-up d2 no-print">
+    <h3>申込先と借入の希望</h3>
+    <div class="sub">借入額・年利・返済年数・据置は、経営シミュレーターのステップ3の入力をそのまま「希望の条件」として計画書に載せます。</div>
+    <div class="grid c3">
+      <div class="field">
+        <label>申込先の種類</label>
+        <select id="inInstType">
+          <option value="">（未記入）</option>
+          <option value="日本政策金融公庫">日本政策金融公庫</option>
+          <option value="JA（農協）">JA（農協）</option>
+          <option value="銀行・信用金庫">銀行・信用金庫</option>
+          <option value="市町村・県の制度資金の窓口">市町村・県の制度資金の窓口</option>
+          <option value="その他・未定">その他・未定</option>
+        </select>
+      </div>
+      <div class="field"><label>窓口・支店名（わかれば）</label><input type="text" id="inInstName" placeholder="例: ○○支店"></div>
+      <div class="field"><label>資金・制度の名前（わかれば）</label><input type="text" id="inFund" placeholder="例: 青年等就農資金"></div>
+    </div>
+    <div id="loanEcho" class="small muted" style="line-height:1.8"></div>
+    <div class="field mt8"><label>お金のつかいみちの補足（自由記入）</label><textarea id="inUseNote" placeholder="例: パイプハウス2棟の新設と中古トラクターの購入。見積書は○○社から取得済み。"></textarea></div>
+  </div>
+
+  <div class="card fade-up d3 no-print">
+    <h3>計画の説明（文章で伝える部分）</h3>
+    <div class="sub">数字の表だけでは伝わらない部分です。相談の場で必ず聞かれる3点を用意しました。</div>
+    <div class="field"><label>経営の方針・この計画で目指す姿</label><textarea id="inVision" placeholder="例: 研修先で身につけたゴーヤーの栽培を中心に、初年は露地中心で小さく始め、3年目にハウスを増やして周年出荷に近づけます。"></textarea></div>
+    <div class="field"><label>売り先のあて（どこへ・どうやって売るか）</label><textarea id="inSales" placeholder="例: JA共販を基本に、規格外品は直売所へ。研修先の出荷グループに参加予定（内諾あり）。"></textarea></div>
+    <div class="field"><label>不作・台風・価格下落への備え</label><textarea id="inRisk" placeholder="例: 収入保険に加入予定。台風前の予防措置の手順は研修先で経験済み。家計へ渡す給与の6か月分は自己資金とは別に確保。"></textarea></div>
+  </div>
+
+  <div class="card fade-up d3 no-print">
+    <h3>いま返している借入（既往借入）</h3>
+    <div class="sub">住宅・車・営農などの返済中の借入は、金融機関が必ず確認する項目です。正直に書くほうが話が早く進みます。</div>
+    <label class="chk-line mb16"><input type="checkbox" id="inDebtNone"><span>現在返済中の借入はない（計画書に「なし」と載せる）</span></label>
+    <div id="debtWrap"></div>
+    <button class="add-row" id="addDebt">＋ 借入の行を足す</button>
+    <div class="note small muted mt8">この表は計画書にそのまま載せる転記欄です。上の収支・資金繰りの計算（経営シミュレーター）には含まれていません。既存の借入がある場合、利息だけが損益（もうけ）の費用です。元本の返済はもうけの費用でも家族への給与でもなく、資金繰り（手元のお金の増減）に効きます。シミュレーターに反映するときは、利息をおよその年額として固定費に加える程度にとどめ、元本返済は「資金繰りで別に出ていくお金」として見てください（このツールは元本と利息を分けて自動計算しません。正式な計画書では金融機関の返済予定表で確認してください）。</div>
+  </div>
+
+  <div class="card fade-up d4 no-print">
+    <h3>窓口に持っていくものの目安</h3>
+    <div class="sub">必要な書類は金融機関・資金の種類ごとに違います。以下は一般に求められることが多いものの目安です（窓口で必ず確認してください）。</div>
+    <div class="small muted" style="line-height:2">
+      ・借入の申込書類（金融機関所定の様式。公庫の農業資金では「借入申込希望書兼経営改善資金計画書」という様式があります＝2026年7月時点・公庫サイトで確認）<br>
+      ・事業計画の説明資料（この計画書はここで使えます。所定様式の下書きにも使えます）<br>
+      ・投資の見積書（機械・ハウスなど、業者からの見積り）<br>
+      ・本人確認書類・住民票など<br>
+      ・資産や借入の分かる資料（預金通帳・借入の返済予定表など）<br>
+      ・すでに経営している場合は決算書・確定申告書（直近2〜3年分を求められることが多い）<br>
+      ・認定新規就農者・認定農業者の場合は認定書の写し
+    </div>
+  </div>
+
+  <!-- ============ 計画書 ============ -->
+  <div class="sec-title fade-up d4 no-print">
+    <h2>事業計画書</h2>
+    <button class="btn primary sm no-print" id="btnPrint" style="margin-left:auto">この計画書を印刷する（紙・PDF）</button>
+    <button class="btn ghost sm no-print" id="btnFile">印刷用ファイルで保存（HTML）</button>
+  </div>
+  <p class="small muted no-print" style="margin:-6px 0 14px">印刷画面でプリンターの代わりに「PDFに保存」を選ぶと、PDFファイルになります。保存したHTMLファイルはどのパソコンでも開いて印刷できます。</p>
+
+  <p class="small muted no-print" style="margin:0 0 8px">ここから下が、そのまま印刷されます。</p>
+  <div id="docArea" class="fade-up d5"></div>
+
+  <!-- 段7：読み合わせ -->
+  <div class="card mt16 fade-up d6 no-print" id="cardYomi">
+    <h3>書きもれと、数字の食い違いを読み合わせる</h3>
+    <div class="sub">計画書の中身をAIに渡して、抜けているところ・数字が合わないところ・窓口で聞かれそうなところを挙げてもらいます。
+      直すかどうかを決めるのはご本人です。当社は良し悪しを書きません。</div>
+    <div class="flex wrap" style="margin-top:12px">
+      <button class="btn" id="btnYomi" type="button">読み合わせる</button>
+      <span class="small muted" id="yomiState" style="align-self:center"></span>
+    </div>
+    <div id="yomiKekka"></div>
+    <p class="small muted" style="margin:12px 0 0">
+      AIへ渡すのは、計画の数字と文章だけです。氏名・住所・電話番号・生年月日は渡しません。</p>
+  </div>
+
+  <!-- 控え -->
+  <div class="card mt16 fade-up d6 no-print">
+    <h3>記入内容の控え</h3>
+    <div class="sub">このページの記入（氏名・文章・既往借入）は端末のブラウザに自動保存されます。ブラウザのデータ削除で消えるため、JSONでの控えをおすすめします。数字の控えは経営シミュレーター側のJSONです。</div>
+    <div class="flex wrap">
+      <button class="btn ghost sm" id="btnExpJson">記入内容をJSONで控える</button>
+      <label class="btn ghost sm" style="cursor:pointer">JSONを読み込む<input type="file" id="fileImp" accept=".json" class="hide"></label>
+      <button class="btn ghost sm" id="btnClear">記入内容を消す</button>
+    </div>
+  </div>
+
+  <p class="src mt24 no-print" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/sim_engine.js"></script>
+<script src="../assets/js/uchite.js"></script>
+<script src="../assets/js/ai.js"></script>
+<script>
+CORE.renderTopbar("keikaku", "../");
+document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+(function () {
+  "use strict";
+  var fmt = CORE.fmt, store = CORE.store;
+
+  /* ============================================================
+     計画書の紙面スタイル
+     画面プレビューと印刷用ファイル（HTML書き出し）で共用するため
+     JS定数にまとめ、<style> として注入する。紙面は常に白地。
+     ============================================================ */
+  var DOC_CSS = [
+    "#docArea { background:#fff; color:#1f2530; border:1px solid rgba(128,128,128,.45); border-radius:14px; padding:34px 38px; font-size:12px; line-height:1.75; font-family:'Noto Sans JP','Segoe UI','Hiragino Sans','Yu Gothic UI',Meiryo,sans-serif; }",
+    "#docArea .dc-title { display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; border-bottom:2.5px solid var(--accent); padding-bottom:8px; margin-bottom:4px; }",
+    "#docArea .dc-title h1 { font-size:19px; font-weight:800; color:#12202e; letter-spacing:.05em; margin:0; }",
+    "#docArea .dc-date { font-size:11px; color:var(--ink-3); }",
+    "#docArea .dc-sub { font-size:10.5px; color:var(--ink-3); margin-bottom:14px; }",
+    "#docArea h2 { font-size:13px; font-weight:750; color:var(--accent); border-left:4px solid var(--accent); padding-left:8px; margin:20px 0 8px; }",
+    "#docArea .tblx { overflow-x:auto; }",
+    "#docArea table { width:100%; border-collapse:collapse; font-size:11px; margin:4px 0 6px; }",
+    "#docArea th { background:#f1f4f1; border:1px solid #b9beba; padding:4px 8px; font-weight:650; color:#333; text-align:left; white-space:nowrap; }",
+    "#docArea td { border:1px solid #b9beba; padding:4px 8px; color:#222; font-variant-numeric:tabular-nums; }",
+    "#docArea th.num, #docArea td.num { text-align:right; }",
+    "#docArea td.neg { color:#b3261e; font-weight:650; }",
+    "#docArea tr.emph td { background:#f4f9f4; font-weight:700; }",
+    "#docArea .dc-blank { display:inline-block; min-width:130px; min-height:14px; }",
+    "#docArea .dc-note { font-size:10px; color:var(--ink-3); line-height:1.7; margin:2px 0 4px; }",
+    "#docArea .dc-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }",
+    "#docArea .dc-keep { break-inside:avoid; }",
+    "#docArea .dc-sign { margin-top:26px; display:flex; justify-content:flex-end; }",
+    "#docArea .dc-sign table { width:auto; }",
+    "#docArea .dc-sign td { min-width:190px; }",
+    "@media (max-width:640px){ #docArea { padding:18px 14px; } #docArea .dc-cols { grid-template-columns:1fr; } }",
+    "@media print { #docArea h2 { break-after:avoid; } .fbar { display:none !important; } }"
+  ].join("\n");
+  var styleEl = document.createElement("style");
+  styleEl.textContent = DOC_CSS;
+  document.head.appendChild(styleEl);
+
+  /* ============================================================
+     経営シミュレーターの計画（simPlan）を読む
+     既定値の合成はシミュレーターと同じ手順（数字の食い違い防止）
+     ============================================================ */
+  var REG = simBuildRegistry(DATA);
+  function regById(id) {
+    for (var i = 0; i < REG.length; i++) if (REG[i].id === id) return REG[i];
+    return null;
+  }
+  function makeItem(cropId, area) {
+    var c = regById(cropId) || REG[0];
+    return {
+      cropId: c.id, area: area != null ? area : 10,
+      yieldV: c.yieldObj ? c.yieldObj.v : 0,
+      priceV: c.priceObj ? c.priceObj.v : 0,
+      costRate: c.costRateObj ? c.costRateObj.v : 0.5,
+      laborH10a: c.laborObj ? c.laborObj.v : 0,
+      typhoonExp: c.typhoonExp != null ? c.typhoonExp : 0.4,
+      curve: simDefaultCurve(c), curveEdited: false
+    };
+  }
+  function defaultState() {
+    return {
+      years: 5, famPeople: 2, famHours: 160,
+      livingMan: 20, cashStartMan: 300, targetMan: 300,
+      items: [makeItem("kibi", 100), makeItem("goya_roji", 20)],
+      invests: [],
+      loan: { amountMan: 0, ratePct: 2.0, termY: 10, graceY: 3 },
+      hojo: { amountMan: 0, year: 1 },
+      fixedMan: 30, fixedMemo: ""
+    };
+  }
+  function loadPlan() {
+    var saved = store.load("simPlan", null);
+    var st = defaultState();
+    var fromSaved = false;
+    if (saved && saved.items && saved.items.length) {
+      st = Object.assign(st, saved);
+      st.loan = Object.assign({ amountMan: 0, ratePct: 2.0, termY: 10, graceY: 3 }, saved.loan || {});
+      st.hojo = Object.assign({ amountMan: 0, year: 1 }, saved.hojo || {});
+      st.items = st.items.filter(function (it) { return !!regById(it.cropId); });
+      if (!st.items.length) st.items = [makeItem(REG[0].id, 10)];
+      st.items.forEach(function (it) {
+        if (!it.curve || it.curve.length !== 10) { it.curve = simDefaultCurve(regById(it.cropId)); it.curveEdited = false; }
+      });
+      st.invests = (st.invests || []).map(function (iv) {
+        return Object.assign({ label: "", amountMan: 0, year: 1, kind: "new", life: 7, leaseMan: 0, leaseYears: 5 }, iv);
+      });
+      fromSaved = true;
+    }
+    return { st: st, fromSaved: fromSaved };
+  }
+
+  /* 借入の年別内訳（元金・利息・残高）。元利均等・据置は利息のみ。
+     年間返済額の合計は sim_engine.js の simLoanPayments と同じ式 */
+  function loanTable(amountYen, ratePct, termY, graceY) {
+    var rows = [];
+    if (!(amountYen > 0)) return rows;
+    var r = (ratePct || 0) / 100;
+    termY = Math.max(1, Math.round(termY || 1));
+    graceY = Math.max(0, Math.min(Math.round(graceY || 0), termY - 1));
+    var n = termY - graceY;
+    var annuity = r > 0 ? amountYen * r / (1 - Math.pow(1 + r, -n)) : amountYen / n;
+    var bal = amountYen;
+    for (var t = 1; t <= termY; t++) {
+      var interest = bal * r, principal = 0;
+      if (t > graceY) principal = Math.min(bal, annuity - interest);
+      bal = Math.max(0, bal - principal);
+      rows.push({ y: t, pay: interest + principal, interest: interest, principal: principal, bal: bal });
+    }
+    return rows;
+  }
+
+  /* ============================================================
+     このページの記入内容（keikakuDraft）
+     ============================================================ */
+  function defaultDraft() {
+    return {
+      name: "", kana: "", birth: "", addr: "", tel: "", start: "", family: "",
+      nintei: "", career: "",
+      instType: "", instName: "", fund: "", useNote: "",
+      vision: "", sales: "", risk: "",
+      debtNone: false, debts: []
+    };
+  }
+  var draft = Object.assign(defaultDraft(), store.load("keikakuDraft", {}) || {});
+  if (!Array.isArray(draft.debts)) draft.debts = [];
+  function persist() { store.save("keikakuDraft", draft); }
+
+  /* ---------- 記入欄のひも付け ---------- */
+  var FIELDS = [
+    ["inName", "name"], ["inKana", "kana"], ["inBirth", "birth"], ["inAddr", "addr"],
+    ["inTel", "tel"], ["inStart", "start"], ["inFamily", "family"], ["inNintei", "nintei"],
+    ["inCareer", "career"], ["inInstType", "instType"], ["inInstName", "instName"],
+    ["inFund", "fund"], ["inUseNote", "useNote"], ["inVision", "vision"],
+    ["inSales", "sales"], ["inRisk", "risk"]
+  ];
+  FIELDS.forEach(function (f) {
+    var el = document.getElementById(f[0]);
+    el.value = draft[f[1]] || "";
+    el.addEventListener("input", function () { draft[f[1]] = el.value; scheduleRender(); });
+    el.addEventListener("change", function () { draft[f[1]] = el.value; scheduleRender(); });
+  });
+  var debtNoneEl = document.getElementById("inDebtNone");
+  debtNoneEl.checked = !!draft.debtNone;
+  debtNoneEl.addEventListener("change", function () { draft.debtNone = debtNoneEl.checked; scheduleRender(); });
+
+  function renderDebts() {
+    var wrap = document.getElementById("debtWrap");
+    wrap.innerHTML = "";
+    if (!draft.debts.length) {
+      wrap.innerHTML = '<p class="small muted mb16">借入の行はまだありません。「行を足す」で追加してください。行がないまま「なし」にチェックも入れない場合、計画書には手書き用の空欄の表が載ります。</p>';
+    }
+    draft.debts.forEach(function (d, idx) {
+      var row = document.createElement("div");
+      row.className = "crow";
+      row.innerHTML =
+        '<div class="crow-head">' +
+          '<input type="text" data-f="to" placeholder="借入先（例: ○○銀行・○○公庫）" value="' + String(d.to || "").replace(/"/g, "&quot;") + '" style="flex:1">' +
+          '<button class="row-del" title="この行を消す">✕</button>' +
+        "</div>" +
+        '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px">' +
+          '<div class="field" style="margin:0"><label>つかいみち</label><input type="text" data-f="use" placeholder="例: 住宅・車・営農" value="' + String(d.use || "").replace(/"/g, "&quot;") + '"></div>' +
+          '<div class="field" style="margin:0"><label>いまの残高</label><div class="input-unit"><input type="number" data-f="balMan" min="0" step="10" value="' + (d.balMan || 0) + '"><span class="u">万円</span></div></div>' +
+          '<div class="field" style="margin:0"><label>年間の返済額</label><div class="input-unit"><input type="number" data-f="payMan" min="0" step="1" value="' + (d.payMan || 0) + '"><span class="u">万円</span></div></div>' +
+        "</div>";
+      row.querySelector(".row-del").addEventListener("click", function () {
+        draft.debts.splice(idx, 1); renderDebts(); scheduleRender();
+      });
+      row.querySelectorAll("input").forEach(function (inp) {
+        inp.addEventListener("input", function () {
+          var f = inp.dataset.f;
+          d[f] = inp.type === "number" ? (+inp.value || 0) : inp.value;
+          scheduleRender();
+        });
+      });
+      wrap.appendChild(row);
+    });
+  }
+  document.getElementById("addDebt").addEventListener("click", function () {
+    draft.debts.push({ to: "", use: "", balMan: 0, payMan: 0 });
+    draft.debtNone = false; debtNoneEl.checked = false;
+    renderDebts(); scheduleRender();
+  });
+
+  /* ============================================================
+     計画書の組み立て
+     ============================================================ */
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]; }); }
+  function nl2br(s) { return esc(s).replace(/\n/g, "<br>"); }
+  function blankOr(v, br) {
+    if (v == null || String(v).trim() === "") return '<span class="dc-blank"></span>';
+    return br ? nl2br(v) : esc(v);
+  }
+  // 円 → 万円の数字だけ（表の中で使う。見出し側に「万円」と書く）
+  function manNum(yen) {
+    if (yen == null || isNaN(yen)) return "―";
+    var m = yen / 10000;
+    var a = Math.abs(m);
+    var digits = a >= 100 ? 0 : 1;
+    return (m < 0 ? "−" : "") + a.toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+  }
+  function negCls(yen) { return yen < 0 ? " neg" : ""; }
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
+  }
+  function flagTxt(obj) { return obj ? (DATA.flagLabel(obj) || "") : ""; }
+
+  function buildDoc(L) {
+    var st = L.st;
+    var r = simCompute(st, regById, {});
+    var wf = simWhatif(st, regById);
+    var lb = simMonthlyLabor(st, regById);
+    var M = 10000;
+    var loanYen = (st.loan.amountMan || 0) * M;
+    var lt = loanTable(loanYen, st.loan.ratePct, st.loan.termY, st.loan.graceY);
+    var N = st.years;
+
+    /* ---- 1. 申込者 ---- */
+    var ninteiTxt = draft.nintei ? esc(draft.nintei) : '<span class="dc-blank"></span>';
+    var sec1 =
+      "<h2>１．申込者</h2>" +
+      '<div class="dc-keep"><table><tbody>' +
+      "<tr><th style='width:17%'>氏名（ふりがな）</th><td style='width:33%'>" + blankOr(draft.name) + (draft.kana ? "（" + esc(draft.kana) + "）" : "") + "</td>" +
+      "<th style='width:17%'>生年月日</th><td>" + blankOr(draft.birth) + "</td></tr>" +
+      "<tr><th>住所</th><td>" + blankOr(draft.addr) + "</td><th>電話番号</th><td>" + blankOr(draft.tel) + "</td></tr>" +
+      "<tr><th>就農（開始）の時期</th><td>" + blankOr(draft.start) + "</td><th>家族構成・手伝える人</th><td>" + blankOr(draft.family) + "</td></tr>" +
+      "<tr><th>認定の状況</th><td>" + ninteiTxt + "</td><th>労働力の計画</th><td>家族 " + st.famPeople + "人 × 月" + st.famHours + "時間</td></tr>" +
+      "<tr><th>農業の経験・研修</th><td colspan='3'>" + blankOr(draft.career, true) + "</td></tr>" +
+      "</tbody></table></div>";
+
+    /* ---- 2. 申込みの内容 ---- */
+    var instTxt = (draft.instType || draft.instName)
+      ? esc([draft.instType, draft.instName].filter(Boolean).join("　"))
+      : '<span class="dc-blank"></span>';
+    var useList = (st.invests || []).map(function (iv) { return iv.label || ""; }).filter(Boolean).join("・");
+    var useTxt = [useList, draft.useNote].filter(function (s) { return s && s.trim(); }).map(nl2br).join("<br>") || '<span class="dc-blank"></span>';
+    var condTxt = loanYen > 0
+      ? "年利 " + st.loan.ratePct + "%（仮）・返済 " + st.loan.termY + "年・うち据置 " + st.loan.graceY + "年（元利均等）"
+      : "―";
+    var sec2 =
+      "<h2>２．申込みの内容</h2>" +
+      '<div class="dc-keep"><table><tbody>' +
+      "<tr><th style='width:17%'>申込先</th><td style='width:33%'>" + instTxt + "</td>" +
+      "<th style='width:17%'>資金・制度の名前</th><td>" + blankOr(draft.fund) + "</td></tr>" +
+      "<tr><th>借入の希望額</th><td class='num' style='text-align:left'><b>" + (loanYen > 0 ? fmt.num(st.loan.amountMan) + " 万円" : "借入の予定なし（自己資金・補助金で実施）") + "</b></td>" +
+      "<th>希望する条件</th><td>" + condTxt + "</td></tr>" +
+      "<tr><th>お金のつかいみち</th><td colspan='3'>" + useTxt + "</td></tr>" +
+      "</tbody></table>" +
+      '<div class="dc-note">金利・期間は希望であり、実際の条件は金融機関の審査・制度の要件で決まります。</div></div>';
+
+    /* ---- 3. 事業の内容 ---- */
+    var cropRows = st.items.map(function (it) {
+      var c = regById(it.cropId);
+      var full = it.area / 10 * it.yieldV * it.priceV;
+      var curveTxt = [];
+      for (var y = 0; y < N; y++) curveTxt.push((y + 1) + "年目" + (it.curve[y] || 0) + "%");
+      return "<tr><td>" + esc(c.name) + "</td><td class='num'>" + it.area + "</td>" +
+        "<td class='num'>" + fmt.num(it.yieldV) + " " + c.unitY + flagTxt(c.yieldObj) + "</td>" +
+        "<td class='num'>" + fmt.num(it.priceV, 1) + " " + c.unitP + flagTxt(c.priceObj) + "</td>" +
+        "<td class='num'>" + Math.round(it.costRate * 100) + "%" + flagTxt(c.costRateObj) + "</td>" +
+        "<td class='num'>" + manNum(full) + "</td>" +
+        "<td style='font-size:10px'>" + curveTxt.join("・") + (it.curveEdited ? "（編集済み）" : "（仮）") + "</td></tr>";
+    }).join("");
+    var cap = st.famPeople * st.famHours;
+    var overM = [];
+    lb.total.forEach(function (v, i) { if (v > cap) overM.push((i + 1) + "月"); });
+    var laborLine = overM.length
+      ? "満作年は " + overM.join("・") + " に家族労働の上限（" + st.famPeople + "人×月" + st.famHours + "時間）を超える計算のため、臨時雇いか作業の平準化を検討します（月別のならしは仮の計算です）。"
+      : "満作年でも全12か月が家族労働の上限（" + st.famPeople + "人×月" + st.famHours + "時間）の中に収まる計算です（月別のならしは仮の計算です）。";
+    var sec3 =
+      "<h2>３．事業の内容</h2>" +
+      "<table><tbody>" +
+      "<tr><th style='width:17%'>経営の方針</th><td>" + blankOr(draft.vision, true) + "</td></tr>" +
+      "<tr><th>売り先の計画</th><td>" + blankOr(draft.sales, true) + "</td></tr>" +
+      "</tbody></table>" +
+      '<div class="tblx"><table><thead><tr><th>品目</th><th class="num">面積(a)</th><th class="num">単収</th><th class="num">単価</th><th class="num">経費率</th><th class="num">満作年の売上(万円)</th><th>収穫の立ち上がり</th></tr></thead><tbody>' +
+      cropRows + "</tbody></table></div>" +
+      '<div class="dc-note">単収・単価の初期値は県の公表資料等にもとづく品目マスタの値（（仮）は仮定値・（計算値）は計算による値・（自分の値）は利用者が入力した値）。労働力: ' + laborLine + "</div>";
+
+    /* ---- 4. お金のつかいみちと調達 ---- */
+    var investCashTotal = 0;
+    r.years.forEach(function (row) { investCashTotal += row.investCash; });
+    var buyRows = "", leaseRows = "";
+    (st.invests || []).forEach(function (iv) {
+      if (iv.kind === "lease") {
+        leaseRows += "<tr><td>" + blankOr(iv.label) + "</td><td class='num'>" + fmt.num(iv.leaseMan) + "</td><td class='num'>" + iv.year + "年目から" + (iv.leaseYears || 1) + "年間</td></tr>";
+      } else {
+        buyRows += "<tr><td>" + blankOr(iv.label) + "（" + (iv.kind === "used" ? "中古" : "新品") + "）</td><td class='num'>" + fmt.num(iv.amountMan) + "</td><td class='num'>" + iv.year + "年目</td></tr>";
+      }
+    });
+    var hojoYen = (st.hojo && st.hojo.amountMan > 0) ? st.hojo.amountMan * M : 0;
+    var chotatsuTotal = st.cashStartMan * M + loanYen + hojoYen;
+    var unten = chotatsuTotal - investCashTotal;
+    var sec4 =
+      "<h2>４．使うお金と、その用意のしかた</h2>" +
+      '<div class="dc-cols dc-keep"><div>' +
+      "<table><thead><tr><th>つかいみち</th><th class='num'>金額(万円)</th><th class='num'>時期</th></tr></thead><tbody>" +
+      (buyRows || "<tr><td>設備などの購入予定</td><td class='num'>0</td><td class='num'>―</td></tr>") +
+      "<tr><td>運転資金・当面の家計へ渡す給与にあてる手元資金</td><td class='num" + negCls(unten) + "'>" + manNum(unten) + "</td><td class='num'>―</td></tr>" +
+      "<tr class='emph'><td>計</td><td class='num'>" + manNum(investCashTotal + unten) + "</td><td></td></tr>" +
+      "</tbody></table></div><div>" +
+      "<table><thead><tr><th>調達</th><th class='num'>金額(万円)</th></tr></thead><tbody>" +
+      "<tr><td>自己資金</td><td class='num'>" + fmt.num(st.cashStartMan) + "</td></tr>" +
+      "<tr><td>借入（今回の申込み）</td><td class='num'>" + fmt.num(st.loan.amountMan || 0) + "</td></tr>" +
+      "<tr><td>補助金（仮・採択は未確定）</td><td class='num'>" + fmt.num(st.hojo ? st.hojo.amountMan || 0 : 0) + "</td></tr>" +
+      "<tr class='emph'><td>計</td><td class='num'>" + manNum(chotatsuTotal) + "</td></tr>" +
+      "</tbody></table></div></div>" +
+      '<div class="dc-note">つかいみちの計と調達の計は一致します（運転資金＝調達の計から設備などの購入を引いた残り）。金融機関に出す場合は、この節がいわゆる資金計画にあたります。' +
+      (unten < 0 ? "<b>運転資金がマイナスです。投資が調達を上回っているため、自己資金・借入を増やすか投資を見直す必要があります。</b>" : "") +
+      (leaseRows ? "</div><div class='dc-keep'><div class='dc-note'>リースで調達する設備（購入ではないため上の表に含めず、毎年のリース料を経費に計上）:</div><table><thead><tr><th>設備</th><th class='num'>リース料(万円/年)</th><th class='num'>期間</th></tr></thead><tbody>" + leaseRows + "</tbody></table>" : "") +
+      "</div>";
+
+    /* ---- 5. 収支の計画 ---- */
+    function yrow(label, get, opts) {
+      opts = opts || {};
+      var tds = r.years.map(function (row) {
+        var v = get(row);
+        return "<td class='num" + (opts.redNeg ? negCls(v) : "") + "'>" + manNum(v) + "</td>";
+      }).join("");
+      return "<tr" + (opts.emph ? " class='emph'" : "") + "><td>" + label + "</td>" + tds + "</tr>";
+    }
+    var yhead = "<tr><th>項目（万円）</th>" + r.years.map(function (row) { return "<th class='num'>" + row.y + "年目</th>"; }).join("") + "</tr>";
+    var sec5 =
+      "<h2>５．収支の計画</h2>" +
+      '<div class="tblx"><table><thead>' + yhead + "</thead><tbody>" +
+      yrow("売上高", function (row) { return row.sales; }) +
+      yrow("経費 計", function (row) { return row.expense; }) +
+      yrow("　うち変動費（種苗・肥料・資材など）", function (row) { return row.varCost; }) +
+      yrow("　うち固定費" + (st.fixedMemo ? "（" + esc(st.fixedMemo) + "）" : ""), function (row) { return row.fixed; }) +
+      (r.years.some(function (row) { return row.lease > 0; }) ? yrow("　うちリース料", function (row) { return row.lease; }) : "") +
+      yrow("　うち減価償却", function (row) { return row.dep; }) +
+      yrow("農業所得", function (row) { return row.income; }, { emph: true, redNeg: true }) +
+      "</tbody></table></div>" +
+      '<div class="dc-note">売上＝面積×単収×立ち上がり×単価。変動費＝当年の売上×経費率。税金・社会保険料・農外収入は含みません。</div>';
+
+    /* ---- 6. 返済の計画 ---- */
+    var sec6 = "<h2>６．返済の計画</h2>";
+    if (loanYen > 0) {
+      var ltRows = lt.map(function (row) {
+        var idx = row.y - 1;
+        var gensen = idx < N ? r.years[idx].income + r.years[idx].dep : null;
+        var yutori = gensen != null && row.pay > 0 ? gensen / row.pay : null;
+        return "<tr><td>" + row.y + "年目</td>" +
+          "<td class='num'>" + manNum(row.pay) + "</td>" +
+          "<td class='num'>" + manNum(row.principal) + "</td>" +
+          "<td class='num'>" + manNum(row.interest) + "</td>" +
+          "<td class='num'>" + manNum(row.bal) + "</td>" +
+          "<td class='num" + (gensen != null ? negCls(gensen) : "") + "'>" + (gensen != null ? manNum(gensen) : "―") + "</td>" +
+          "<td class='num" + (yutori != null && yutori < 1 ? " neg" : "") + "'>" + (yutori != null ? yutori.toFixed(2) + "倍" : "―") + "</td></tr>";
+      }).join("");
+      sec6 +=
+        '<div class="dc-note">借入 ' + fmt.num(st.loan.amountMan) + "万円・年利" + st.loan.ratePct + "%（仮）・" + st.loan.termY + "年返済・据置" + st.loan.graceY + "年・元利均等。据置の間は利息のみを支払います。</div>" +
+        '<div class="tblx"><table><thead><tr><th>年</th><th class="num">返済額 計(万円)</th><th class="num">うち元金</th><th class="num">うち利息</th><th class="num">年末残高</th><th class="num">返済の元手(万円)</th><th class="num">ゆとり</th></tr></thead><tbody>' +
+        ltRows + "</tbody></table></div>" +
+        '<div class="dc-note">返済の元手＝農業所得＋減価償却（現金の出ない経費を足し戻した、返済にあてられる金額の目安）。ゆとり＝返済の元手÷その年の返済額で、1.00倍を下回る年は所得だけでは返済できず手元資金からの持ち出しになります。計画期間（' + N + "年）より先の年は試算の外のため「―」です。</div>";
+    } else {
+      sec6 += '<div class="dc-note">今回の計画に新たな借入はありません（自己資金・補助金で実施する計画です）。</div>';
+    }
+    // 既往借入
+    var debtRows = "";
+    var filled = draft.debts.filter(function (d) { return (d.to && d.to.trim()) || d.balMan > 0 || d.payMan > 0 || (d.use && d.use.trim()); });
+    if (draft.debtNone) {
+      debtRows = "<tr><td colspan='4'>現在返済中の借入はありません。</td></tr>";
+    } else if (filled.length) {
+      debtRows = filled.map(function (d) {
+        return "<tr><td>" + blankOr(d.to) + "</td><td>" + blankOr(d.use) + "</td>" +
+          "<td class='num'>" + (d.balMan > 0 ? fmt.num(d.balMan) : "―") + "</td>" +
+          "<td class='num'>" + (d.payMan > 0 ? fmt.num(d.payMan) : "―") + "</td></tr>";
+      }).join("");
+      var balSum = filled.reduce(function (a, d) { return a + (d.balMan || 0); }, 0);
+      var paySum = filled.reduce(function (a, d) { return a + (d.payMan || 0); }, 0);
+      debtRows += "<tr class='emph'><td>計</td><td></td><td class='num'>" + fmt.num(balSum) + "</td><td class='num'>" + fmt.num(paySum) + "</td></tr>";
+    } else {
+      debtRows = "<tr><td><span class='dc-blank'></span></td><td><span class='dc-blank'></span></td><td></td><td></td></tr>" +
+        "<tr><td><span class='dc-blank'></span></td><td><span class='dc-blank'></span></td><td></td><td></td></tr>";
+    }
+    sec6 +=
+      '<div class="dc-keep"><div class="dc-note" style="font-weight:650; color:#333">現在返済中の借入（既往借入）</div>' +
+      "<table><thead><tr><th>借入先</th><th>つかいみち</th><th class='num'>いまの残高(万円)</th><th class='num'>年間の返済額(万円)</th></tr></thead><tbody>" +
+      debtRows + "</tbody></table>" +
+      '<div class="dc-note">既往借入は上の収支・資金繰りの試算には含めていません（転記欄です）。</div></div>';
+
+    /* ---- 7. 資金繰りの見通し ---- */
+    var cfRows = r.years.map(function (row) {
+      return "<tr><td>" + row.y + "年目</td>" +
+        "<td class='num" + negCls(row.income) + "'>" + manNum(row.income) + "</td>" +
+        "<td class='num'>" + manNum(row.dep) + "</td>" +
+        "<td class='num'>" + manNum(row.loanIn + row.hojoIn) + "</td>" +
+        "<td class='num'>" + manNum(row.investCash) + "</td>" +
+        "<td class='num'>" + manNum(row.repay) + "</td>" +
+        "<td class='num'>" + manNum(row.living) + "</td>" +
+        "<td class='num" + negCls(row.cashEnd) + "'><b>" + manNum(row.cashEnd) + "</b></td></tr>";
+    }).join("");
+    var minLine = r.minCash < 0
+      ? "<b>手元資金は " + r.minYear + "年目の年末に " + fmt.man(r.minCash) + "円まで下がり、マイナスになる計算です。計画の調整（自己資金・借入・投資時期）が必要です。</b>"
+      : "手元資金がいちばん薄くなるのは " + r.minYear + "年目の年末（" + fmt.man(r.minCash) + "円）で、期間内にマイナスにはならない計算です。";
+    var sec7 =
+      "<h2>７．資金繰りの見通し</h2>" +
+      '<div class="dc-note">計画開始時の手元資金 ' + fmt.num(st.cashStartMan) + "万円・自分・家族への給与（家計へ渡すお金） 月" + st.livingMan + "万円からの積み上げです。</div>" +
+      '<div class="tblx"><table><thead><tr><th>年</th><th class="num">農業所得(万円)</th><th class="num">＋減価償却</th><th class="num">＋借入・補助金の入金</th><th class="num">−設備などの支払い</th><th class="num">−借入の返済</th><th class="num">−自分・家族への給与</th><th class="num">年末の手元資金</th></tr></thead><tbody>' +
+      cfRows + "</tbody></table></div>" +
+      '<div class="dc-note">' + minLine + " 月ごとの支払いの波はこの表に出ないため、月単位は資金繰りカレンダーで確認します。</div>" +
+      tsukiNoYama() + eranda();
+
+    /* ---- 資金繰りカレンダーで作った月ごとの見通しを、1行だけ持ってくる ----
+       段4で月ごとの資金繰りを作っても、計画書に1行も出ていなかった。
+       表そのものは大きいので、いちばん薄くなる月と額だけを載せる */
+    function tsukiNoYama() {
+      var cf = CORE.store.load("cashflow", null);
+      if (!cf || !cf.incomes || !cf.incomes.length) return "";
+      var MAN = 10000;
+      var zan = cf.cashStart || 0;
+      var deru = (cf.living || 0) + (cf.keihi != null ? cf.keihi : 0);
+      (cf.extraExpenses || []).forEach(function (x) { deru += (x.man || 0) * MAN; });
+      (cf.loans || []).forEach(function (l) { deru += (l.monthly != null ? l.monthly : (l.amount || 0)); });
+      var hairu = [0,0,0,0,0,0,0,0,0,0,0,0];
+      cf.incomes.forEach(function (r) {
+        var toshi = r.annualYen || 0;
+        for (var m = 0; m < 12; m++) hairu[m] += toshi / 12;
+      });
+      var yasui = null, yasuiTsuki = null;
+      for (var k = 0; k < 12; k++) {
+        var mo = ((cf.startMonth || 1) - 1 + k) % 12 + 1;
+        var ooguchi = 0;
+        (cf.bigPays || []).forEach(function (b) { if (+b.month === mo) ooguchi += b.amount || 0; });
+        zan += hairu[mo - 1] - deru - ooguchi;
+        if (yasui === null || zan < yasui) { yasui = zan; yasuiTsuki = mo; }
+      }
+      if (yasui === null) return "";
+      return '<div class="dc-note">月ごとに見ると、手元資金がいちばん薄くなるのは ' + yasuiTsuki
+        + "月で、" + fmt.man(Math.round(yasui)) + "円の計算です"
+        + (yasui < 0 ? "（マイナスになります）" : "")
+        + "。入金は品目の年間売上を12か月に等分して置いた概算です。"
+        + "くわしくは資金繰りカレンダーで確かめてください。</div>";
+    }
+
+    /* ---- この計画が、どの直しどころを入れて作ったものか ----
+       段6で「この案を計画に入れる」を押すと teian.eranda に残る。
+       窓口では「なぜこの数字にしたのか」を必ず聞かれるので、計画書に1行残す */
+    function eranda() {
+      var t = CORE.store.load("teian", null);
+      if (!t || !t.eranda) return "";
+      var KATA = {
+        menseki: "面積を変える", tanka: "単価を上げる", keihiritsu: "経費率を下げる",
+        hinmokuKae: "品目を入れ替える", shoryoku: "省力の道具で労働時間を減らす",
+        toushi: "投資をする", koyou: "人を雇う",
+      };
+      var na = [];
+      (t.erandaTeate || []).forEach(function (x) {
+        if (x && x.kata) na.push(KATA[x.kata] || x.kata);
+      });
+      var hi = t.erandaAt ? String(t.erandaAt).slice(0, 10) : "";
+      return '<div class="dc-note">この計画は、段6「計画の直しどころ」で出た案のうち'
+        + "「" + esc(t.eranda) + "」を計画に入れて作ったものです"
+        + (na.length ? "（打ち手：" + esc(na.join("・")) + "）" : "")
+        + (hi ? "。入れた日 " + esc(hi) : "") + "。</div>";
+    }
+
+    /* ---- 8. 前提が悪い方に振れたときの試算 ---- */
+    var wfRows = wf.map(function (row, i) {
+      return "<tr" + (i === 0 ? " class='emph'" : "") + "><td>" + row.label + "</td>" +
+        "<td class='num" + negCls(row.finalIncome) + "'>" + manNum(row.finalIncome) + "</td>" +
+        "<td class='num" + negCls(row.minCash) + "'>" + manNum(row.minCash) + "（" + row.minYear + "年目）</td>" +
+        "<td class='num'>" + (row.targetYear ? row.targetYear + "年目" : "期間内になし") + "</td></tr>";
+    }).join("");
+    var sec8 =
+      "<h2>８．前提が悪い方に振れたときの試算</h2>" +
+      '<div class="tblx dc-keep"><table><thead><tr><th>ケース</th><th class="num">最終年の農業所得(万円)</th><th class="num">資金の最低点(万円)</th><th class="num">目標所得(年' + fmt.num(st.targetMan) + '万円)に届く年</th></tr></thead><tbody>' +
+      wfRows + "</tbody></table></div>" +
+      '<div class="dc-note">単価・収量・経費・台風・金利・立ち上がりの6つを1つずつ悪い方に振った決め打ちの比較です。起きる確率は使っていません（裏付けになるデータがないためです）。</div>' +
+      "<table><tbody><tr><th style='width:17%'>不作・台風・価格下落への備え</th><td>" + blankOr(draft.risk, true) + "</td></tr></tbody></table>";
+
+    /* ---- 8.5 相談メモ（計画を「埋めた紙」で終わらせず、判断と次の行動を残す欄。手書き前提） ---- */
+    var sec85 =
+      "<h2>９．相談メモ（この紙で決めたこと・次の行動）</h2>" +
+      '<div class="tblx dc-keep"><table><tbody>' +
+      "<tr><th style='width:22%'>今日決めたこと</th><td style='height:34px'></td></tr>" +
+      "<tr><th>まだ確かめていない前提</th><td style='height:34px'></td></tr>" +
+      "<tr><th>次の行動（誰が・何を・いつまでに）</th><td style='height:34px'></td></tr>" +
+      "<tr><th>相談先・確認する窓口</th><td style='height:34px'></td></tr>" +
+      "<tr><th>次回この計画を見直す日</th><td style='height:34px'></td></tr>" +
+      "</tbody></table></div>" +
+      '<div class="dc-note">計画は作って終わりではなく、実際の結果と見比べて直すための出発点です。この欄は相談の場で手書きで埋めてください。</div>';
+
+    /* ---- 9. 注意書き・署名 ---- */
+    var sec9 =
+      '<div class="dc-note" style="margin-top:16px; border-top:1px solid #b9beba; padding-top:8px">' +
+      "この計画書の数字は「マイファーム農業経営コンパス」の経営シミュレーターで作成した計画（作成日時点の入力値）にもとづく試算です。" +
+      "収穫の立ち上がり・耐用年数・台風の減収割合など（仮）と示した値は編集前提の仮定値です。" +
+      "正式な申込みは金融機関所定の様式で行います（この計画書は下書き・説明資料です）。" +
+      esc(DATA.DISCLAIMER) +
+      "</div>" +
+      '<div class="dc-sign"><table><tbody>' +
+      "<tr><th style='width:80px'>作成日</th><td>" + today() + "</td></tr>" +
+      "<tr><th>氏名</th><td>" + (draft.name ? esc(draft.name) + "　　　　印" : "<span class='dc-blank'></span>　印") + "</td></tr>" +
+      "</tbody></table></div>";
+
+    var head =
+      '<div class="dc-title"><h1>農業経営 事業計画書</h1><span class="dc-date">作成日 ' + today() + "</span></div>" +
+      '<div class="dc-sub">マイファーム農業経営コンパス 経営シミュレーターの計画から作成（計画期間 ' + N + "年）</div>";
+
+    return head + sec1 + sec2 + sec3 + sec4 + sec5 + sec6 + sec7 + sec8 + sec85 + sec9;
+  }
+
+  /* ---------- 画面上部: 読み込み状態と持ち込み前の確認 ---------- */
+  function renderStatus(L, r, unten) {
+    var box = document.getElementById("planStatus");
+    var html = "";
+    if (L.fromSaved) {
+      html += '<div class="advice info"><div class="a-icon">🔗</div><div>' +
+        '<div class="a-title">経営シミュレーターの計画を読み込みました（品目' + L.st.items.length + "・計画" + L.st.years + "年・借入 " + fmt.num(L.st.loan.amountMan || 0) + "万円）</div>" +
+        '<div class="a-body">数字を直すときは<a href="simulator.html" style="color:var(--accent)">経営シミュレーター</a>で直してください。このページを開き直すと反映されます。</div></div></div>';
+    } else {
+      html += '<div class="advice warn"><div class="a-icon">⚠</div><div>' +
+        '<div class="a-title">経営シミュレーターの保存された計画が見つかりません（いまは初期値の見本で表示しています）</div>' +
+        '<div class="a-body">先に<a href="simulator.html" style="color:var(--accent)">経営シミュレーター</a>で計画をつくってから戻ってくると、あなたの計画の計画書になります。</div></div></div>';
+    }
+    // 持ち込み前の確認（金融機関がまず見る3点）
+    var checks = [];
+    checks.push({ ok: r.minCash >= 0, t: "手元資金が期間内にマイナスにならない", d: r.minCash >= 0 ? "最低点 " + fmt.manUnit(r.minCash) + "（" + r.minYear + "年目）" : "最低点 " + fmt.manUnit(r.minCash) + "（" + r.minYear + "年目）。このままだと返済計画の説明が難しくなります" });
+    var lt = loanTable((L.st.loan.amountMan || 0) * 10000, L.st.loan.ratePct, L.st.loan.termY, L.st.loan.graceY);
+    var worst = null;
+    lt.forEach(function (row) {
+      var idx = row.y - 1;
+      if (idx < r.years.length && row.pay > 0) {
+        var yut = (r.years[idx].income + r.years[idx].dep) / row.pay;
+        if (worst == null || yut < worst) worst = yut;
+      }
+    });
+    if (worst != null) checks.push({ ok: worst >= 1, t: "毎年の返済の元手（所得＋償却）が返済額を下回らない", d: "いちばん厳しい年で " + worst.toFixed(2) + "倍" + (worst < 1 ? "。1倍未満の年は手元資金からの持ち出しです" : "") });
+    checks.push({ ok: unten >= 0, t: "お金のつかいみちと調達が合っている", d: unten >= 0 ? "運転資金にまわる手元 " + fmt.manUnit(unten) : "投資が調達を " + fmt.manUnit(-unten) + " 上回っています" });
+    html += '<div class="card mt16"><h3>持ち込み前の確認（金融機関がまず見る3点）</h3><div class="small" style="line-height:2">' +
+      checks.map(function (c) {
+        return (c.ok ? '<span style="color:var(--good)">✓</span> ' : '<span style="color:var(--critical)">✕</span> ') +
+          "<b>" + c.t + "</b>　<span class='muted'>" + c.d + "</span>";
+      }).join("<br>") +
+      '</div><div class="note small muted mt8">✕がある計画も相談はできますが、「どう直すつもりか」を聞かれます。経営シミュレーターで調整してから持ち込むほうが話が早く進みます。</div></div>';
+    box.innerHTML = html;
+  }
+
+  /* ---------- 描画 ---------- */
+  var _tm = null;
+  function scheduleRender() { clearTimeout(_tm); _tm = setTimeout(render, 250); }
+  function render() {
+    var L = loadPlan();
+    var r = simCompute(L.st, regById, {});
+    var investCashTotal = 0;
+    r.years.forEach(function (row) { investCashTotal += row.investCash; });
+    var unten = L.st.cashStartMan * 10000 + (L.st.loan.amountMan || 0) * 10000 + ((L.st.hojo && L.st.hojo.amountMan > 0) ? L.st.hojo.amountMan * 10000 : 0) - investCashTotal;
+    document.getElementById("docArea").innerHTML = buildDoc(L);
+    renderStatus(L, r, unten);
+    var lm = L.st.loan.amountMan || 0;
+    document.getElementById("loanEcho").innerHTML =
+      "いまの計画: 借入 <b>" + fmt.num(lm) + "万円</b>" +
+      (lm > 0 ? "（年利" + L.st.loan.ratePct + "%（仮）・" + L.st.loan.termY + "年・据置" + L.st.loan.graceY + "年）" : "") +
+      "・自己資金 " + fmt.num(L.st.cashStartMan) + "万円・補助金（仮）" + fmt.num(L.st.hojo ? L.st.hojo.amountMan || 0 : 0) + "万円";
+    /* 利用者の実操作があるまでは保存しない（開いただけで進行表が「完了」になる誤判定を防ぐ） */
+    if (CORE.userActed && CORE.userActed()) persist();
+  }
+
+  /* ---------- 印刷・書き出し ---------- */
+  document.getElementById("btnPrint").addEventListener("click", function () { render(); window.print(); });
+
+  document.getElementById("btnFile").addEventListener("click", function () {
+    render();
+    var doc = document.getElementById("docArea").innerHTML;
+    var html = "<!DOCTYPE html>\n<html lang=\"ja\"><head><meta charset=\"UTF-8\">" +
+      "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
+      "<title>農業経営 事業計画書</title><style>\n" +
+      "body { background:#eceee9; margin:0; padding:22px 10px; font-family:'Noto Sans JP','Segoe UI','Hiragino Sans','Yu Gothic UI',Meiryo,sans-serif; }\n" +
+      "#docArea { max-width:860px; margin:0 auto; box-shadow:0 4px 24px rgba(0,0,0,.15); }\n" +
+      ".fbar { max-width:860px; margin:0 auto 14px; text-align:right; }\n" +
+      ".fbar button { padding:9px 18px; font-size:13px; font-weight:650; border:1px solid #999; border-radius:9px; background:#fff; cursor:pointer; }\n" +
+      "@media print { body { background:#fff; padding:0; } #docArea { max-width:none; box-shadow:none; border:none; border-radius:0; padding:0; } }\n" +
+      DOC_CSS + "\n</style></head><body>" +
+      "<div class=\"fbar\"><button onclick=\"window.print()\">印刷する（紙・PDF）</button></div>" +
+      "<div id=\"docArea\">" + doc + "</div></body></html>";
+    var d = new Date();
+    var stamp = d.getFullYear() + ("0" + (d.getMonth() + 1)).slice(-2) + ("0" + d.getDate()).slice(-2);
+    var blob = new Blob([html], { type: "text/html" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "事業計画書_" + stamp + ".html";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  document.getElementById("btnExpJson").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(draft, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "keikaku_draft.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  document.getElementById("fileImp").addEventListener("change", function (e) {
+    var f = e.target.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      try {
+        var obj = JSON.parse(rd.result);
+        if (!obj || typeof obj !== "object") { alert("読み込めませんでした（JSONの形式が不正です）"); return; }
+        store.save("keikakuDraft", Object.assign(defaultDraft(), obj));
+        location.reload();
+      } catch (err) { alert("読み込めませんでした（JSONの形式が不正です）"); }
+    };
+    rd.readAsText(f);
+  });
+  document.getElementById("btnClear").addEventListener("click", function () {
+    if (confirm("このページの記入内容（氏名・文章・既往借入）をすべて消します。経営シミュレーターの計画は消えません。よろしいですか？")) {
+      store.remove("keikakuDraft");
+      location.reload();
+    }
+  });
+
+  /* ---------- 初期描画 ---------- */
+  renderDebts();
+  render();
+})();
+
+  /* ============================================================
+     段7「読み合わせ」。計画書の中身をAIへ渡し、指摘を受け取る。
+     AIに数字を作らせない決まりはここでも同じで、AIが返すのは
+     「どこが」「どういう型で」おかしいかの言葉だけ。金額は採らない。
+     ============================================================ */
+  (function yomiawase() {
+    var btn = document.getElementById("btnYomi");
+    if (!btn || !window.MFK_AI) return;
+
+    function esc2(v) {
+      return String(v == null ? "" : v).replace(/[&<>"']/g, function (m) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m];
+      });
+    }
+
+    /* 計画書から、渡してよいものだけを集める。個人が分かるものは入れない */
+    function zairyouWoAtsumeru() {
+      var d = CORE.store.load("keikakuDraft", {}) || {};
+      var plan = CORE.store.load("simPlan", null);
+      var nozomi = CORE.store.load("nozomi", null);
+      var cc = CORE.store.load("cropCustom", null);
+
+      var konkyoAri = 0, konkyoNashi = 0;
+      if (plan && plan.items) {
+        plan.items.forEach(function (it) {
+          var o = (cc && cc.overrides && cc.overrides[it.cropId]) || null;
+          /* 本で数える品目（花きなど）は priceYenHon に入る。
+             kgだけを見ていると、自分の数字を入れていても根拠なしに数えてしまう */
+          var tanka = (o && (o.priceYenKg || o.priceYenHon)) || null;
+          var ari = (typeof tanka === "number")
+            || (tanka && typeof tanka === "object" && (tanka.jisseki || tanka.kiroku || tanka.jibun));
+          if (ari) konkyoAri++; else konkyoNashi++;
+        });
+      }
+
+      return {
+        keikaku: plan ? {
+          years: plan.years,
+          items: (plan.items || []).map(function (it) {
+            return { cropId: it.cropId, area: it.area, yieldV: it.yieldV,
+              priceV: it.priceV, costRate: it.costRate, laborH10a: it.laborH10a };
+          }),
+          loan: plan.loan, invests: plan.invests, hojo: plan.hojo,
+          livingMan: plan.livingMan, fixedMan: plan.fixedMan, cashStartMan: plan.cashStartMan,
+          targetMan: plan.targetMan, famPeople: plan.famPeople, famHours: plan.famHours,
+        } : null,
+        bunshou: {
+          houshin: d.houshin || "", urisaki: d.urisaki || "", sonae: d.sonae || "",
+          shikinYouto: d.shikinYouto || "", moushikomiSaki: d.moushikomiSaki || "",
+        },
+        nozomi: nozomi ? { nen: nozomi.nen, mokuhyouMan: nozomi.mokuhyouMan,
+          roudouKibou: nozomi.roudouKibou } : null,
+        konkyo: { ari: konkyoAri, nashi: konkyoNashi },
+        roudouNen: (plan && window.MFK_UCHITE) ? Math.round(MFK_UCHITE.roudouNen(plan)) : null,
+      };
+    }
+
+    /* AIが落ちても、機械で分かる食い違いは必ず出す。ここはAIを使わない */
+    function kikaiNoShiteki(z) {
+      var out = [];
+      if (!z.keikaku) {
+        out.push({ kata: "根拠が無い", basho: "計画の数字",
+          naiyou: "経営シミュレーターの計画が読み込まれていません。先に計画を作ってください。" });
+        return out;
+      }
+      if (z.konkyo.nashi > 0) {
+        out.push({ kata: "根拠が無い", basho: "品目の単価",
+          naiyou: z.konkyo.nashi + "件の品目の単価が、県の平均値のままです。"
+            + "実績の診断か記録から自分の数字にすると、窓口で根拠を示せます。" });
+      }
+      if (z.roudouNen != null && z.keikaku.famPeople) {
+        var hito = Number(z.keikaku.famPeople) || 1;
+        var jougen = hito * 2400;   // 1人あたり年2,400時間（月200時間）を目安に置く
+        if (z.roudouNen > jougen) {
+          out.push({ kata: "手間が現実的でない", basho: "年間の労働時間",
+            naiyou: "計画の年間の労働時間は約" + CORE.fmt.num(z.roudouNen) + "時間で、"
+              + "働き手" + hito + "人ぶんの目安（1人年2,400時間）" + CORE.fmt.num(jougen) + "時間を超えています。"
+              + "面積を減らすか、人を増やすか、手間を減らす投資が要ります。" });
+        }
+      }
+      if (z.keikaku.loan && Number(z.keikaku.loan.amountMan) > 0 && !z.bunshou.shikinYouto) {
+        out.push({ kata: "窓口で聞かれる", basho: "お金のつかいみち",
+          naiyou: "借入の予定があるのに、つかいみちの説明が空です。窓口で必ず聞かれます。" });
+      }
+      if (!z.bunshou.urisaki) {
+        out.push({ kata: "窓口で聞かれる", basho: "売り先のあて",
+          naiyou: "売り先のあてが空です。作ったものをどこへ出すかは、返済の見通しの根になります。" });
+      }
+      if (!z.bunshou.sonae) {
+        out.push({ kata: "窓口で聞かれる", basho: "不作・台風・価格下落への備え",
+          naiyou: "備えの説明が空です。悪い年に返済をどう続けるかを聞かれます。" });
+      }
+      return out;
+    }
+
+    function render(shiteki, shirase, midashi) {
+      var box = document.getElementById("yomiKekka");
+      var kataCls = { "数字が合っていない": "k1", "手間が現実的でない": "k2", "根拠が無い": "k3", "窓口で聞かれる": "k4" };
+      var h = "";
+      if (shirase) h += '<div class="yomi-mihon"><b>' + esc2(midashi || "見本の受け答えです。") + '</b> ' + esc2(shirase) + "</div>";
+      if (!shiteki.length) {
+        h += '<p class="small" style="margin:10px 0 0">機械で分かる範囲では、書きもれと食い違いは見つかりませんでした。'
+          + "見落としが無いとは言えません。窓口でもお確かめください。</p>";
+      } else {
+        h += '<p class="small muted" style="margin:10px 0 6px">' + shiteki.length + "件あります。</p>";
+        shiteki.forEach(function (x) {
+          h += '<div class="yomi-shiteki">'
+            + '<span class="kata ' + (kataCls[x.kata] || "k4") + '">' + esc2(x.kata) + "</span>"
+            + (x.basho ? '<span class="basho">' + esc2(x.basho) + "</span>" : "")
+            + '<div class="naiyou">' + esc2(x.naiyou) + "</div></div>";
+        });
+      }
+      box.innerHTML = h;
+    }
+
+    btn.addEventListener("click", function () {
+      var st = document.getElementById("yomiState");
+      st.textContent = "読み合わせています…";
+      btn.disabled = true;
+      var z = zairyouWoAtsumeru();
+      var kikai = kikaiNoShiteki(z);
+
+      MFK_AI.yomiawase(z).then(function (r) {
+        var ai = (r && r.shiteki) ? r.shiteki : [];
+        /* 機械の指摘を先に、AIの指摘を後に。同じ場所の重なりは落とす */
+        var deta = kikai.slice();
+        var aru = {};
+        deta.forEach(function (x) { aru[x.kata + "|" + x.basho] = 1; });
+        ai.forEach(function (x) { if (!aru[x.kata + "|" + x.basho]) deta.push(x); });
+
+        var shirase = "";
+        if (r && r.mihon) {
+          shirase = (r.shirase || "AIの受け口がまだ設定されていません。")
+            + " 下に出ているのは、機械で分かる範囲の指摘だけです。";
+        }
+        /* 見本になった理由は ai.js が見出しにして返す（回数の上限に達したときなど） */
+        render(deta, shirase, (r && r.midashi) || "");
+        st.textContent = "読み合わせました（" + deta.length + "件）";
+        btn.disabled = false;
+        btn.textContent = "もう一度読み合わせる";
+      });
+    });
+  })();
+</script>
+</body>
+</html>

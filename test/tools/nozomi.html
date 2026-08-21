@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>なりたい姿｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<script>document.documentElement.classList.add("light");</script>
+<link rel="stylesheet" href="../assets/css/app.css">
+<style>
+  .nz-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .nz-chip {
+    border: 1px solid var(--hairline-strong); background: var(--inset); color: var(--ink-2);
+    font-family: var(--font); font-size: 12.5px; font-weight: 650;
+    padding: 8px 14px; border-radius: 99px; cursor: pointer; transition: all .15s;
+    max-width: 100%; overflow-wrap: anywhere; text-align: left;
+  }
+  .nz-chip:hover { color: var(--ink); background: var(--wash-strong); }
+  .nz-chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .nz-field { max-width: 460px; }
+  .nz-ref { margin-top: 10px; }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="page-head fade-up">
+    <h1>何年後に、<span class="grad-text">どうなっていたいか</span></h1>
+    <p class="lede">ここで入れた4つを手がかりに、次の段が計画の直しどころを出します。当てはまらない案は出しません。入れた内容は自動で保存され、この端末のブラウザにだけ残ります。</p>
+  </div>
+
+  <div class="card accent fade-up hide" id="noPlan">
+    <h3>先に計画を作ってください</h3>
+    <div class="sub">次の段は、いま作っている計画の数字を直して案を出します。その計画がまだ保存されていません。下の4つは先に入れておけます。</div>
+    <a class="btn ghost sm" href="simulator.html">経営シミュレーターへ</a>
+  </div>
+
+  <div class="card fade-up d1">
+    <h3>何年後に、農業所得をいくらにしたいか</h3>
+    <div class="sub">農業所得は、売上から経費を引いた額です。税金と社会保険料を払う前の数字にあたります。</div>
+    <div class="field nz-field">
+      <label>何年後 <span class="val" id="nenVal">5年後</span></label>
+      <input type="range" id="nen" min="3" max="10" step="1" value="5">
+    </div>
+    <div class="field nz-field" style="margin-bottom:0">
+      <label>そのときの農業所得 <span class="val" id="mokuVal">600万円</span></label>
+      <input type="range" id="moku" min="100" max="2000" step="10" value="600">
+    </div>
+    <div class="kpi nz-ref hide" id="refIncomeBox" style="max-width:460px">
+      <div class="k-label">いまの計画の最終年の農業所得</div>
+      <div class="k-value" id="refIncome">―</div>
+    </div>
+    <p class="small muted nz-ref" id="mokuNote"></p>
+  </div>
+
+  <div class="card fade-up d2">
+    <h3>1年に働く時間をどれくらいにしたいか</h3>
+    <div class="sub">自分と家族が農作業にあてる1年の合計です。品目ごとの面積と、10a当たりの作業時間から数えます。</div>
+    <div class="seg" id="segRoudou" style="margin-bottom:14px">
+      <button type="button" data-v="kimeru">時間を決める</button>
+      <button type="button" data-v="ima">いまのままでよい</button>
+    </div>
+    <div class="field nz-field" id="roudouField" style="margin-bottom:0">
+      <label>1年の働く時間 <span class="val" id="roudouVal">2,000時間</span></label>
+      <input type="range" id="roudou" min="200" max="4000" step="50" value="2000">
+      <div class="note" id="roudouTsuki"></div>
+    </div>
+    <div class="kpi nz-ref hide" id="refRoudouBox" style="max-width:460px">
+      <div class="k-label">いまの計画の1年の働く時間</div>
+      <div class="k-value" id="refRoudou">―</div>
+    </div>
+    <p class="small muted nz-ref" id="roudouNote"></p>
+  </div>
+
+  <div class="card fade-up d3">
+    <h3>借入をどこまで増やしてよいか</h3>
+    <div class="sub">これから新しく借りてよい金額の上限です。借入を増やさずに進めたいときは0のままにしてください。</div>
+    <div class="field nz-field" style="margin-bottom:0">
+      <label>増やしてよい借入 <span class="val" id="kariVal">0万円</span></label>
+      <input type="range" id="kari" min="0" max="3000" step="10" value="0">
+    </div>
+  </div>
+
+  <div class="card fade-up d4">
+    <h3>手放したくないもの</h3>
+    <div class="sub">いまの計画に入っている品目です。押して選ぶと、次の段はその面積を減らす案を出しません。いくつでも選べます。</div>
+    <div class="nz-chips" id="chips"></div>
+    <p class="small muted nz-ref" id="chipNote"></p>
+  </div>
+
+  <div class="card fade-up d5">
+    <h3>入れた内容の保存</h3>
+    <div class="sub" id="saveState">上の4つを動かすと、その場で保存されます。</div>
+    <div class="next-hint no-print hide" id="nextBox"></div>
+  </div>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/sim_engine.js"></script>
+<script>
+(function () {
+  "use strict";
+  CORE.renderTopbar("nozomi", "../");
+  document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+  var store = CORE.store;
+  var fmt = CORE.fmt;
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  }
+  function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+  function num(v, kitei) { var n = Number(v); return isFinite(n) ? n : (kitei || 0); }
+
+  var REG = simBuildRegistry(DATA);
+  function regById(id) {
+    for (var i = 0; i < REG.length; i++) if (REG[i].id === id) return REG[i];
+    return null;
+  }
+  function cropName(id) {
+    var c = regById(id);
+    return c ? c.name : id;
+  }
+
+  /* ---------- いまの計画（simPlan）を読む ----------
+     このページは計画を書き換えない。読むだけで、保存するのは nozomi だけ。 */
+  var plan = store.load("simPlan", null);
+  var hasPlan = !!(plan && plan.items && plan.items.length);
+
+  /* シミュレーターの既定値をそろえてから計算に渡す。
+     逆算のページなど、品目だけを保存した計画でも計算が止まらないようにするため。 */
+  function planForCalc() {
+    var p = JSON.parse(JSON.stringify(plan));
+    var st = {
+      years: clamp(Math.round(num(p.years, 5)), 1, 10),
+      livingMan: num(p.livingMan, 20),
+      cashStartMan: num(p.cashStartMan, 300),
+      targetMan: num(p.targetMan, 300),
+      fixedMan: num(p.fixedMan, 30),
+      items: [], invests: [],
+      loan: Object.assign({ amountMan: 0, ratePct: 2.0, termY: 10, graceY: 3 }, p.loan || {}),
+      hojo: Object.assign({ amountMan: 0, year: 1 }, p.hojo || {})
+    };
+    /* 名目つきの固定費は、シミュレーターと同じ数え方で固定費に足す */
+    (p.extraExpenses || []).forEach(function (x) {
+      var v = parseFloat(x && x.man);
+      if (!isNaN(v)) st.fixedMan += v;
+    });
+    st.invests = (p.invests || []).map(function (iv) {
+      return Object.assign({ label: "", amountMan: 0, year: 1, kind: "new", life: 7, leaseMan: 0, leaseYears: 5 }, iv);
+    });
+    (p.items || []).forEach(function (it) {
+      var c = regById(it.cropId);
+      var curve = (it.curve && it.curve.length === 10) ? it.curve : (c ? simDefaultCurve(c) : null);
+      if (!curve) { curve = []; for (var i = 0; i < 10; i++) curve.push(100); }
+      st.items.push({
+        cropId: it.cropId, area: num(it.area), yieldV: num(it.yieldV), priceV: num(it.priceV),
+        costRate: num(it.costRate, 0.5), laborH10a: num(it.laborH10a),
+        typhoonExp: num(it.typhoonExp), curve: curve
+      });
+    });
+    return st;
+  }
+
+  /* いまの計画の最終年の農業所得（円）。計算は sim_engine.js に任せる */
+  var refIncomeYen = null;
+  if (hasPlan) {
+    try {
+      var r = simCompute(planForCalc(), regById, {});
+      refIncomeYen = r.finalIncome;
+    } catch (e) { refIncomeYen = null; }
+  }
+
+  /* いまの計画の1年の働く時間。品目ごとに 面積÷10 × 10a当たりの作業時間 を足す */
+  var refRoudouH = null;
+  if (hasPlan) {
+    var g = 0;
+    (plan.items || []).forEach(function (it) { g += num(it.area) / 10 * num(it.laborH10a); });
+    refRoudouH = g;
+  }
+
+  /* ---------- 参考の値を出す ---------- */
+  if (!hasPlan) $("noPlan").classList.remove("hide");
+  if (refIncomeYen != null) {
+    var lastY = clamp(Math.round(num(plan.years, 5)), 1, 10);
+    $("refIncomeBox").classList.remove("hide");
+    $("refIncome").textContent = fmt.manUnit(refIncomeYen);
+    $("refIncomeBox").querySelector(".k-label").textContent = "いまの計画の最終年（" + lastY + "年目）の農業所得";
+  }
+  if (refRoudouH != null && refRoudouH > 0) {
+    $("refRoudouBox").classList.remove("hide");
+    $("refRoudou").textContent = Math.round(refRoudouH / 10) * 10 + "時間";
+    $("refRoudouBox").querySelector(".k-label").textContent =
+      "いまの計画の1年の働く時間（月およそ" + Math.round(refRoudouH / 12) + "時間）";
+  }
+
+  /* ---------- 初期値 ----------
+     前に入れた値があればそれを使う。無いときは、いまの計画の値をつまみの出発点に置く。 */
+  var saved = store.load("nozomi", null) || null;
+
+  var nenEl = $("nen"), mokuEl = $("moku"), roudouEl = $("roudou"), kariEl = $("kari");
+
+  var mokuStart = 600;
+  if (saved && saved.mokuhyouMan != null) mokuStart = num(saved.mokuhyouMan, 600);
+  else if (refIncomeYen != null && refIncomeYen > 0) mokuStart = Math.round(refIncomeYen / 10000 / 10) * 10;
+  mokuStart = clamp(Math.round(mokuStart / 10) * 10, +mokuEl.min, +mokuEl.max);
+
+  var roudouStart = 2000;
+  if (saved && saved.roudouKibou) roudouStart = num(saved.roudouKibou, 2000);
+  else if (refRoudouH != null && refRoudouH > 0) roudouStart = Math.round(refRoudouH / 50) * 50;
+  roudouStart = clamp(Math.round(roudouStart / 50) * 50, +roudouEl.min, +roudouEl.max);
+
+  nenEl.value = clamp(Math.round(num(saved && saved.nen, 5)), +nenEl.min, +nenEl.max);
+  mokuEl.value = mokuStart;
+  roudouEl.value = roudouStart;
+  kariEl.value = clamp(Math.round(num(saved && saved.kariireJougenMan, 0) / 10) * 10, +kariEl.min, +kariEl.max);
+
+  /* 「いまのままでよい」＝ 0 を保存する。前に0で保存していたらその側から始める */
+  var roudouMode = (saved && saved.roudouKibou === 0) ? "ima" : "kimeru";
+
+  var tebanasanai = [];
+  if (saved && Object.prototype.toString.call(saved.tebanasanai) === "[object Array]") {
+    tebanasanai = saved.tebanasanai.slice();
+  }
+
+  if (refIncomeYen != null) {
+    $("mokuNote").textContent = "つまみの出発点は、いまの計画の最終年に合わせてあります。上げたい分だけ動かしてください。";
+  }
+  if (refRoudouH != null && refRoudouH > 0) {
+    $("roudouNote").textContent = "つまみの出発点は、いまの計画の働く時間に合わせてあります。減らしたい分だけ動かしてください。";
+  } else if (hasPlan) {
+    $("roudouNote").textContent = "いまの計画には10a当たりの作業時間が入っていないため、参考の時間を出せません。品目と単価のページで入れると出ます。";
+  }
+
+  /* ---------- 手放したくないもの ---------- */
+  var planCropIds = [];
+  (function () {
+    var seen = {};
+    ((plan && plan.items) || []).forEach(function (it) {
+      if (!it || !it.cropId || seen[it.cropId]) return;
+      seen[it.cropId] = 1;
+      planCropIds.push(it.cropId);
+    });
+  })();
+  /* 計画から消えた品目を選んだまま残さない */
+  tebanasanai = tebanasanai.filter(function (id) { return planCropIds.indexOf(id) > -1; });
+
+  function renderChips() {
+    var box = $("chips");
+    if (!planCropIds.length) {
+      box.innerHTML = "";
+      $("chipNote").textContent = "いまの計画に品目がありません。計画を作ると、その品目がここに並びます。";
+      return;
+    }
+    var h = "";
+    planCropIds.forEach(function (id) {
+      var on = tebanasanai.indexOf(id) > -1;
+      h += '<button type="button" class="nz-chip' + (on ? " on" : "") + '" data-id="' + esc(id) + '"' +
+        ' aria-pressed="' + (on ? "true" : "false") + '">' + esc(cropName(id)) + "</button>";
+    });
+    var none = !tebanasanai.length;
+    h += '<button type="button" class="nz-chip' + (none ? " on" : "") + '" data-id="__nashi"' +
+      ' aria-pressed="' + (none ? "true" : "false") + '">特にない</button>';
+    box.innerHTML = h;
+    box.querySelectorAll(".nz-chip").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var id = b.dataset.id;
+        if (id === "__nashi") {
+          tebanasanai = [];
+        } else {
+          var i = tebanasanai.indexOf(id);
+          if (i > -1) tebanasanai.splice(i, 1); else tebanasanai.push(id);
+        }
+        renderChips();
+        save();
+      });
+    });
+    $("chipNote").textContent = tebanasanai.length
+      ? "選んだ品目：" + tebanasanai.map(cropName).join("・")
+      : "いまは選んでいません。次の段は、どの品目の面積も動かしてよいものとして案を出します。";
+  }
+
+  /* ---------- 保存 ----------
+     書き込むのは nozomi だけ。simPlan・cropCustom には触れない。 */
+  function save() {
+    var d = {
+      nen: +nenEl.value,
+      mokuhyouMan: +mokuEl.value,
+      roudouKibou: roudouMode === "ima" ? 0 : +roudouEl.value,
+      kariireJougenMan: +kariEl.value,
+      tebanasanai: tebanasanai.slice(),
+      updatedAt: new Date().toISOString()
+    };
+    store.save("nozomi", d);
+    showNext(true);
+  }
+
+  function showNext(justSaved) {
+    var box = $("nextBox");
+    box.innerHTML = '<div class="nh-msg">✓ ' + (justSaved ? "なりたい姿を保存しました" : "前に入れた内容を読み込みました") +
+      "（この端末に残ります）</div>" +
+      '<a class="nh-btn" href="teian.html">次へ：計画の直しどころ</a>';
+    box.classList.remove("hide");
+    $("saveState").textContent = "上の4つを動かすと、その場で保存されます。押して確定する必要はありません。";
+  }
+
+  /* ---------- 表示の更新 ---------- */
+  function paintNen() { $("nenVal").textContent = nenEl.value + "年後"; }
+  function paintMoku() { $("mokuVal").textContent = (+mokuEl.value).toLocaleString() + "万円"; }
+  function paintKari() { $("kariVal").textContent = (+kariEl.value).toLocaleString() + "万円"; }
+  function paintRoudou() {
+    $("roudouVal").textContent = (+roudouEl.value).toLocaleString() + "時間";
+    $("roudouTsuki").textContent = "月およそ" + Math.round(+roudouEl.value / 12) + "時間の見当です。";
+  }
+  function paintRoudouMode() {
+    $("segRoudou").querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("on", b.dataset.v === roudouMode);
+    });
+    $("roudouField").classList.toggle("hide", roudouMode === "ima");
+  }
+
+  paintNen(); paintMoku(); paintKari(); paintRoudou(); paintRoudouMode();
+  renderChips();
+  if (saved) showNext(false);
+
+  CORE.bindRange(nenEl, function () { paintNen(); save(); });
+  CORE.bindRange(mokuEl, function () { paintMoku(); save(); });
+  CORE.bindRange(roudouEl, function () { paintRoudou(); save(); });
+  CORE.bindRange(kariEl, function () { paintKari(); save(); });
+  CORE.bindSeg($("segRoudou"), function (v) {
+    roudouMode = (v === "ima") ? "ima" : "kimeru";
+    paintRoudouMode();
+    save();
+  });
+})();
+</script>
+</body>
+</html>

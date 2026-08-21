@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>災害への備えと、被災後の手続き｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+<style>
+  /* このページ専用の追加スタイル（共通CSSは変更しない） */
+  .mode-seg { margin: 6px 0 18px; }
+  .mode-seg button { font-size: 14.5px; padding: 11px 22px; }
+  /* 災害の種類・月の押しボタン */
+  .hz-btns { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 6px; }
+  .hz-btn {
+    padding: 11px 20px; border-radius: 10px; border: 1px solid var(--hairline);
+    background: var(--inset); color: var(--ink-2); font-size: 15px; font-weight: 650;
+    cursor: pointer; font-family: inherit; min-height: 44px;
+  }
+  .hz-btn.on { border-color: var(--accent); background: rgba(143,195,32,.10); color: var(--ink); }
+  .mon-btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 6px; }
+  .mon-btn {
+    width: 52px; min-height: 44px; border-radius: 9px; border: 1px solid var(--hairline);
+    background: var(--inset); color: var(--ink-3); font-size: 13.5px; font-weight: 650;
+    cursor: pointer; font-family: inherit;
+  }
+  .mon-btn.on { border-color: var(--s6); background: rgba(230,103,103,.12); color: var(--ink); }
+  .state-line { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+  .exp-cell input[type="range"] { width: 92px; vertical-align: middle; margin-right: 6px; }
+  /* 直後モード: 停電時にスマホで読む前提。大きい字・大きいチェック */
+  .check-group-title { font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: .06em; margin: 18px 0 8px; }
+  .check-item {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 14px 15px; border: 1px solid var(--hairline); border-radius: var(--r-md);
+    background: var(--inset); margin-bottom: 9px; cursor: pointer;
+  }
+  .check-item input[type="checkbox"] {
+    width: 26px; height: 26px; flex: 0 0 26px; margin-top: 2px;
+    accent-color: var(--accent); cursor: pointer;
+  }
+  .check-item .c-main { font-size: 16.5px; font-weight: 650; line-height: 1.5; }
+  .check-item .c-sub { font-size: 13.5px; color: var(--ink-2); margin-top: 3px; }
+  .check-item.done { border-color: rgba(143,195,32,.4); background: rgba(143,195,32,.06); }
+  .check-item.done .c-main { color: var(--ink-3); text-decoration: line-through; }
+  .plan-col h3 { display: flex; align-items: center; gap: 8px; }
+  .tbl td.best { color: var(--good); font-weight: 700; }
+  .row-del { background: none; border: none; color: var(--ink-3); cursor: pointer; font-size: 15px; padding: 4px 8px; }
+  .row-del:hover { color: var(--critical); }
+  @media print {
+    .check-item .c-main { color: #111 !important; }
+    .check-item { background: #fff; }
+    /* 印刷監査（2026-07-19）: 見出しの飾り文字（h1右側のスパン）が透明のまま印刷されて欠けるのを防ぐ */
+    .page-head h1 .grad-text { background: none; -webkit-text-fill-color: #111; color: #111; }
+    /* 表示アニメーションの初期状態（透明）で印刷されないようにする */
+    .fade-up { animation: none !important; opacity: 1 !important; transform: none !important; }
+    /* 紙には操作類を出さない（つまみ・保存後の行き先ボタン） */
+    input[type="range"] { display: none !important; }
+    .next-hint, .fromq-band { display: none !important; }
+    /* 結果（グラフ・表・数値）は紙に出す */
+    .viz svg text { fill: #333 !important; }
+    .viz .legend .lg { color: #333; }
+    .card, .kpi, .advice { background: #fff; border-color: #ccc; }
+    .kpi .k-value, .state-line, .tbl td, .tbl th { color: #111; }
+    .src { color: #555; }
+    /* 転記済みの数字は枠なしの値として印刷する */
+    input[type="number"], input[type="text"], input[type="date"], select, textarea { border: none; background: #fff; color: #111; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="page-head fade-up">
+    <div class="eyebrow">BCP</div>
+    <h1>災害への備えと、<span class="grad-text">被災後の手続き</span></h1>
+    <p class="lede">台風・大雪・長雨・水害・霜などの災害が来る前は、収穫前の作物の想定売上と共済・収入保険の掛金・補償を金額で確認します。来たあとは、片付ける前にやることを時間の順で確認できます。</p>
+  </div>
+
+  <!-- 災害の種類の選択（ページ全体の前提） -->
+  <div class="card fade-up d1">
+    <h3 style="margin-top:0">どの災害に備えますか（1つ選ぶ）</h3>
+    <div class="hz-btns no-print" id="hzBtns"></div>
+    <div class="state-line" id="hzState"></div>
+    <p class="small muted" id="hzHint"></p>
+  </div>
+
+  <div class="card fade-up d1 mt16">
+    <div class="grid c3">
+      <div>
+        <div class="check-group-title" style="margin-top:0">できること</div>
+        <p class="small muted">災害の種類と直撃しやすい月を選び、収穫前の作物の想定売上との重なりを月別に確認。無保険・現在の加入・見直し案の3案比較、被災後72時間のチェックリスト、被害の記録。</p>
+      </div>
+      <div>
+        <div class="check-group-title" style="margin-top:0">使う場面</div>
+        <p class="small muted">災害の季節が来る前、共済・保険の更新のとき、被災した直後。</p>
+      </div>
+      <div>
+        <div class="check-group-title" style="margin-top:0">他のページとのつながり</div>
+        <p class="small muted">単独で使えます。資金繰りカレンダーのデータがあれば、被災後6か月の残高も試算します。被害の記録は次回以降の入力の初期値に使えます。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="seg mode-seg fade-up d1 no-print" id="modeSeg">
+    <button data-v="sonae" class="on">事前の備え（保険・共済）</button>
+    <button data-v="ato">被災後（72時間）</button>
+  </div>
+
+  <!-- ============================================================
+       事前モード
+       ============================================================ -->
+  <section id="secSonae">
+
+    <!-- 1. 災害の月 × 自分の畑 -->
+    <div class="sec-title"><h2>災害の来る月と、収穫前の作物の想定売上</h2><span class="hint">選んだ月と収穫前の想定売上の重なりが危ない</span></div>
+
+    <div class="advice info fade-up hide" id="gateNotice">
+      <div class="a-icon">☝</div>
+      <div><div class="a-title" id="gateTitle"></div><div class="a-body" id="gateBody"></div></div>
+    </div>
+
+    <div class="card fade-up d1">
+      <h3 style="margin-top:0">直撃しやすい月（複数選べます）<span class="small muted" id="monKari"></span></h3>
+      <div class="mon-btns no-print" id="monBtns"></div>
+      <div class="state-line" id="monState"></div>
+      <p class="small muted" id="monHint"></p>
+    </div>
+
+    <div class="grid c3 fade-up d1 mt16">
+      <div class="kpi hero">
+        <div class="k-label" id="kpiZaihoLabel">直撃しやすい月の収穫前の想定売上</div>
+        <div class="k-value" id="kpiZaiho">―</div>
+        <div class="k-delta flat" id="kpiZaihoSub"></div>
+      </div>
+      <div class="kpi">
+        <div class="k-label">年間の想定売上（下の品目表の合計）</div>
+        <div class="k-value" id="kpiSales">―</div>
+        <div class="k-delta flat">（計算値・面積×単収×単価）</div>
+      </div>
+      <div class="kpi">
+        <div class="k-label">備える災害</div>
+        <div class="k-value" id="kpiHazard">―</div>
+        <div class="k-delta flat" id="kpiHazardSub"></div>
+      </div>
+    </div>
+
+    <div class="card mt16 fade-up d2">
+      <h3>月別の収穫前の想定売上と、直撃しやすい月の重なり</h3>
+      <p class="sub" id="vizCoreSub">赤い棒＝直撃しやすい月に畑にある収穫前の想定売上。ここが大きい月ほど、被災したときに失う金額が大きい。</p>
+      <div class="viz" id="vizCore"></div>
+      <p class="small muted no-print hide" id="vizCoreNote">災害の種類と直撃しやすい月を選ぶと、危ない月が色分けされます。</p>
+      <p class="src">各月の値＝その月に収穫前（植え付け〜収穫）の品目の年間想定売上の合計（計算値）。同じ品目は収穫前の月すべてに同じ額で数えています。</p>
+    </div>
+
+    <div class="card mt16 fade-up d3" id="cropCard">
+      <h3>うちの品目と収穫前の期間</h3>
+      <div id="cropBadgeHost"></div>
+      <p class="sub">作付けの決定で決めた計画（無ければ、段1「品目と単価」）の品目が入っています（どちらも無ければ例の品目）。面積と被害の割合は自分の畑に合わせて直してください。ここでの「被害の割合」は、直撃したときに収穫予定の売上が減る割合（％）を指します（ハウス等の設備の損害や復旧の費用は含みません。設備は下の「補強への投資」で別に扱います）。</p>
+      <div class="tbl-wrap">
+        <table class="tbl" id="cropTbl">
+          <thead><tr><th>品目</th><th class="num">面積（a）</th><th class="num">想定売上/年</th><th class="num">被害の割合<span id="expHead"></span></th><th></th></tr></thead>
+          <tbody id="cropRows"></tbody>
+        </table>
+      </div>
+      <div class="flex mt16 wrap no-print">
+        <select id="addCropSel" style="max-width:260px"></select>
+        <button class="btn ghost sm" id="addCropBtn">品目を足す</button>
+      </div>
+      <div id="cropAddHost" class="no-print"></div>
+      <div class="mt16">
+        <h3>収穫前の作物がある月（濃いほど想定売上が大きい）</h3>
+        <div class="viz" id="vizZaihoMap"></div>
+      </div>
+      <p class="src" id="srcCrop"></p>
+    </div>
+
+    <!-- 沖縄だけ: 台風接近数の統計と被害実例 -->
+    <div class="card mt16 fade-up hide" id="okiCard">
+      <h3>月別の台風接近数（平年値・沖縄地方）</h3>
+      <p class="sub" id="okiKpiLine"></p>
+      <div class="viz" id="vizTyphoon"></div>
+      <p class="small muted" id="okiDamageLine"></p>
+      <p class="src" id="srcTyphoon"></p>
+    </div>
+
+    <!-- 2. 保険3案くらべ -->
+    <div class="sec-title"><h2>保険3案の比較 — 無保険・現在の加入・見直し案</h2><span class="hint">掛金と補償は証書・見積りから書き写す（このページは自動判定しない）</span></div>
+    <div class="card fade-up">
+      <div class="note" style="background:var(--sand-soft);border:1px solid #d9bd77;border-radius:8px;padding:10px 12px;line-height:1.8;margin-bottom:12px">収入保険と園芸施設共済は、そもそも別のしくみです。収入保険は、1年間の販売収入の全体が基準より下がったときに補てんする制度で、台風1回でいくら、という払い方はしません。園芸施設共済は、ハウスや被覆材など施設の損害が対象です。下の表は、あなたが証書や見積から写した金額を横に並べて「実質の自己負担」で見比べるための簡単な比較で、制度が実際に払う額を計算するものではありません。正確な支払いは、加入内容と加入先（NOSAI・収入保険の窓口）で確かめてください。</div>
+      <h3>① 掛金と補償を書き写す</h3>
+      <p class="sub">お手元の共済証書・収入保険の加入明細・見直しの見積から、次の数字を転記してください。分からない欄は0のままで構いません（0＝補償なしとして計算）。<br>年間掛金＝証書に書いてある1年分の掛金。<br>補償の各欄（収量3割減／被覆材全損／ハウス倒壊）＝その被害が起きたとき、いまの加入でおよそいくら受け取れる見込みか（加入明細・過去の支払例・見積から。園芸施設共済は施設の損害、収入保険は収入の落ち込みに対して出ます）。</p>
+      <div class="grid c3" id="planCards"></div>
+
+      <h3 class="mt24">② 被害の想定（損失額は編集できます）</h3>
+      <div class="grid c3">
+        <div class="field">
+          <label>収量3割減のときの損失 <span class="val" id="loss0Val"></span></label>
+          <div class="input-unit"><input type="number" id="loss0" min="0" step="10000"><span class="u">円</span></div>
+          <div class="note">初期値＝年間想定売上×30%（計算値・編集可）</div>
+        </div>
+        <div class="field">
+          <label>被覆材（ビニール等）全損の損失 <span class="val" id="loss1Val"></span></label>
+          <div class="input-unit"><input type="number" id="loss1" min="0" step="10000"><span class="u">円</span></div>
+          <div class="note" id="loss1Note"></div>
+        </div>
+        <div class="field">
+          <label>ハウス倒壊の損失 <span class="val" id="loss2Val"></span></label>
+          <div class="input-unit"><input type="number" id="loss2" min="0" step="100000"><span class="u">円</span></div>
+          <div class="note" id="loss2Note"></div>
+        </div>
+      </div>
+
+      <h3 class="mt24">③ 実質の自己負担でくらべる</h3>
+      <p class="sub">自己負担 ＝ 損失 − 補償 ＋ 年間掛金。緑が3案のうち最小。被害が無い年は掛金分がそのまま持ち出しになります。その両方を確認して選んでください。</p>
+      <div class="tbl-wrap">
+        <table class="tbl" id="cmpTbl"></table>
+      </div>
+      <div class="flex mt16 wrap">
+        <button class="btn primary sm" id="savePlansBtn">この比較を保存する</button>
+        <button class="btn ghost sm no-print" onclick="window.print()">A4で印刷する（相談に持っていく紙）</button>
+      </div>
+      <p class="src" id="srcCmp">無保険の列は補償0円で計算しています。掛金・補償の実額は加入内容で決まるため、このページでは判定せず転記方式としています。</p>
+    </div>
+
+    <!-- 3. 制度の仕組み -->
+    <div class="sec-title"><h2>制度の仕組み（公表資料の範囲だけ）</h2><span class="hint">収入保険・園芸施設共済は全国の制度</span></div>
+    <div class="grid c2 fade-up">
+      <div class="card">
+        <h3>収入保険</h3>
+        <p class="sub" id="shunyuScheme"></p>
+        <div id="shunyuBody" class="small"></div>
+        <p class="src" id="srcShunyu"></p>
+      </div>
+      <div class="card">
+        <h3>園芸施設共済</h3>
+        <div id="engeiBody" class="small"></div>
+        <p class="src" id="srcEngei"></p>
+      </div>
+    </div>
+    <div class="advice info mt16">
+      <div class="a-icon">☎</div>
+      <div><div class="a-title">最終確認先</div><div class="a-body" id="contactBody"></div></div>
+    </div>
+
+    <!-- 4. 被災後6か月の残高 -->
+    <div class="sec-title"><h2>被災後6か月の資金残高の試算<span id="kariStress"></span></h2><span class="hint">資金繰りカレンダーの保存データを使った簡易の試算</span></div>
+    <div class="card fade-up" id="stressCard"></div>
+
+    <!-- 5. 補強投資の回収 -->
+    <div class="sec-title"><h2>補強への投資は何年で回収できるか<span id="kariInv"></span></h2><span class="hint">参考の目安。係数はすべて仮で、編集できます</span></div>
+    <div class="card fade-up">
+      <div class="grid c2">
+        <div>
+          <div class="field">
+            <label>補強の投資額 <span class="val" id="invVal"></span></label>
+            <div class="input-unit"><input type="number" id="invAmt" min="0" step="100000"><span class="u">円</span></div>
+            <div class="note">妻面補強・防風ネット・被覆材の格納・雪対策の補強柱など（入力初期値）</div>
+          </div>
+          <div class="field">
+            <label><span id="invRateLabel">選んだ災害での被害率の見込み</span> <span class="val" id="invRateVal"></span></label>
+            <input type="range" id="invRate" min="0" max="100" step="5">
+            <div class="note" id="invRateNote"></div>
+          </div>
+          <div class="field">
+            <label>補強でその被害がどれだけ減るか <span class="val" id="invCutVal"></span></label>
+            <input type="range" id="invCut" min="0" max="100" step="5">
+            <div class="note">係数は仮。実際の効き目は工法・立地で変わります（要確認）</div>
+          </div>
+        </div>
+        <div>
+          <div class="kpi hero">
+            <div class="k-label">回収の目安</div>
+            <div class="k-value" id="invYears">―</div>
+            <div class="k-delta flat" id="invCalcLine"></div>
+          </div>
+          <p class="small muted mt8" id="invWhy"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       直後モード
+       ============================================================ -->
+  <section id="secAto" class="hide">
+    <div class="sec-title"><h2>被災後72時間チェック</h2><span class="hint">チェックは自動で保存されます。電波が無くてもこのページは動きます</span></div>
+
+    <div class="card fade-up">
+      <div class="flex between wrap">
+        <div style="flex:1;min-width:200px">
+          <div class="meter"><i id="checkMeter" style="width:0%"></i></div>
+          <div class="small muted mt8" id="checkProgress"></div>
+        </div>
+        <div class="flex no-print">
+          <button class="btn ghost sm" id="checkResetBtn">チェックを全部消す</button>
+          <button class="btn primary sm" onclick="window.print()">A4で印刷する（相談に持っていく紙）</button>
+        </div>
+      </div>
+      <div id="checkList"></div>
+      <p class="src">最も重要な順番は、<b>片付ける前に、写真の撮影と損害の連絡</b>です。片付けてしまうと被害の証明が難しくなります。人の安全がすべてに優先します。</p>
+    </div>
+
+    <div class="sec-title"><h2>被害を記録する</h2><span class="hint">ここに残した被害の割合は、事前の備えの入力にそのまま使えます</span></div>
+    <div class="card fade-up">
+      <div class="grid c2">
+        <div>
+          <div class="field"><label>日付</label><input type="date" id="dmgDate"></div>
+          <div class="field"><label>災害の種類</label><select id="dmgHazard"></select></div>
+          <div class="field"><label>災害の名前・呼び方</label><input type="text" id="dmgTyphoon" placeholder="例: 台風6号、1月の大雪"></div>
+          <div class="field"><label>品目</label><select id="dmgCrop"></select></div>
+        </div>
+        <div>
+          <div class="field">
+            <label>被害の割合の概算 <span class="val" id="dmgRateVal">0%</span></label>
+            <input type="range" id="dmgRate" min="0" max="100" step="5" value="0">
+            <div class="note">正確でなくてよい。あとから直せます</div>
+          </div>
+          <div class="field"><label>メモ（被害の場所・写真の枚数など）</label><textarea id="dmgMemo" rows="3"></textarea></div>
+          <button class="btn primary" id="dmgAddBtn">この被害を記録する</button>
+        </div>
+      </div>
+      <div class="mt24" id="dmgLogWrap"></div>
+    </div>
+  </section>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/charts.js"></script>
+<script>
+(function () {
+  "use strict";
+  CORE.renderTopbar("taifu", "../");
+
+  var F = CORE.fmt, store = CORE.store;
+  var $ = function (id) { return document.getElementById(id); };
+  var KIBI_ID = "kibi";
+  var MONTH_LABELS = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+  var SCENARIOS = ["収量3割減", "被覆材全損", "ハウス倒壊"];
+  var HZ = window.MFK_HAZARDS || {};
+  var HZ_IDS = Object.keys(HZ);
+  var IS_OKINAWA = CORE.REGION === "okinawa";
+
+  /* ---------- 注意書き（地域で出し分け） ---------- */
+  $("disclaimer").textContent = IS_OKINAWA
+    ? DATA.DISCLAIMER
+    : "本ツールの数値は公表資料に基づく参考値と、（仮）と表示した仮定値です。金額の断定ではなく判断材料の比較です。制度・共済・価格の最終確認は、お住まいの県のNOSAI（農業共済組合）・市町村の農政窓口・JA へ。";
+
+  /* ---------- ページ内状態（保存キー: taifuLocal はこのページ専用・キー名は変えない） ---------- */
+  var _saved = store.load("taifuLocal", null);
+  var _hadData = !!(_saved && Object.keys(_saved).length);
+  var L = Object.assign({
+    mode: "sonae",
+    rows: null,           // [{cropId, areaA}]（旧データは exp 付き→hz.taifu へ移す）
+    plans: null,          // [{label, kakekin, hosho[3]}]
+    loss: {},             // {l0,l1,l2}
+    lossManual: {},       // 手で直したらtrue（自動再計算しない）
+    checks: {},
+    inv: {},              // 旧形式（→invHz.taifu へ移す）
+    invHz: null,          // 災害別 {taifu:{amt,rate,cut,rateTouched}}
+    stress: {},           // {month, fukkyu, kyosai, delay, cash}
+    hazard: undefined,    // 選択中の災害ID（旧データは台風扱い）
+    hz: null,             // 災害別 {months[], monthsTouched, exp{cropId:率}, expTouched{}}
+  }, _saved || {});
+  if (L.hazard === undefined) L.hazard = _hadData ? "taifu" : (IS_OKINAWA ? "taifu" : null);
+  if (!L.hz) L.hz = {};
+  if (!L.invHz) L.invHz = {};
+  /* 利用者の実操作があるまでは保存しない（初期化中の描画関数からも呼ばれるため、
+     ここで一括ガードする。開いただけで進行表が「完了」になる誤判定を防ぐ） */
+  function saveL() { if (CORE.userActed && CORE.userActed()) store.save("taifuLocal", L); }
+
+  /* ---------- 品目ヘルパ ---------- */
+  function cropById(id) {
+    for (var i = 0; i < DATA.CROPS.length; i++) if (DATA.CROPS[i].id === id) return DATA.CROPS[i];
+    return null;
+  }
+  function cropName(id) {
+    if (id === KIBI_ID) return "さとうきび";
+    if (id === "sonota") return "その他";
+    var c = cropById(id);
+    return c ? c.name : id;
+  }
+  // 10a当たり売上（円）
+  function salesPer10a(id) {
+    if (id === KIBI_ID) {
+      if (!DATA.KIBI) return 0;
+      // 単収kg/10a（R6県計）→ t → トン当たり手取り（原料代金＋交付金・分蜜糖県計）
+      return DATA.KIBI.yield.r6kei.v / 1000 * DATA.KIBI.tedori.totalYenT.v;
+    }
+    var c = cropById(id);
+    if (!c) return 0;
+    /* 地域によっては単収も単価も収録が無い品目がある。無いまま掛けると落ちる */
+    var atai = function (x) { return (x && x.v != null) ? x.v : 0; };
+    if (c.yieldHon10a) return atai(c.yieldHon10a) * atai(c.priceYenHon);
+    return atai(c.yieldKg10a) * atai(c.priceYenKg);
+  }
+  // 台風の被害割合の初期値（品目マスタの typhoonExp・仮）。台風以外では使わない
+  function defaultExp(id) {
+    if (id === KIBI_ID) return 0.1; // 仮。きびは倒伏しても全滅しにくい（DATA.KIBI.typhoonNote）
+    var c = cropById(id);
+    return c ? c.typhoonExp : 0.3;
+  }
+  // 収穫前の作物がある月のマスク。index 0=1月
+  function fieldMask(id) {
+    var mask = [false,false,false,false,false,false,false,false,false,false,false,false];
+    if (id === KIBI_ID) { for (var i = 0; i < 12; i++) mask[i] = true; return mask; }
+    var c = cropById(id);
+    if (!c) return mask;
+    var plant = c.months.plant, harvest = c.months.harvest;
+    if (!plant || plant.length === 0) { for (var j = 0; j < 12; j++) mask[j] = true; return mask; } // 樹園地は通年
+    if (!harvest || harvest.length === 0) { for (var k = 0; k < 12; k++) mask[k] = true; return mask; }
+    var m = plant[0], end = harvest[harvest.length - 1], guard = 0;
+    while (guard < 12) {
+      mask[m - 1] = true;
+      if (m === end) break;
+      m = (m % 12) + 1; guard++;
+    }
+    return mask;
+  }
+  function incomeMonths(id) {
+    if (id === KIBI_ID) return DATA.KIBI ? DATA.KIBI.months.income : [1];
+    var c = cropById(id);
+    return (c && c.months.income && c.months.income.length) ? c.months.income : [1];
+  }
+
+  /* ---------- 災害別の状態ヘルパ ---------- */
+  function hzDef() { return (L.hazard && HZ[L.hazard]) || null; }
+  function hzLabel() { var d = hzDef(); return d ? d.label : "災害"; }
+  function ensureHz(h) {
+    if (!L.hz[h]) {
+      var def = HZ[h] || {};
+      L.hz[h] = { months: (def.monthsDefault || []).slice(), monthsTouched: false, exp: {}, expTouched: {} };
+    }
+    return L.hz[h];
+  }
+  // 被害の割合。未入力は null（台風のみ品目マスタの仮の初期値を返す）
+  function expOf(id) {
+    if (!L.hazard) return null;
+    var hz = ensureHz(L.hazard);
+    if (hz.exp[id] != null) return hz.exp[id];
+    var d = hzDef();
+    if (d && d.usesCropExp) return defaultExp(id);
+    return null;
+  }
+  // 仮の初期値のままか（自分で入力・上書きしたら false）
+  function expIsKari(id) {
+    if (!L.hazard) return false;
+    var hz = ensureHz(L.hazard);
+    return hz.exp[id] == null || !hz.expTouched[id];
+  }
+  function selMonths() { return L.hazard ? ensureHz(L.hazard).months : []; }
+  function monthsIsKari() {
+    var d = hzDef();
+    return !!(d && d.monthsDefault && d.monthsDefault.length && !ensureHz(L.hazard).monthsTouched);
+  }
+  function kariExpAny() {
+    var d = hzDef();
+    if (!d || !d.usesCropExp) return false;
+    return L.rows.some(function (r) { return expIsKari(r.cropId); });
+  }
+  // 試算に必要な入力がそろっているか
+  function readyState() {
+    if (!L.hazard) return { ok: false, why: "hazard" };
+    if (!selMonths().length) return { ok: false, why: "input" };
+    if (!L.rows.length) return { ok: false, why: "input" };
+    for (var i = 0; i < L.rows.length; i++) {
+      if (expOf(L.rows[i].cropId) == null) return { ok: false, why: "input" };
+    }
+    return { ok: true };
+  }
+
+  /* ---------- 旧データの移行（キー互換・旧データは台風扱い） ---------- */
+  if (L.rows && L.rows.length && typeof L.rows[0].exp === "number") {
+    var _tz = ensureHz("taifu");
+    L.rows.forEach(function (r) {
+      if (typeof r.exp === "number") {
+        _tz.exp[r.cropId] = r.exp;
+        if (Math.abs(r.exp - defaultExp(r.cropId)) > 1e-9) _tz.expTouched[r.cropId] = true;
+        delete r.exp;
+      }
+    });
+  }
+  if (L.inv && (L.inv.amt != null || L.inv.rate != null || L.inv.cut != null)) {
+    if (!L.invHz.taifu) L.invHz.taifu = { amt: L.inv.amt, rate: L.inv.rate, cut: L.inv.cut, rateTouched: true };
+    L.inv = {};
+  }
+  function invOf() {
+    var h = L.hazard || "none";
+    if (!L.invHz[h]) {
+      var d = HZ[h];
+      L.invHz[h] = {
+        amt: 1000000, // 入力初期値（金額の主張ではない）
+        rate: (d && d.usesCropExp) ? Math.round(DATA.TYPHOON.damageRateDefaults.pipe.v * 100) : 0, // 台風のみ仮の初期値
+        cut: (d && d.usesCropExp) ? 50 : 0, // 台風のみ仮の初期値
+        rateTouched: false,
+      };
+    }
+    return L.invHz[h];
+  }
+
+  /* ---------- 品目行の初期化 ----------
+     優先順: このページの保存（taifuLocal）→ 作付けの決定（plan）→ 段1「品目と単価」（profile）→ 例の品目。
+     rowsSrc は出所バッジの表示に使う（plan/profile/null） */
+  var rowsSrc = null;
+  function _idsOf(arr, key) {
+    return arr.map(function (x) { return x[key]; }).sort().join(",");
+  }
+  function _validCrop(id) { return !!cropById(id) || (id === KIBI_ID && DATA.KIBI); }
+  if (!L.rows) {
+    var _plan = store.load("plan", null);
+    if (_plan && _plan.items && _plan.items.length) {
+      L.rows = _plan.items.filter(function (it) { return _validCrop(it.cropId); })
+        .map(function (it) { return { cropId: it.cropId, areaA: Math.round(it.area10a * 10) }; });
+      if (L.rows.length) rowsSrc = "plan";
+    }
+    if (!L.rows || !L.rows.length) {
+      var prof = CORE.getProfile();
+      if (prof.crops && prof.crops.length) {
+        L.rows = prof.crops.filter(function (pc) { return _validCrop(pc.cropId); })
+          .map(function (pc) { return { cropId: pc.cropId, areaA: Math.round(pc.area10a * 10) }; });
+        if (L.rows.length) rowsSrc = "profile";
+      }
+    }
+    if (!L.rows || !L.rows.length) {
+      // 例としての初期値（編集前提。事実の顔をさせない）
+      L.rows = [];
+      if (IS_OKINAWA && DATA.KIBI) {
+        L.rows.push({ cropId: KIBI_ID, areaA: 100 });
+        if (cropById("goya_roji")) L.rows.push({ cropId: "goya_roji", areaA: 20 });
+      } else {
+        DATA.CROPS.slice(0, 2).forEach(function (c) { L.rows.push({ cropId: c.id, areaA: 20 }); });
+      }
+    }
+  } else {
+    // 保存済みの行が plan／profile と同じ品目構成なら、出所として表示する
+    var _ids = _idsOf(L.rows, "cropId");
+    var _plan2 = store.load("plan", null);
+    if (_plan2 && _plan2.items && _plan2.items.length && _idsOf(_plan2.items, "cropId") === _ids) {
+      rowsSrc = "plan";
+    } else {
+      var _prof2 = CORE.getProfile();
+      if (_prof2.crops && _prof2.crops.length && _idsOf(_prof2.crops, "cropId") === _ids) rowsSrc = "profile";
+    }
+  }
+
+  /* ---------- 出所バッジと品目追加への誘導 ---------- */
+  if (rowsSrc === "plan") {
+    CORE.sourceBadge($("cropBadgeHost"), "この品目は、作付けの決定で決めた計画から反映しています",
+      [{ label: "→ 作付けの決定を開く", href: "sakutsuke.html" }]);
+  } else if (rowsSrc === "profile") {
+    CORE.sourceBadge($("cropBadgeHost"), "この品目は、段1「品目と単価」から反映しています",
+      [{ label: "→ 品目と単価で直す", href: "hinmoku.html?back=taifu" }]);
+  }
+  CORE.cropAddLink($("cropAddHost"), "taifu");
+
+  /* ---------- モード切替 ---------- */
+  function setMode(v) {
+    L.mode = v; saveL();
+    $("secSonae").classList.toggle("hide", v !== "sonae");
+    $("secAto").classList.toggle("hide", v !== "ato");
+    $("modeSeg").querySelectorAll("button").forEach(function (b) { b.classList.toggle("on", b.dataset.v === v); });
+  }
+  CORE.bindSeg($("modeSeg"), setMode);
+  if (L.mode === "ato") setMode("ato");
+
+  /* ============================================================
+     災害の種類の選択
+     ============================================================ */
+  function renderHazard() {
+    var wrap = $("hzBtns");
+    wrap.innerHTML = "";
+    HZ_IDS.forEach(function (h) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "hz-btn" + (L.hazard === h ? " on" : "");
+      b.textContent = HZ[h].label;
+      b.addEventListener("click", function () {
+        L.hazard = h;
+        ensureHz(h);
+        saveL();
+        renderAll();
+      });
+      wrap.appendChild(b);
+    });
+    $("hzState").textContent = L.hazard ? "備える災害: " + hzLabel() : "まだ選んでいません";
+    var d = hzDef();
+    $("hzHint").textContent = d ? (d.hint || "") : "台風・大雪・長雨・水害・霜のうち、自分の地域でいちばん怖いものから始めてください。";
+    // 沖縄×台風のときだけ台風統計カードを出す
+    $("okiCard").classList.toggle("hide", !(IS_OKINAWA && L.hazard === "taifu"));
+  }
+
+  /* ============================================================
+     直撃しやすい月（1〜12月のオン・オフ）
+     ============================================================ */
+  function renderMonths() {
+    var wrap = $("monBtns");
+    wrap.innerHTML = "";
+    if (!L.hazard) {
+      $("monState").textContent = "災害の種類を選ぶと、月を選べるようになります。";
+      $("monKari").textContent = "";
+      $("monHint").textContent = "";
+      return;
+    }
+    var hz = ensureHz(L.hazard);
+    MONTH_LABELS.forEach(function (lab, i) {
+      var m = i + 1;
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "mon-btn" + (hz.months.indexOf(m) > -1 ? " on" : "");
+      b.textContent = lab;
+      b.addEventListener("click", function () {
+        var ix = hz.months.indexOf(m);
+        if (ix > -1) hz.months.splice(ix, 1); else { hz.months.push(m); hz.months.sort(function (a, b2) { return a - b2; }); }
+        hz.monthsTouched = true;
+        saveL();
+        renderMonths(); recalc(); renderStress();
+      });
+      wrap.appendChild(b);
+    });
+    var ms = hz.months;
+    $("monState").textContent = ms.length
+      ? "直撃しやすい月: " + ms.map(function (m) { return m + "月"; }).join("・") + (monthsIsKari() ? "（仮）" : "")
+      : "まだ月を選んでいません。";
+    $("monKari").textContent = monthsIsKari() ? "（仮の初期値・自分の地域に合わせて直せます）" : "";
+    var d = hzDef();
+    $("monHint").textContent = d ? (d.hint || "") : "";
+  }
+
+  /* ============================================================
+     事前モード 1: 品目行と収穫前の想定売上
+     ============================================================ */
+  // 追加用セレクト
+  (function () {
+    var sel = $("addCropSel"), opts = [];
+    DATA.CROPS.forEach(function (c) { opts.push('<option value="' + c.id + '">' + c.name + "</option>"); });
+    if (DATA.KIBI) opts.push('<option value="' + KIBI_ID + '">さとうきび</option>');
+    sel.innerHTML = opts.join("");
+  })();
+  $("addCropBtn").addEventListener("click", function () {
+    var id = $("addCropSel").value;
+    L.rows.push({ cropId: id, areaA: 10 });
+    renderRows(); recalc(); renderStress();
+  });
+
+  function rowSales(r) { return salesPer10a(r.cropId) * r.areaA / 10; }
+
+  function renderRows() {
+    var d = hzDef();
+    $("expHead").textContent = !d ? "（災害を選ぶと入力できます）"
+      : d.usesCropExp ? "（%・仮の初期値・編集可）" : "（%・自分で入力）";
+    var tb = $("cropRows");
+    tb.innerHTML = "";
+    L.rows.forEach(function (r, i) {
+      var tr = document.createElement("tr");
+      var flagParts = [];
+      if (r.cropId === KIBI_ID) {
+        if (DATA.KIBI) flagParts.push(DATA.flagLabel(DATA.KIBI.yield.r6kei) || "");
+      } else {
+        var c = cropById(r.cropId);
+        if (c) flagParts.push(DATA.flagLabel(c.yieldHon10a || c.yieldKg10a) + DATA.flagLabel(c.priceYenHon || c.priceYenKg));
+      }
+      var e = expOf(r.cropId);
+      var e100 = e == null ? "" : Math.round(e * 100);
+      var kariMark = (e != null && expIsKari(r.cropId)) ? '<span class="small muted">（仮）</span>' : "";
+      tr.innerHTML =
+        "<td>" + cropName(r.cropId) + ' <span class="small muted">' + flagParts.join("") + "</span></td>" +
+        '<td class="num"><input type="number" data-i="' + i + '" data-k="areaA" value="' + r.areaA + '" min="0" step="5" style="width:88px;text-align:right"></td>' +
+        '<td class="num tnum">' + F.manUnit(rowSales(r)) + "</td>" +
+        '<td class="num exp-cell"><input type="range" class="no-print" data-i="' + i + '" data-k="expR" min="0" max="100" step="5" value="' + (e100 === "" ? 0 : e100) + '"' + (d ? "" : " disabled") + ">" +
+        '<input type="number" data-i="' + i + '" data-k="exp" value="' + e100 + '" min="0" max="100" step="5" placeholder="未入力" style="width:64px;text-align:right"' + (d ? "" : " disabled") + "> % " + kariMark + "</td>" +
+        '<td><button class="row-del no-print" data-i="' + i + '" title="この行を消す">×</button></td>';
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll('input[type="number"]').forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        var r = L.rows[+inp.dataset.i];
+        if (inp.dataset.k === "areaA") {
+          r.areaA = Math.max(0, +inp.value || 0);
+        } else {
+          if (!L.hazard) return;
+          var hz = ensureHz(L.hazard);
+          if (inp.value === "") { delete hz.exp[r.cropId]; delete hz.expTouched[r.cropId]; }
+          else {
+            hz.exp[r.cropId] = Math.max(0, Math.min(100, +inp.value || 0)) / 100;
+            hz.expTouched[r.cropId] = true;
+          }
+        }
+        renderRows(); recalc(); renderStress();
+      });
+    });
+    tb.querySelectorAll('input[type="range"]').forEach(function (inp) {
+      CORE.bindRange(inp, function (v) {
+        if (!L.hazard) return;
+        var r = L.rows[+inp.dataset.i];
+        var hz = ensureHz(L.hazard);
+        hz.exp[r.cropId] = v / 100;
+        hz.expTouched[r.cropId] = true;
+        // つまみ操作中は行を作り直さない（つまみが消えるため）。数字欄だけ追従させる
+        var num = inp.parentElement.querySelector('input[type="number"]');
+        if (num) num.value = v;
+        recalc();
+      });
+      // つまみを離したら行と残高試算を作り直す（（仮）表示の更新もここで行う）
+      inp.addEventListener("change", function () { renderRows(); recalc(); renderStress(); });
+    });
+    tb.querySelectorAll(".row-del").forEach(function (btn) {
+      btn.addEventListener("click", function () { L.rows.splice(+btn.dataset.i, 1); renderRows(); recalc(); renderStress(); });
+    });
+  }
+
+  function computeTotals() {
+    var sel = {};
+    selMonths().forEach(function (m) { sel[m] = true; });
+    var total = 0, zaiho = 0, exposed = [];
+    var hit = [0,0,0,0,0,0,0,0,0,0,0,0], other = [0,0,0,0,0,0,0,0,0,0,0,0];
+    L.rows.forEach(function (r) {
+      var s = rowSales(r);
+      total += s;
+      var mask = fieldMask(r.cropId), hitAny = false;
+      for (var m = 1; m <= 12; m++) {
+        if (!mask[m - 1]) continue;
+        if (sel[m]) { hit[m - 1] += s; hitAny = true; }
+        else other[m - 1] += s;
+      }
+      if (hitAny) { zaiho += s; exposed.push(cropName(r.cropId)); }
+    });
+    return { total: total, zaiho: zaiho, exposed: exposed, hit: hit, other: other };
+  }
+
+  function renderGate() {
+    var rd = readyState();
+    var box = $("gateNotice");
+    box.classList.toggle("hide", rd.ok);
+    if (rd.ok) return rd;
+    if (rd.why === "hazard") {
+      $("gateTitle").textContent = "災害の種類を選んでください";
+      $("gateBody").textContent = "ページ上部の押しボタンで備えたい災害を1つ選ぶと、危ない月の色分けと被害額の試算が出ます。";
+    } else {
+      $("gateTitle").textContent = "直撃しやすい月と被害の割合を入力してください";
+      $("gateBody").textContent = "「直撃しやすい月」を1つ以上選び、品目表の被害の割合をすべて入力すると、被害額と被災後の残高の試算が出ます。";
+    }
+    return rd;
+  }
+
+  function recalc() {
+    /* 利用者の実操作があるまでは保存しない（開いただけで進行表が「完了」になる誤判定を防ぐ） */
+    if (CORE.userActed && CORE.userActed()) saveL();
+    var rd = renderGate();
+    var t = computeTotals();
+    var msLabel = selMonths().length
+      ? selMonths().map(function (m) { return m + "月"; }).join("・") + (monthsIsKari() ? "・仮" : "")
+      : "未選択";
+    $("kpiZaihoLabel").textContent = "直撃しやすい月の収穫前の想定売上" + (monthsIsKari() ? "（月は仮の初期値）" : "");
+    $("kpiSales").textContent = F.manUnit(t.total);
+    $("kpiHazard").textContent = L.hazard ? hzLabel() : "未選択";
+    $("kpiHazardSub").textContent = L.hazard ? ("直撃しやすい月: " + msLabel) : "上の押しボタンで選んでください";
+
+    // （仮の被害割合）の見出し表示（台風の初期値のまま試算している間は付け続ける）
+    var kari = kariExpAny();
+    $("kariStress").textContent = kari ? "（仮の被害割合）" : "";
+    $("kariInv").textContent = kari ? "（仮の被害割合）" : "";
+
+    /* 直撃月の在圃額のKPI。在圃額は品目と作期だけで計算できるため、
+       災害と月が選ばれていれば（被害の割合が未入力でも）表示する */
+    var split = !!(L.hazard && selMonths().length);
+    if (split) {
+      CORE.countUp($("kpiZaiho"), t.zaiho, function (v) { return F.manUnit(v); });
+      $("kpiZaihoSub").textContent = t.exposed.length
+        ? "収穫前で直撃月にかかる品目が" + t.exposed.length + "品目あります（内訳は下の「収穫前の作物がある月」の図）"
+        : "選んだ月に収穫前の品目はありません";
+    } else {
+      $("kpiZaiho").textContent = "―";
+      $("kpiZaihoSub").textContent = !L.hazard ? "災害の種類を選んでください" : "直撃しやすい月を選んでください";
+    }
+
+    /* 核心の図: 月別の収穫前想定売上。常時表示する（在圃額は品目と作期だけで計算できるため、
+       災害・月・被害割合が未入力でも出す）。災害と月が選ばれたら
+       「直撃しやすい月／その他の月」の2色に切り替える。
+       被害額・被災後残高・補強投資の試算は従来どおり被害の割合まで揃うのを待つ（renderGate・renderStress・renderInvest） */
+    $("vizCoreNote").classList.toggle("hide", split || !L.rows.length);
+    if (!L.rows.length) {
+      $("vizCoreSub").textContent = "棒＝その月に畑にある収穫前の作物の想定売上。";
+      $("vizCore").innerHTML = '<p class="small muted">下の品目表に品目を1つ以上足すと、月別の図が出ます。</p>';
+    } else if (split) {
+      $("vizCoreSub").textContent = "赤い棒＝直撃しやすい月に畑にある収穫前の想定売上。ここが大きい月ほど、被災したときに失う金額が大きい。";
+      VIZ.stackedBar($("vizCore"), {
+        labels: MONTH_LABELS,
+        series: [
+          { name: "直撃しやすい月の収穫前売上", values: t.hit, color: "var(--s6)" },
+          { name: "その他の月の収穫前売上", values: t.other, color: "var(--s1)" },
+        ],
+        fmt: function (v) { return F.man(v) + "円"; },
+        h: 260, totals: true,
+      });
+    } else {
+      // 未入力時は全月を同じ色の1系列で表示（月未選択なら hit は全月0なので hit+other＝月別の在圃額）
+      $("vizCoreSub").textContent = "棒＝その月に畑にある収穫前の作物の想定売上。この金額が大きい月に災害が来ると、失う金額が大きい。";
+      VIZ.stackedBar($("vizCore"), {
+        labels: MONTH_LABELS,
+        series: [
+          { name: "収穫前の想定売上", values: t.hit.map(function (v, i) { return v + t.other[i]; }), color: "var(--s1)" },
+        ],
+        fmt: function (v) { return F.man(v) + "円"; },
+        h: 260, totals: true,
+      });
+    }
+
+    // 収穫前売上のヒートマップ（月の選択に関係なく、畑にある月の内訳として表示）
+    if (L.rows.length) {
+      VIZ.heatmap($("vizZaihoMap"), {
+        rows: L.rows.map(function (r) { return cropName(r.cropId) + " " + r.areaA + "a"; }),
+        cols: MONTH_LABELS,
+        values: L.rows.map(function (r) {
+          var mask = fieldMask(r.cropId), s = rowSales(r);
+          return mask.map(function (on) { return on ? s : 0; });
+        }),
+        fmt: function (v) { return v ? F.man(v) + "円" : "―"; },
+        padL: 170,
+      });
+    } else {
+      $("vizZaihoMap").innerHTML = '<p class="small muted">品目を1つ以上足してください。</p>';
+    }
+    var kibiUsed = L.rows.some(function (r) { return r.cropId === KIBI_ID; });
+    var srcTxt = "想定売上＝面積×県平均単収×平均単価（計算値）。単収・単価の出典は各ツール共通の品目マスタ。被害の割合は、台風のみ品目マスタの仮の初期値が入り、それ以外の災害は自分の入力です。どちらも自分の経験・記録で上書きする前提です。";
+    if (kibiUsed && DATA.KIBI) srcTxt += " さとうきび＝単収" + DATA.srcLine(DATA.KIBI.yield.r6kei) + "×トン当たり手取り" + DATA.srcLine(DATA.KIBI.tedori.totalYenT) + "。" + DATA.KIBI.typhoonNote + "。";
+    $("srcCrop").textContent = srcTxt;
+
+    // 損失既定値（手で直していなければ追従）
+    if (!L.lossManual.l0) { L.loss.l0 = Math.round(t.total * 0.3); $("loss0").value = L.loss.l0; }
+    renderCmp();
+    renderInvest(rd, t);
+  }
+
+  /* ============================================================
+     沖縄だけ: 台風接近数の統計（region=okinawa かつ台風選択時）
+     ============================================================ */
+  (function () {
+    if (!IS_OKINAWA || !DATA.TYPHOON) return; // 沖縄以外では組み立て自体をしない（カードは非表示のまま）
+    var hein = DATA.TYPHOON.heinen;
+    var rec = DATA.TYPHOON.recent;
+    $("okiKpiLine").textContent = "沖縄地方への接近数の平年値: " + hein.annual.v + "回/年。直近: 2022年" + rec[2022] + "・2023年" + rec[2023] + "・2024年" + rec[2024] + "・2025年" + rec[2025] + "回。7〜10月の山と上の収穫前売上の重なりが危ない時期。";
+    VIZ.barChart($("vizTyphoon"), {
+      labels: MONTH_LABELS,
+      series: [{ name: "接近数（平年値）", values: MONTH_LABELS.map(function (_, i) { return hein.monthly[i + 1]; }), color: "var(--s1)" }],
+      fmt: function (v) { return F.num(v, 1); },
+      h: 220, direct: true,
+    });
+    var dmg = DATA.TYPHOON.damageExample;
+    $("okiDamageLine").textContent = "被害の実例: 令和5年台風6号の沖縄県農作物被害 " + dmg.v + "（" + dmg.note + "・出典 " + DATA.srcLine({ src: dmg.src }) + "）。";
+    $("srcTyphoon").textContent = "出典: " + DATA.srcLine(hein.annual) + "。年別は" + DATA.srcLine({ src: "S12" }) + "。" + hein.monthlyNote + "。";
+  })();
+
+  /* ============================================================
+     事前モード 2: 保険3案くらべ
+     ============================================================ */
+  if (!L.plans) {
+    L.plans = [
+      { label: "無保険", kakekin: 0, hosho: [0, 0, 0] },
+      { label: "現在の加入", kakekin: 0, hosho: [0, 0, 0] },
+      { label: "見直し案", kakekin: 0, hosho: [0, 0, 0] },
+    ];
+  }
+  if (L.loss.l0 == null) L.loss.l0 = 0;
+  if (L.loss.l1 == null) L.loss.l1 = IS_OKINAWA ? 200000 : 0; // 沖縄=旧ページの仮の置き数を踏襲。他地域は0で見積額の入力待ち
+  if (L.loss.l2 == null) L.loss.l2 = IS_OKINAWA ? DATA.FACILITY.kyokaPipe.vLow * 1000 : 0; // 沖縄=9,400円/㎡×10a分（計算値）
+
+  function renderPlanCards() {
+    var wrap = $("planCards");
+    wrap.innerHTML = "";
+    L.plans.forEach(function (p, pi) {
+      var div = document.createElement("div");
+      div.className = "card plan-col";
+      div.style.padding = "16px";
+      if (pi === 0) {
+        div.innerHTML = "<h3>" + p.label + '</h3><p class="sub">掛金 0円・補償 0円で固定。損失がそのまま自己負担になります。</p>';
+      } else {
+        var h = "<h3>" + p.label + "</h3>" +
+          '<div class="field"><label>年間掛金</label><div class="input-unit"><input type="number" min="0" step="1000" data-p="' + pi + '" data-k="kakekin" value="' + p.kakekin + '"><span class="u">円/年</span></div></div>';
+        SCENARIOS.forEach(function (sc, si) {
+          h += '<div class="field"><label>補償: ' + sc + '</label><div class="input-unit"><input type="number" min="0" step="10000" data-p="' + pi + '" data-s="' + si + '" value="' + p.hosho[si] + '"><span class="u">円</span></div></div>';
+        });
+        div.innerHTML = h;
+      }
+      wrap.appendChild(div);
+    });
+    wrap.querySelectorAll("input").forEach(function (inp) {
+      inp.addEventListener("change", function () {
+        var p = L.plans[+inp.dataset.p];
+        var v = Math.max(0, +inp.value || 0);
+        if (inp.dataset.k === "kakekin") p.kakekin = v; else p.hosho[+inp.dataset.s] = v;
+        saveL(); renderCmp();
+      });
+    });
+  }
+
+  function renderCmp() {
+    var losses = [L.loss.l0, L.loss.l1, L.loss.l2];
+    var t = $("cmpTbl");
+    var h = "<thead><tr><th>被害の想定</th><th class='num'>損失</th>";
+    L.plans.forEach(function (p) { h += "<th class='num'>" + p.label + "</th>"; });
+    h += "</tr></thead><tbody>";
+    h += "<tr><td>年間掛金（被害ゼロの年の持ち出し）</td><td class='num'>―</td>";
+    L.plans.forEach(function (p) { h += "<td class='num'>" + F.yen(p.kakekin) + "</td>"; });
+    h += "</tr>";
+    SCENARIOS.forEach(function (sc, si) {
+      var burdens = L.plans.map(function (p) { return losses[si] - p.hosho[si] + p.kakekin; });
+      var best = Math.min.apply(null, burdens);
+      h += "<tr><td>" + sc + "</td><td class='num'>" + F.yen(losses[si]) + "</td>";
+      burdens.forEach(function (b) {
+        h += "<td class='num" + (b === best && losses[si] > 0 ? " best" : "") + "'>" + F.yen(b) + "</td>";
+      });
+      h += "</tr>";
+    });
+    h += "</tbody>";
+    t.innerHTML = h;
+    ["loss0", "loss1", "loss2"].forEach(function (id, i) {
+      $(id + "Val").textContent = F.manUnit(losses[i]);
+    });
+  }
+
+  ["loss0", "loss1", "loss2"].forEach(function (id, i) {
+    var key = "l" + i;
+    $(id).value = L.loss[key];
+    $(id).addEventListener("change", function () {
+      L.loss[key] = Math.max(0, +$(id).value || 0);
+      L.lossManual[key] = true;
+      saveL(); renderCmp();
+    });
+  });
+  if (IS_OKINAWA) {
+    $("loss1Note").textContent = "初期値は仮の置き数（仮・編集可）。張替えの見積額に直してください";
+    $("loss2Note").textContent = "初期値＝強化型パイプハウス建設単価の低い側 " + F.yen(DATA.FACILITY.kyokaPipe.vLow) + "/㎡ × 10a分（計算値・編集可）。出典: " + DATA.srcLine(DATA.FACILITY.kyokaPipe);
+  } else {
+    $("loss1Note").textContent = "張替えの見積額を入れてください（初期値なし）";
+    $("loss2Note").textContent = "再建・修理の見積額を入れてください。単価は県・工法により異なるため初期値を置いていません";
+    $("srcCmp").textContent += " 掛金・補償の水準は県・作物により異なります。ご自身の証書・見積の数字だけを使ってください。";
+  }
+
+  /* 前に保存した3案の比較を、開き直したときに出す。
+     保存はしていたのに読む場所がどこにも無く、開き直すと消えたように見えていた */
+  (function maeNoHikaku() {
+    var ins = store.load("insurance", null);
+    if (!ins || !ins.items || !ins.items.length) return;
+    var host = document.getElementById("savePlansBtn");
+    if (!host || !host.parentElement) return;
+    var box = document.createElement("div");
+    box.className = "advice info mt16";
+    var gyou = ins.items.map(function (x) {
+      return "<li>" + String(x.label || "") + "：掛金 "
+        + F.num(x["kakekin円"] || 0) + "円 ／ 補償（収量3割減） "
+        + F.num(x["hosho円"] || 0) + "円</li>";
+    }).join("");
+    box.innerHTML = '<div class="a-icon">🗂</div><div>'
+      + '<div class="a-title">前に保存した3案の比較</div>'
+      + '<div class="a-body"><ul style="margin:6px 0 0;padding-left:1.2em">' + gyou + "</ul>"
+      + "下の欄を直して保存し直すと、この一覧も入れ替わります。</div></div>";
+    host.parentElement.insertBefore(box, host);
+  })();
+
+  $("savePlansBtn").addEventListener("click", function () {
+    store.save("insurance", {
+      items: L.plans.map(function (p) {
+        return {
+          label: p.label,
+          kakekin円: p.kakekin,
+          hosho円: p.hosho[0],
+          memo: "補償の転記: 収量3割減 " + p.hosho[0] + "円／被覆材全損 " + p.hosho[1] + "円／ハウス倒壊 " + p.hosho[2] + "円",
+        };
+      }),
+    });
+    saveL();
+    CORE.nextHint($("savePlansBtn"), [
+      { label: "→ A4で印刷する（相談に持っていく紙）", onclick: function () { window.print(); } },
+    ], "3案の比較を保存しました");
+  });
+
+  /* ============================================================
+     事前モード 3: 制度の仕組み（収入保険・園芸施設共済は全国制度）
+     ============================================================ */
+  (function () {
+    var sh = DATA.INSURANCE.shunyuHoken;
+    $("shunyuScheme").textContent = sh.scheme + "。";
+    $("shunyuBody").innerHTML =
+      "<p>" + sh.hoshoGendo.note + "。</p>" +
+      "<p>" + sh.kokko.note + "。</p>" +
+      "<p>つなぎ融資の例: " + sh.tsunagiExample.note + "。</p>" +
+      '<p class="provisional">' + sh.premiumNote + "。</p>";
+    $("srcShunyu").textContent = "出典: " + DATA.srcLine({ src: sh.src }) + "／" + DATA.srcLine({ src: sh.hoshoGendo.src });
+    var en = DATA.INSURANCE.engeiKyosai;
+    var pn = en.premiumNote;
+    if (!IS_OKINAWA) {
+      var cut = pn.indexOf("（沖縄");
+      if (cut > -1) pn = pn.slice(0, cut) + "（お住まいの県の掛金率はNOSAIへ・要確認）";
+    }
+    $("engeiBody").innerHTML =
+      "<p>" + en.fuho + "。</p>" +
+      "<p>" + en.kokko + "。</p>" +
+      '<p class="provisional">' + pn + "。</p>";
+    $("srcEngei").textContent = "出典: " + DATA.srcLine({ src: en.src });
+    $("contactBody").textContent = IS_OKINAWA
+      ? DATA.INSURANCE.contact
+      : "最終確認先: お住まいの県のNOSAI（農業共済組合）・市町村の農政窓口・JA";
+  })();
+
+  /* ============================================================
+     事前モード 4: 被災後6か月の残高（簡易）
+     ============================================================ */
+  function renderStress() {
+    var card = $("stressCard");
+    var rd = readyState();
+    if (!rd.ok) {
+      card.innerHTML = '<div class="advice info"><div class="a-icon">🗓</div><div>' +
+        '<div class="a-title">まだ表示できません</div>' +
+        '<div class="a-body">上で災害の種類・直撃しやすい月・被害の割合を入力すると、被災月からの残高の試算がここに出ます。</div></div></div>';
+      return;
+    }
+    var cf = store.load("cashflow", null);
+    if (!cf) {
+      card.innerHTML = '<div class="advice info"><div class="a-icon">🗓</div><div>' +
+        '<div class="a-title">まだ表示できません</div>' +
+        '<div class="a-body">「資金繰りカレンダー」で自分・家族への給与・大口支払い・返済を入力して保存すると、被災月からの残高の試算がここに出ます。</div></div></div>';
+      return;
+    }
+    var st = L.stress;
+    if (st.month == null) st.month = (new Date().getMonth() + 1) % 12 + 1; // 来月
+    if (st.fukkyu == null) st.fukkyu = 0;
+    if (st.kyosai == null) st.kyosai = 0;
+    if (st.delay == null) st.delay = 3;
+    if (st.cash == null) st.cash = cf.cashStart || 0;
+
+    var monthOpts = "";
+    for (var m = 1; m <= 12; m++) monthOpts += '<option value="' + m + '"' + (m === st.month ? " selected" : "") + ">" + m + "月</option>";
+    card.innerHTML =
+      '<div class="grid c4">' +
+      '<div class="field"><label>被災する月（想定）</label><select id="stMonth">' + monthOpts + "</select></div>" +
+      '<div class="field"><label>被災時の手元資金</label><div class="input-unit"><input type="number" id="stCash" step="100000" value="' + st.cash + '"><span class="u">円</span></div><div class="note">初期値＝資金繰りカレンダーの開始残高（編集可）</div></div>' +
+      '<div class="field"><label>復旧の持ち出し（片付け・張替え等）</label><div class="input-unit"><input type="number" id="stFukkyu" min="0" step="100000" value="' + st.fukkyu + '"><span class="u">円</span></div></div>' +
+      '<div class="field"><label>共済金・保険金の見込み</label><div class="input-unit"><input type="number" id="stKyosai" min="0" step="100000" value="' + st.kyosai + '"><span class="u">円</span></div>' +
+      '<div class="note">入金は被災の <input type="number" id="stDelay" min="0" max="6" value="' + st.delay + '" style="width:52px;text-align:right"> か月後と仮定（仮・編集可）</div></div>' +
+      "</div>" +
+      '<div class="viz mt16" id="vizStress"></div>' +
+      '<p class="src">簡易計算です。入金＝品目の入金月に年間売上を等分して置いたもの。被災あり線＝被災月以降の入金を品目ごとの被害の割合' + (kariExpAny() ? "（仮）" : "") + 'だけ減らし、復旧支出と共済金の入金遅れを重ねたもの。被害の割合が未入力の品目は減収0として計算します。自分・家族への給与・毎月の農業経費・その他の毎月の支出・大口支払い・返済は、資金繰りカレンダーの保存値をそのまま使います。</p>';
+
+    function draw() {
+      // 月別入金（品目の入金月に等分）
+      var incNormal = [0,0,0,0,0,0,0,0,0,0,0,0];
+      var incHit = [0,0,0,0,0,0,0,0,0,0,0,0];
+      var plan = store.load("plan", null);
+      var items = [];
+      if (plan && plan.items && plan.items.length) {
+        items = plan.items.map(function (it) {
+          var s = (it.yieldKg10a != null && it.priceYenKg != null)
+            ? it.area10a * it.yieldKg10a * it.priceYenKg
+            : salesPer10a(it.cropId) * it.area10a;
+          var e = expOf(it.cropId);
+          return { cropId: it.cropId, sales: s, exp: e == null ? 0 : e };
+        });
+      } else {
+        items = L.rows.map(function (r) { var e = expOf(r.cropId); return { cropId: r.cropId, sales: rowSales(r), exp: e == null ? 0 : e }; });
+      }
+      items.forEach(function (it) {
+        var ms = incomeMonths(it.cropId);
+        ms.forEach(function (m) {
+          incNormal[m - 1] += it.sales / ms.length;
+          incHit[m - 1] += it.sales / ms.length * (1 - it.exp);
+        });
+      });
+      var loansMonthly = 0;
+      (cf.loans || []).forEach(function (ln) { loansMonthly += (ln.monthly != null ? ln.monthly : (ln.amount || 0)); });
+      var living = cf.living || 0;
+      /* 毎月の農業経費と、その他の毎月の支出も引く。
+         引かないと、資金繰りカレンダーより残高が甘く出る（同じ保存値から違う線が出る） */
+      var keihiMonthly = (cf.keihi != null) ? cf.keihi : 0;
+      var extraMonthly = 0;
+      (cf.extraExpenses || []).forEach(function (x) { extraMonthly += (x.man || 0) * 10000; });
+      var labels = [], b1 = [], b2 = [], bal1 = st.cash, bal2 = st.cash;
+      for (var k = 0; k < 6; k++) {
+        var mo = ((st.month - 1 + k) % 12) + 1;
+        labels.push(mo + "月");
+        var big = 0;
+        (cf.bigPays || []).forEach(function (bp) { if (bp.month === mo) big += bp.amount || 0; });
+        var out = living + loansMonthly + big + keihiMonthly + extraMonthly;
+        bal1 += incNormal[mo - 1] - out;
+        var inHit = incHit[mo - 1];
+        var extra = 0;
+        if (k === 0) extra -= st.fukkyu;
+        if (k === st.delay) extra += st.kyosai;
+        bal2 += inHit - out + extra;
+        b1.push(Math.round(bal1)); b2.push(Math.round(bal2));
+      }
+      VIZ.lineChart($("vizStress"), {
+        labels: labels,
+        series: [
+          { name: "被災なしの残高", values: b1, color: "var(--s1)" },
+          { name: "被災ありの残高（仮）", values: b2, color: "var(--s6)" },
+        ],
+        fmt: function (v) { return F.man(v) + "円"; },
+        h: 260,
+      });
+      var worst = Math.min.apply(null, b2);
+      var warnEl = card.querySelector(".stress-warn");
+      if (warnEl) warnEl.remove();
+      if (worst < 0) {
+        var idx = b2.indexOf(worst);
+        var d = document.createElement("div");
+        d.className = "advice critical mt16 stress-warn";
+        d.innerHTML = '<div class="a-icon">⚠</div><div><div class="a-title">' + labels[idx] + "に残高が " + F.manUnit(worst) + " まで下がる想定です</div>" +
+          '<div class="a-body">共済金の入金が' + st.delay + "か月後という仮定のためです。つなぎ融資（収入保険は上の制度欄参照）も確認してください。<br>" +
+          '<a class="nh-btn" href="shikin.html" style="margin-top:8px">→ 資金繰りカレンダーで大口支払いの月をずらして試す</a></div></div>';
+        $("vizStress").after(d);
+      }
+      saveL();
+    }
+    $("stMonth").addEventListener("change", function () { st.month = +this.value; draw(); });
+    ["stCash","stFukkyu","stKyosai","stDelay"].forEach(function (id) {
+      $(id).addEventListener("change", function () {
+        var v = +this.value || 0;
+        if (id === "stCash") st.cash = v;
+        if (id === "stFukkyu") st.fukkyu = Math.max(0, v);
+        if (id === "stKyosai") st.kyosai = Math.max(0, v);
+        if (id === "stDelay") st.delay = Math.max(0, Math.min(6, Math.round(v)));
+        draw();
+      });
+    });
+    draw();
+  }
+
+  /* ============================================================
+     事前モード 5: 補強投資の回収
+     ============================================================ */
+  var invBound = false;
+  function renderInvest(rd, t) {
+    var inv = invOf();
+    var d = hzDef();
+    $("invAmt").value = inv.amt;
+    $("invRate").value = inv.rate;
+    $("invCut").value = inv.cut;
+    $("invRateLabel").textContent = "選んだ災害（" + (d ? d.label : "未選択") + "）での被害率の見込み";
+    var kariR = d && d.usesCropExp && !inv.rateTouched;
+    if (d && d.usesCropExp) {
+      $("invRateNote").textContent = "初期値＝パイプハウスの被害率の仮置き " + Math.round(DATA.TYPHOON.damageRateDefaults.pipe.v * 100) + "%（仮）。" + DATA.TYPHOON.damageRateDefaults.note;
+    } else {
+      $("invRateNote").textContent = "初期値はありません。出典のある全国一律の値が無いため、自分の想定を置いてください。";
+    }
+    $("invVal").textContent = F.manUnit(inv.amt);
+    $("invRateVal").textContent = inv.rate + "%" + (kariR ? "（仮）" : "");
+    $("invCutVal").textContent = inv.cut + "%" + (kariR ? "（仮）" : "");
+    if (!rd || !rd.ok) {
+      $("invYears").textContent = "―";
+      $("invCalcLine").textContent = "災害の種類・直撃しやすい月・被害の割合を入力すると計算できます";
+      $("invWhy").textContent = "";
+    } else {
+      var base = t.zaiho;
+      var saveYen = base * (inv.rate / 100) * (inv.cut / 100);
+      if (saveYen > 0) {
+        var years = inv.amt / saveYen;
+        $("invYears").textContent = "約" + (years >= 10 ? Math.round(years) : years.toFixed(1)) + "年";
+        $("invCalcLine").textContent = F.manUnit(inv.amt) + " ÷ 年" + F.manUnit(saveYen) + "（計算値）";
+      } else {
+        $("invYears").textContent = "―";
+        $("invCalcLine").textContent = "直撃月の収穫前の想定売上か係数が0のため計算できません";
+      }
+      $("invWhy").textContent = "考え方: 直撃しやすい月にある収穫前の作物の想定売上 " + F.manUnit(base) + " × 被害率 " + inv.rate + "% × 補強で減る割合 " + inv.cut + "% ＝ 1年あたりに守れる金額の目安。" + hzLabel() + "の来方は年により異なるため、参考の目安です。実際の判断は見積と自分の畑の条件で行ってください。";
+    }
+    saveL();
+    if (!invBound) {
+      invBound = true;
+      $("invAmt").addEventListener("change", function () { invOf().amt = Math.max(0, +this.value || 0); recalc(); });
+      CORE.bindRange($("invRate"), function (v) { var iv = invOf(); iv.rate = v; iv.rateTouched = true; recalc(); });
+      CORE.bindRange($("invCut"), function (v) { var iv = invOf(); iv.cut = v; iv.rateTouched = true; recalc(); });
+    }
+  }
+
+  /* ============================================================
+     直後モード 1: 72時間チェック
+     ・only を付けた項目は、その災害を選んでいるときだけ表示
+     ============================================================ */
+  var CHECKS = [
+    { g: "まず安全（〜24時間）", items: [
+      { id: "safe1", main: "家族と自分の無事をたしかめる。見回りは天候が落ち着き明るくなってから", sub: "強風・積雪・増水が残る中の見回りでの事故が多い。長靴・厚手の手袋を着ける" },
+      { id: "safe2", main: "切れた電線・折れたハウスの骨・飛んだトタンに近づかない", sub: "電線はさわらず電力会社へ。骨材は跳ね返ることがある" },
+      { id: "snow1", only: "ooyuki", main: "雪の重みでつぶれかけたハウスに入らない", sub: "倒壊しかけの骨材は急に落ちる。雪下ろし・除雪は安全を確かめてから、できるだけ複数人で" },
+    ]},
+    { g: "片付ける前に（〜24時間）", items: [
+      { id: "photo1", main: "写真を撮る——全景 → 被害の箇所 → 大きさがわかる物と一緒に", sub: "スマホの日付設定をオンに。あとで損害の証明になる。撮る前に片付けない" },
+      { id: "nosai1", main: "加入している共済・保険（NOSAI等）へ損害の発生を連絡する", sub: "連絡は片付け・撤去の前。評価・査定の進め方は組合の案内に従う" },
+    ]},
+    { g: "48時間まで", items: [
+      { id: "city1", main: "市町村の農政窓口へ被害を報告する", sub: "被害報告が支援策の入口になることがある。写真と被害のメモを手元に" },
+      { id: "salt1", only: "taifu", main: "葉に付いた潮を真水で洗い流す（塩害対策）", sub: "できるだけ早く。かん水設備が使えるかも一緒に確認する" },
+    ]},
+    { g: "72時間まで", items: [
+      { id: "rec1", main: "このページの下の「被害を記録する」に品目別の被害の割合を残す", sub: "来年の作付け判断と事前の備えの計算の元データになる" },
+      { id: "est1", main: "修理・再建の見積の手配を始める（撤去のタイミングは共済組合に確認）", sub: "写真と見積のセットで相談が早く進む" },
+    ]},
+  ];
+  function renderChecks() {
+    var wrap = $("checkList");
+    wrap.innerHTML = "";
+    var total = 0, done = 0;
+    CHECKS.forEach(function (grp) {
+      var items = grp.items.filter(function (it) { return !it.only || it.only === L.hazard; });
+      if (!items.length) return;
+      var gt = document.createElement("div");
+      gt.className = "check-group-title";
+      gt.textContent = grp.g;
+      wrap.appendChild(gt);
+      items.forEach(function (it) {
+        total++;
+        var on = !!L.checks[it.id];
+        if (on) done++;
+        var lab = document.createElement("label");
+        lab.className = "check-item" + (on ? " done" : "");
+        lab.innerHTML = '<input type="checkbox"' + (on ? " checked" : "") + '><div><div class="c-main">' + it.main + '</div><div class="c-sub">' + it.sub + "</div></div>";
+        lab.querySelector("input").addEventListener("change", function () {
+          L.checks[it.id] = this.checked; saveL(); renderChecks();
+        });
+        wrap.appendChild(lab);
+      });
+    });
+    $("checkMeter").style.width = (total ? Math.round(done / total * 100) : 0) + "%";
+    $("checkProgress").textContent = done + " / " + total + " 件チェック済み";
+  }
+  $("checkResetBtn").addEventListener("click", function () { L.checks = {}; saveL(); renderChecks(); });
+
+  /* ============================================================
+     直後モード 2: 被害記録 → damageLog
+     ・記録に hazard を追加（既存記録は台風扱いで読む・キー互換）
+     ============================================================ */
+  function renderDmgSelects() {
+    var sel = $("dmgCrop"), opts = [];
+    L.rows.forEach(function (r) { opts.push('<option value="' + r.cropId + '">' + cropName(r.cropId) + "（うちの品目）</option>"); });
+    DATA.CROPS.forEach(function (c) {
+      if (!L.rows.some(function (r) { return r.cropId === c.id; })) opts.push('<option value="' + c.id + '">' + c.name + "</option>");
+    });
+    if (DATA.KIBI && !L.rows.some(function (r) { return r.cropId === KIBI_ID; })) opts.push('<option value="' + KIBI_ID + '">さとうきび</option>');
+    opts.push('<option value="sonota">その他</option>');
+    sel.innerHTML = opts.join("");
+    var hsel = $("dmgHazard"), hopts = [];
+    HZ_IDS.forEach(function (h) {
+      hopts.push('<option value="' + h + '"' + ((L.hazard || "taifu") === h ? " selected" : "") + ">" + HZ[h].label + "</option>");
+    });
+    hsel.innerHTML = hopts.join("");
+  }
+  $("dmgDate").value = new Date().toISOString().slice(0, 10);
+  CORE.bindRange($("dmgRate"), function (v) { $("dmgRateVal").textContent = v + "%"; });
+
+  function renderDmgLog() {
+    var log = store.load("damageLog", []) || [];
+    var wrap = $("dmgLogWrap");
+    if (!log.length) {
+      wrap.innerHTML = '<p class="small muted">まだ記録がありません。被害が無かった年もそれ自体が大事な記録です。</p>';
+      return;
+    }
+    var h = '<h3>これまでの被害記録</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th>日付</th><th>災害</th><th>品目</th><th class="num">被害の割合</th><th>メモ</th><th></th></tr></thead><tbody>';
+    log.forEach(function (d, i) {
+      var hzName = (d.hazard && HZ[d.hazard]) ? HZ[d.hazard].label : "台風"; // 旧記録は台風扱い
+      var name = d.typhoon ? "・" + d.typhoon : "";
+      h += "<tr><td>" + (d.date || "―") + "</td><td>" + hzName + name + "</td><td>" + cropName(d.cropId) +
+        '</td><td class="num">' + Math.round((d.rate || 0) * 100) + "%</td><td>" + (d.memo || "") +
+        '</td><td><button class="row-del no-print" data-i="' + i + '">×</button></td></tr>';
+    });
+    h += "</tbody></table></div>";
+    wrap.innerHTML = h;
+    wrap.querySelectorAll(".row-del").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var lg = store.load("damageLog", []) || [];
+        lg.splice(+btn.dataset.i, 1);
+        store.save("damageLog", lg);
+        renderDmgLog();
+      });
+    });
+  }
+  $("dmgAddBtn").addEventListener("click", function () {
+    var log = store.load("damageLog", []) || [];
+    var rec = {
+      date: $("dmgDate").value,
+      typhoon: $("dmgTyphoon").value,   // キー互換のため項目名は typhoon のまま（中身は災害の名前）
+      cropId: $("dmgCrop").value,
+      rate: (+$("dmgRate").value || 0) / 100,
+      memo: $("dmgMemo").value,
+      hazard: $("dmgHazard").value,
+    };
+    log.push(rec);
+    store.save("damageLog", log);
+    $("dmgTyphoon").value = ""; $("dmgMemo").value = "";
+    renderDmgLog();
+    CORE.nextHint($("dmgAddBtn"), [
+      { label: "この被害割合を、上の備えの入力に使う", onclick: function () {
+        var h2 = rec.hazard || "taifu";
+        L.hazard = h2;
+        var hz = ensureHz(h2);
+        hz.exp[rec.cropId] = rec.rate;
+        hz.expTouched[rec.cropId] = true;
+        if (rec.cropId !== "sonota" && !L.rows.some(function (r) { return r.cropId === rec.cropId; })) {
+          L.rows.push({ cropId: rec.cropId, areaA: 10 });
+        }
+        saveL();
+        setMode("sonae");
+        renderAll();
+        $("cropCard").scrollIntoView({ behavior: "smooth" });
+      } },
+    ], "被害を記録しました");
+  });
+
+  /* ---------- 初期描画 ---------- */
+  function renderAll() {
+    renderHazard();
+    renderMonths();
+    renderRows();
+    renderDmgSelects();
+    recalc();
+    renderStress();
+    renderChecks();
+  }
+  renderPlanCards();
+  renderAll();
+  renderDmgLog();
+})();
+</script>
+</body>
+</html>

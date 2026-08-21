@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>さとうきびの手取り計算と、園芸への配分検討｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+</head>
+<body>
+<main class="shell">
+
+  <div class="page-head fade-up">
+    <div class="eyebrow">KIBI BALANCE</div>
+    <h1>さとうきびの手取り計算と、<span class="grad-text">園芸への配分検討</span></h1>
+    <p class="lede">面積・作型・糖度からさとうきびの手取りを円で計算し、一部を園芸品目に替えた場合の所得と労働時間の差を並べます。やめるかどうかの結論はこのページでは出しません。差額を見て決めるのはご自身です。</p>
+  </div>
+
+  <div class="card fade-up d1">
+    <div class="grid c3">
+      <div>
+        <h3 style="font-size:12px; color:var(--accent); letter-spacing:.06em; margin-bottom:6px;">できること</h3>
+        <p class="small muted">交付金込みの手取りの内訳計算、株出し回数による収量低下の反映、園芸品目に替えた場合の所得・労働時間の比較、台風の年を想定した比較。</p>
+      </div>
+      <div>
+        <h3 style="font-size:12px; color:var(--accent); letter-spacing:.06em; margin-bottom:6px;">使う場面</h3>
+        <p class="small muted">きびの収穫後や株出し更新を考える時期（10〜11月、3〜4月）。</p>
+      </div>
+      <div>
+        <h3 style="font-size:12px; color:var(--accent); letter-spacing:.06em; margin-bottom:6px;">他のページとのつながり</h3>
+        <p class="small muted">単独で使えます。園芸品目の数値は作付けの決定と共通です。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 上段: きび手取り計算機 ============ -->
+  <div class="sec-title fade-up d1">
+    <h2>きび手取り計算機</h2>
+    <span class="hint">数字はすべて編集できます。（仮）（計算値）の値は特に、自分の伝票の数字に直してください</span>
+  </div>
+
+  <div class="grid c2 fade-up d2">
+    <div class="card">
+      <h3>畑の条件</h3>
+      <p class="sub">作型ごとの面積と単収。単収の既定値は令和5年産の県平均（作型別）です。</p>
+
+      <div class="field">
+        <label>地域（単収の目安を切り替え）</label>
+        <div class="seg" id="regSeg">
+          <button data-v="kei" class="on">県平均</button>
+          <button data-v="okinawa">沖縄本島</button>
+          <button data-v="miyako">宮古</button>
+          <button data-v="yaeyama">八重山</button>
+        </div>
+        <div class="note">地域を切り替えると、令和6年産の地域別単収と県計の比で下の単収既定値を補正します（計算値）。切替時に単収欄は既定値に戻ります。</div>
+      </div>
+
+      <div class="field">
+        <label>夏植の面積 <span class="val"><span id="aNv">20</span> a</span></label>
+        <input type="range" id="aN" min="0" max="500" step="5" value="20">
+      </div>
+      <div class="field">
+        <label>春植の面積 <span class="val"><span id="aHv">10</span> a</span></label>
+        <input type="range" id="aH" min="0" max="500" step="5" value="10">
+      </div>
+      <div class="field">
+        <label>株出しの面積 <span class="val"><span id="aKv">70</span> a</span></label>
+        <input type="range" id="aK" min="0" max="500" step="5" value="70">
+        <div class="note" id="kabuShareNote"></div>
+      </div>
+
+      <div class="grid c3">
+        <div class="field">
+          <label>夏植の単収</label>
+          <div class="input-unit"><input type="number" id="yN" min="0" step="10"><span class="u">kg/10a</span></div>
+        </div>
+        <div class="field">
+          <label>春植の単収</label>
+          <div class="input-unit"><input type="number" id="yH" min="0" step="10"><span class="u">kg/10a</span></div>
+        </div>
+        <div class="field">
+          <label>株出しの単収</label>
+          <div class="input-unit"><input type="number" id="yK" min="0" step="10"><span class="u">kg/10a</span></div>
+        </div>
+      </div>
+      <p class="src" id="srcYield"></p>
+
+      <div class="field">
+        <label>株出しの回数 <span class="val"><span id="kTimesV">1</span> 回目</span></label>
+        <input type="range" id="kTimes" min="1" max="4" step="1" value="1">
+      </div>
+      <div class="grid c2">
+        <div class="field">
+          <label>回数ごとの単収の減り（仮）</label>
+          <div class="input-unit"><input type="number" id="kDec" min="0" max="50" step="1" value="10"><span class="u">%/回</span></div>
+          <div class="note">出典のない仮の初期値です。2回目以降、1回ごとにこの割合で単収を減らして計算します。自分の畑の実感で直してください。</div>
+        </div>
+        <div class="field">
+          <label>計算に使う株出し単収</label>
+          <div class="kpi" style="padding:10px 14px"><div class="k-value" style="font-size:20px"><span id="effKv">―</span><small>kg/10a</small></div></div>
+          <div class="note">株出し単収 ×（1−減り率）^（回数−1）。既定単収は回数を区別しない県平均のため、回数が多い畑では下げて見るための係数です。</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>糖度 <span class="val"><span id="tokudoV">13.8</span> 度</span></label>
+        <input type="range" id="tokudo" min="10" max="17" step="0.1" value="13.8">
+        <div class="note" id="tokudoNote"></div>
+      </div>
+
+      <div class="field">
+        <label>ハーベスタ委託費（収穫委託）</label>
+        <div class="input-unit"><input type="number" id="hFee" min="0" step="100" value="5500"><span class="u">円/t</span></div>
+        <div class="note">手刈り・自前収穫なら0にしてください。</div>
+        <p class="src" id="srcFee"></p>
+      </div>
+
+      <button class="btn ghost sm no-print" id="resetBtn">入力を初期値に戻す</button>
+    </div>
+
+    <div class="card">
+      <h3>手取りの計算結果</h3>
+      <p class="sub">手取り＝トン数×（原料代金＋交付金単価）−収穫委託費。肥料代などその他の経費は引く前の金額です。</p>
+
+      <div class="grid c2">
+        <div class="kpi hero">
+          <div class="k-label">きびの手取り（年）</div>
+          <div class="k-value" id="kvTotal">―</div>
+          <div class="k-delta flat">収穫委託費を引いた後・その他経費を引く前</div>
+        </div>
+        <div class="kpi">
+          <div class="k-label">収穫トン数</div>
+          <div class="k-value" id="kvTons">―</div>
+        </div>
+        <div class="kpi">
+          <div class="k-label">1t当たりの手取り</div>
+          <div class="k-value" id="kvPerT">―</div>
+        </div>
+        <div class="kpi">
+          <div class="k-label">10a当たりの手取り</div>
+          <div class="k-value" id="kvPer10a">―</div>
+        </div>
+      </div>
+
+      <div class="advice info mt16">
+        <div class="a-icon">円</div>
+        <div>
+          <div class="a-title">交付金単価: <span id="kofUnit">―</span></div>
+          <div class="a-body" id="kofLine"></div>
+        </div>
+      </div>
+
+      <div class="viz mt16" id="wf"></div>
+      <p class="src" id="srcTedori"></p>
+      <p class="src" id="refLine"></p>
+
+      <button class="btn primary sm no-print mt16" id="printBtn">印刷して持っていく</button>
+    </div>
+  </div>
+
+  <div class="card mt16 fade-up d3">
+    <h3>交付金を受け取れる条件（ここが前提です）</h3>
+    <div class="a-body" id="youkenBody"></div>
+    <p class="src" id="srcYouken"></p>
+    <div class="advice warn mt8">
+      <div class="a-icon">！</div>
+      <div>
+        <div class="a-title">含蜜糖地域は対象外</div>
+        <div class="a-body" id="gonmitsuBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 下段: 園芸に替えた場合の比較 ============ -->
+  <div class="sec-title fade-up">
+    <h2>園芸に替えた場合の比較</h2>
+    <span class="hint">きびの一部を園芸に回したら、所得と労働はどう変わるか</span>
+  </div>
+
+  <div class="grid c2 fade-up d1">
+    <div class="card">
+      <h3>振り替える条件</h3>
+      <p class="sub">上の計算機の単価・糖度・委託費をそのまま使い、同じ面積をきびで続けた場合と園芸に替えた場合を比べます。きび側は株出し（回数の減り反映後）の単収で計算します。</p>
+
+      <div class="field">
+        <label>きび→園芸へ回す面積 <span class="val"><span id="trAv">30</span> a</span></label>
+        <input type="range" id="trA" min="0" max="100" step="5" value="30">
+        <div class="note">上限は上で入力したきびの合計面積です。</div>
+      </div>
+
+      <div class="field">
+        <label>振替先の品目</label>
+        <select id="trCrop"></select>
+      </div>
+
+      <div class="grid c2">
+        <div class="field">
+          <label>きびのその他経費（計算値・編集可）</label>
+          <div class="input-unit"><input type="number" id="kOther" min="0" step="1000"><span class="u">円/10a</span></div>
+          <div class="note" id="kOtherNote"></div>
+        </div>
+        <div class="field">
+          <label>きびの悪年の減収率（仮）</label>
+          <div class="input-unit"><input type="number" id="kBad" min="0" max="100" step="1" value="7"><span class="u">%</span></div>
+          <div class="note" id="kBadNote"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>園芸側の台風被害の想定（仮・0〜100%）</label>
+        <div class="input-unit"><input type="number" id="trExp" min="0" max="100" step="5"><span class="u">%減収</span></div>
+        <div class="note">台風1回直撃の悪年に、この品目の売上が何%減るかの仮の初期値です。経験で必ず上書きしてください。</div>
+      </div>
+
+      <h3 class="mt16">振替先の前提（既定値）</h3>
+      <div class="tbl-wrap mt8">
+        <table class="tbl" id="cropTbl"></table>
+      </div>
+      <p class="src" id="srcCrop"></p>
+    </div>
+
+    <div class="card">
+      <h3>同じ面積で比べた結果</h3>
+      <p class="sub" id="trHead"></p>
+
+      <div class="grid c2">
+        <div class="kpi hero">
+          <div class="k-label">平年の所得の増減（年）</div>
+          <div class="k-value" id="tvDelta">―</div>
+        </div>
+        <div class="kpi">
+          <div class="k-label">悪年の所得の増減（年）</div>
+          <div class="k-value" id="tvBad">―</div>
+        </div>
+        <div class="kpi">
+          <div class="k-label">増える労働時間（年）</div>
+          <div class="k-value" id="tvLabor">―</div>
+        </div>
+        <div class="kpi">
+          <div class="k-label">増える所得÷増える労働</div>
+          <div class="k-value" id="tvPerH">―</div>
+          <div class="k-delta flat">追加1時間あたりの手取り</div>
+        </div>
+      </div>
+
+      <div class="viz mt16" id="trChart"></div>
+
+      <div class="advice info mt16">
+        <div class="a-icon">差</div>
+        <div>
+          <div class="a-title">なぜこの差になるか</div>
+          <div class="a-body" id="trSentence"></div>
+        </div>
+      </div>
+      <div class="advice good">
+        <div class="a-icon">安</div>
+        <div>
+          <div class="a-title">きびの安定した収入源としての価値</div>
+          <div class="a-body" id="mamoriBody"></div>
+        </div>
+      </div>
+      <p class="src" id="srcLabor"></p>
+    </div>
+  </div>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/charts.js"></script>
+<script>
+(function () {
+  "use strict";
+  CORE.renderTopbar("kibi", "../");
+  document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+  var K = DATA.KIBI, F = CORE.fmt;
+  var $ = function (id) { return document.getElementById(id); };
+  /* さとうきびの収録値は沖縄のみ。他地域設定でURL直打ち・ブックマークから来た場合の案内 */
+  if (!K) {
+    var m = document.querySelector("main");
+    if (m) m.innerHTML = '<div class="card mt16"><h3>このページは沖縄地域専用です</h3>' +
+      '<p class="sub">さとうきびの収録値は沖縄の公表資料に基づくため、地域が沖縄県のときだけ使えます。</p>' +
+      '<p><a class="btn ghost sm" href="hinmoku.html?r=okinawa">→ 地域を沖縄県にして品目と単価へ</a></p></div>';
+    return;
+  }
+
+  /* ---------- 既定値（すべて DATA 由来） ---------- */
+  var BASE_YIELD = { natsu: K.yield.r5.natsu.v, haru: K.yield.r5.haru.v, kabudashi: K.yield.r5.kabudashi.v };
+  var REGION_FACTOR = {
+    kei: 1,
+    okinawa: K.yield.r6region.okinawa.v / K.yield.r6kei.v,
+    miyako: K.yield.r6region.miyako.v / K.yield.r6kei.v,
+    yaeyama: K.yield.r6region.yaeyama.v / K.yield.r6kei.v
+  };
+  var GENRYO_T = K.tedori.breakdown.genryo.v;       // 原料代金 円/t（計算値）
+  var KOF_BASE = K.kofukin.baseYenT.v;              // 交付金 基準単価 円/t
+  var STEP_YEN = K.kofukin.tokudoStep.v;            // 0.1度ごとの増減 円/t
+  var BAND_LO = K.kofukin.bandLow, BAND_HI = K.kofukin.bandHigh;
+  var KIBI_LABOR = K.seisanhi.laborH.v;             // 10a当たり労働時間
+  // その他経費の既定 = 物財費 − 賃借料及び料金（賃借料はハーベスタ委託を含むため、別掲の委託費と重ならないよう差し引く。計算値）
+  var OTHER_DEFAULT = K.seisanhi.buzaihi.v - K.seisanhi.chinshakuryo.v;
+
+  var DEFAULTS = {
+    region: "kei",
+    aN: 20, aH: 10, aK: 70,
+    yN: BASE_YIELD.natsu, yH: BASE_YIELD.haru, yK: BASE_YIELD.kabudashi,
+    kTimes: 1, kDec: 10,
+    tokudo: K.kofukin.avgTokudo.v,
+    hFee: K.harvester.yenT.v,
+    kOther: OTHER_DEFAULT,
+    kBad: 7,
+    trA: 30, trCrop: "okra", trExp: null   // trExp null = 品目既定を使う
+  };
+
+  /* ---------- 保存の読み込み ---------- */
+  var saved = CORE.store.load("kibiSettings", null);
+  var S = Object.assign({}, DEFAULTS, saved || {});
+
+  /* ---------- 品目セレクト ---------- */
+  var cropSel = $("trCrop");
+  DATA.CROPS.forEach(function (c) {
+    var op = document.createElement("option");
+    op.value = c.id; op.textContent = c.name + "（" + c.cat + "）";
+    cropSel.appendChild(op);
+  });
+  if (!DATA.CROPS.some(function (c) { return c.id === S.trCrop; })) S.trCrop = DATA.CROPS[0].id;
+  cropSel.value = S.trCrop;
+
+  /* ---------- 初期値の流し込み ---------- */
+  function setVal(id, v) { $(id).value = v; }
+  setVal("aN", S.aN); setVal("aH", S.aH); setVal("aK", S.aK);
+  setVal("yN", S.yN); setVal("yH", S.yH); setVal("yK", S.yK);
+  setVal("kTimes", S.kTimes); setVal("kDec", S.kDec);
+  setVal("tokudo", S.tokudo); setVal("hFee", S.hFee);
+  setVal("kOther", S.kOther); setVal("kBad", S.kBad);
+  setVal("trA", S.trA);
+  document.querySelectorAll("#regSeg button").forEach(function (b) {
+    b.classList.toggle("on", b.dataset.v === S.region);
+  });
+
+  function cropById(id) { return DATA.CROPS.filter(function (c) { return c.id === id; })[0]; }
+  function cropExpDefault(c) { return Math.round(c.typhoonExp * 100); }
+  setVal("trExp", S.trExp == null ? cropExpDefault(cropById(S.trCrop)) : S.trExp);
+
+  /* ---------- 固定の注記・出典表示 ---------- */
+  $("kabuShareNote").textContent = "参考: 県全体では収穫面積の" + Math.round(K.kabudashiShare.v * 1000) / 10 + "%が株出しです（" + DATA.srcLine(K.kabudashiShare) + "）。";
+  $("srcYield").textContent = "単収の既定値: " + DATA.srcLine(K.yield.r5.kabudashi) + "。地域補正は " + DATA.srcLine(K.yield.r6kei) + " の地域別単収（本島" + F.num(K.yield.r6region.okinawa.v) + "・宮古" + F.num(K.yield.r6region.miyako.v) + "・八重山" + F.num(K.yield.r6region.yaeyama.v) + "kg/10a）と県計の比による計算値。";
+  $("tokudoNote").textContent = "既定の" + K.kofukin.avgTokudo.v + "度は令和6年産の平均甘しゃ糖度（" + DATA.srcLine(K.kofukin.avgTokudo) + "。" + (K.kofukin.avgTokudo.note || "") + "）。";
+  $("srcFee").textContent = "委託費の既定値: " + DATA.srcLine(K.harvester.yenT) + "。" + (K.harvester.yenT.note || "") + " 参考: 機械収穫率" + Math.round(K.harvester.shareR6.v * 1000) / 10 + "%（" + DATA.srcLine(K.harvester.shareR6) + "）。";
+  $("srcTedori").textContent = "原料代金" + F.num(GENRYO_T) + "円/t" + DATA.flagLabel(K.tedori.breakdown.genryo) + "と交付金の内訳: " + DATA.srcLine(K.tedori.totalYenT) + "。" + (K.tedori.breakdown.note || "") + " 交付金単価: " + DATA.srcLine(K.kofukin.baseYenT) + "。";
+  $("refLine").textContent = "参考: 令和5/6年期の分蜜糖県計のトン当たり手取り（取引価格＋交付金・収穫委託を引く前）は" + F.num(K.tedori.totalYenT.v) + "円/tでした（" + DATA.srcLine(K.tedori.totalYenT) + "）。";
+  $("youkenBody").textContent = K.kofukin.youken.note + "。いずれにも当てはまらない場合、この計算の交付金分（手取りの大半）は受け取れません。自分がどの区分かは、製糖工場・JA・市町村の窓口で確認してください。";
+  $("srcYouken").textContent = DATA.srcLine(K.kofukin.youken);
+  $("gonmitsuBody").textContent = (K.tedori.gonmitsuYenT.note || "") + " 含蜜糖向けのトン当たり手取りは" + F.num(K.tedori.gonmitsuYenT.v) + "円/t（" + DATA.srcLine(K.tedori.gonmitsuYenT) + "）で単価の仕組みが異なるため、このページの計算は使えません。";
+  $("kOtherNote").textContent = "既定値は生産費統計の物財費" + F.num(K.seisanhi.buzaihi.v) + "円から賃借料及び料金" + F.num(K.seisanhi.chinshakuryo.v) + "円（ハーベスタ委託等を含む）を引いた" + F.num(OTHER_DEFAULT) + "円/10a（計算値・" + DATA.srcLine(K.seisanhi.buzaihi) + "）。委託費は上の欄で別に引くため重ねて数えない形です。";
+  $("kBadNote").textContent = "仮の初期値。" + K.typhoonNote;
+  $("mamoriBody").textContent = "きびは10a当たり年" + KIBI_LABOR + "時間と労働が小さく（" + DATA.srcLine(K.seisanhi.laborH) + "）、台風で倒れても全滅しにくく、価格は交付金の制度で支えられています。振り替えると、この安定した収入源としての利点（労働の軽さ・悪年でも減収が小さいこと・単価の安定）をその面積分は手放すことになります。その価値も含めて判断してください。";
+  $("srcLabor").textContent = "きびの労働時間: " + DATA.srcLine(K.seisanhi.laborH) + "。園芸品目の労働時間は表の出典・ラベルの通りで、（仮）の値は目安にすぎません。";
+
+  /* ---------- 計算 ---------- */
+  function num(id) { var v = parseFloat($(id).value); return isNaN(v) ? 0 : v; }
+
+  function kofukinUnit(tokudo) {
+    var d = Math.round(tokudo * 10);           // 0.1度刻みの整数化（浮動小数対策）
+    var lo = Math.round(BAND_LO * 10), hi = Math.round(BAND_HI * 10);
+    if (d < lo) return KOF_BASE - (lo - d) * STEP_YEN;
+    if (d > hi) return KOF_BASE + (d - hi) * STEP_YEN;
+    return KOF_BASE;
+  }
+
+  function cropCalc(c, expPct) {
+    // 10a当たり: 売上・経費・所得（平年/悪年）・労働時間
+    var sales, cost, costLabel;
+    if (c.yieldHon10a) {
+      sales = c.yieldHon10a.v * c.priceYenHon.v;
+      cost = c.cost10a.v;
+      costLabel = "経費 " + F.manUnit(cost) + "/10a" + DATA.flagLabel(c.cost10a);
+    } else {
+      sales = c.yieldKg10a.v * c.priceYenKg.v;
+      cost = sales * c.costRate.v;
+      costLabel = "経費率 " + F.pct(c.costRate.v) + DATA.flagLabel(c.costRate);
+    }
+    var exp = Math.min(1, Math.max(0, expPct / 100));
+    return {
+      sales: sales, cost: cost, costLabel: costLabel,
+      income: sales - cost,
+      incomeBad: sales * (1 - exp) - cost,   // 悪年: 売上だけ減り、経費はかかった後とみなす
+      laborH: c.laborH10a.v
+    };
+  }
+
+  var firstRun = true;
+
+  function recalc() {
+    /* --- 上段: きび手取り --- */
+    var aN = num("aN"), aH = num("aH"), aK = num("aK");
+    var yN = num("yN"), yH = num("yH"), yK = num("yK");
+    var times = num("kTimes"), dec = num("kDec") / 100;
+    var tokudo = num("tokudo"), hFee = num("hFee");
+    var effK = yK * Math.pow(1 - dec, Math.max(0, times - 1));
+
+    $("aNv").textContent = aN; $("aHv").textContent = aH; $("aKv").textContent = aK;
+    $("kTimesV").textContent = times;
+    $("tokudoV").textContent = tokudo.toFixed(1);
+    $("effKv").textContent = F.num(Math.round(effK));
+
+    var units10a = (aN + aH + aK) / 10;                        // 10a単位の合計
+    var kg = (aN * yN + aH * yH + aK * effK) / 10;             // a×(kg/10a)÷10
+    var tons = kg / 1000;
+    var kofT = kofukinUnit(tokudo);
+    var grossT = GENRYO_T + kofT;
+    var netT = grossT - hFee;
+    var total = tons * netT;
+
+    var setK = function (id, txt) { $(id).textContent = txt; };
+    if (firstRun && total > 0) { CORE.countUp($("kvTotal"), total, F.manUnit); }
+    else setK("kvTotal", F.manUnit(total));
+    setK("kvTons", F.num(tons, 1) + " t");
+    setK("kvPerT", tons > 0 ? F.yen(netT) : "―");
+    setK("kvPer10a", units10a > 0 ? F.yen(total / units10a) : "―");
+
+    $("kofUnit").textContent = F.yen(kofT) + "/t";
+    var d10 = Math.round(tokudo * 10), lo10 = Math.round(BAND_LO * 10), hi10 = Math.round(BAND_HI * 10);
+    var why;
+    if (d10 < lo10) why = "糖度" + tokudo.toFixed(1) + "度は基準糖度帯（" + BAND_LO + "〜" + BAND_HI + "度）を" + ((lo10 - d10) / 10).toFixed(1) + "度下回るため、基準単価" + F.num(KOF_BASE) + "円/tから0.1度ごとに" + F.num(STEP_YEN) + "円引かれます。";
+    else if (d10 > hi10) why = "糖度" + tokudo.toFixed(1) + "度は基準糖度帯（" + BAND_LO + "〜" + BAND_HI + "度）を" + ((d10 - hi10) / 10).toFixed(1) + "度上回るため、基準単価" + F.num(KOF_BASE) + "円/tに0.1度ごとに" + F.num(STEP_YEN) + "円上乗せされます。";
+    else why = "糖度" + tokudo.toFixed(1) + "度は基準糖度帯（" + BAND_LO + "〜" + BAND_HI + "度）の帯内なので、基準単価" + F.num(KOF_BASE) + "円/tがそのまま使われます。";
+    $("kofLine").textContent = why + "（" + DATA.srcLine(K.kofukin.baseYenT) + "）。手取り＝" + F.num(tons, 1) + "t ×（原料代金" + F.num(GENRYO_T) + "円＋交付金" + F.num(kofT) + "円）− 委託費" + F.num(hFee) + "円/t。";
+
+    VIZ.waterfall($("wf"), {
+      steps: [
+        { label: "原料代金\n" + F.num(GENRYO_T) + "円/t", value: tons * GENRYO_T },
+        { label: "交付金\n" + F.num(kofT) + "円/t", value: tons * kofT },
+        { label: "収穫委託\n−" + F.num(hFee) + "円/t", value: -tons * hFee },
+        { label: "手取り", total: true }
+      ],
+      fmt: F.man, h: 280
+    });
+
+    /* --- 下段: 振替 --- */
+    var maxA = Math.max(0, aN + aH + aK);
+    var trA = $("trA");
+    trA.max = maxA;
+    if (num("trA") > maxA) trA.value = maxA;
+    var x = num("trA");
+    $("trAv").textContent = x;
+    var u = x / 10;                                            // 10a単位
+
+    var other = num("kOther");
+    var badRate = Math.min(1, Math.max(0, num("kBad") / 100));
+    var kibiPer10a = effK / 1000 * netT - other;               // きび10a所得（振替対象は株出し想定）
+    var kibiBadPer10a = effK * (1 - badRate) / 1000 * netT - other;
+
+    var c = cropById(cropSel.value);
+    var expPct = num("trExp");
+    var cc = cropCalc(c, expPct);
+
+    var dNorm = (cc.income - kibiPer10a) * u;
+    var dBad = (cc.incomeBad - kibiBadPer10a) * u;
+    var dLabor = (cc.laborH - KIBI_LABOR) * u;
+
+    $("trHead").textContent = "きび" + x + "a分を、きびのまま続けた場合と" + c.name + "に替えた場合の比較です（その他経費・悪年の想定込み）。";
+    $("tvDelta").textContent = u > 0 ? F.signMan(dNorm) : "―";
+    $("tvBad").textContent = u > 0 ? F.signMan(dBad) : "―";
+    $("tvLabor").textContent = u > 0 ? (dLabor >= 0 ? "+" : "") + F.num(Math.round(dLabor)) + " 時間" : "―";
+    $("tvPerH").textContent = (u > 0 && dLabor > 0 && dNorm > 0) ? F.yen(dNorm / dLabor) + "/時" : "―";
+
+    VIZ.barChart($("trChart"), {
+      labels: ["平年", "台風の悪年"],
+      series: [
+        { name: "きびのまま（" + x + "a分）", values: [kibiPer10a * u, kibiBadPer10a * u], color: "var(--s2)" },
+        { name: c.name + "へ振替（" + x + "a分）", values: [cc.income * u, cc.incomeBad * u], color: "var(--s1)" }
+      ],
+      fmt: F.man, h: 260, direct: true
+    });
+
+    var sent;
+    if (u <= 0) {
+      sent = "面積スライダーを動かすと、同じ面積での所得と労働の差が出ます。";
+    } else {
+      sent = "平年は" + (dNorm >= 0 ? "振替のほうが年" + F.manUnit(Math.abs(dNorm)) + "多い" : "きびのままのほうが年" + F.manUnit(Math.abs(dNorm)) + "多い") + "計算です。"
+        + "労働は年" + (dLabor >= 0 ? F.num(Math.round(dLabor)) + "時間増え" : F.num(Math.round(-dLabor)) + "時間減り") + "ます。"
+        + "台風の悪年（園芸の売上" + expPct + "%減・きび" + Math.round(badRate * 100) + "%減の想定）では差は" + F.signMan(dBad) + "になり"
+        + (dNorm >= 0 && dBad < 0 ? "、平年と悪年で有利不利が入れ替わります。" : "ます。")
+        + "差の主因は、園芸の単価の高さと、そのぶん重い労働・台風の危うさです。";
+    }
+    $("trSentence").textContent = sent;
+
+    /* 振替先の前提テーブル */
+    var rows = [];
+    if (c.yieldHon10a) {
+      rows.push(["単収", F.num(c.yieldHon10a.v) + " 本/10a" + DATA.flagLabel(c.yieldHon10a), DATA.srcLine(c.yieldHon10a)]);
+      rows.push(["単価", F.num(c.priceYenHon.v) + " 円/本" + DATA.flagLabel(c.priceYenHon), DATA.srcLine(c.priceYenHon)]);
+      rows.push(["経費", F.manUnit(c.cost10a.v) + "/10a" + DATA.flagLabel(c.cost10a), DATA.srcLine(c.cost10a)]);
+    } else {
+      rows.push(["単収", F.num(c.yieldKg10a.v) + " kg/10a" + DATA.flagLabel(c.yieldKg10a), DATA.srcLine(c.yieldKg10a)]);
+      rows.push(["単価", F.num(c.priceYenKg.v) + " 円/kg" + DATA.flagLabel(c.priceYenKg), DATA.srcLine(c.priceYenKg)]);
+      rows.push(["経費率", F.pct(c.costRate.v) + DATA.flagLabel(c.costRate), DATA.srcLine(c.costRate)]);
+    }
+    rows.push(["労働時間", F.num(c.laborH10a.v) + " 時間/10a" + DATA.flagLabel(c.laborH10a), DATA.srcLine(c.laborH10a)]);
+    rows.push(["10a所得（平年・計算）", F.manUnit(cc.income) + "（計算値）", "上の単収×単価−経費による、このページ内の計算"]);
+    var esc = function (s) { return String(s).replace(/[&<>"]/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]; }); };
+    $("cropTbl").innerHTML = "<thead><tr><th>項目</th><th>値</th></tr></thead><tbody>"
+      + rows.map(function (r) { return "<tr><td>" + esc(r[0]) + "</td><td>" + esc(r[1]) + "</td></tr>"; }).join("")
+      + "</tbody>";
+    $("srcCrop").textContent = rows.map(function (r) { return r[2] ? r[0] + ": " + r[2] : ""; }).filter(Boolean).join(" ／ ");
+
+    /* --- 保存 --- */
+    CORE.store.save("kibiSettings", {
+      region: S.region, aN: aN, aH: aH, aK: aK, yN: yN, yH: yH, yK: yK,
+      kTimes: times, kDec: num("kDec"), tokudo: tokudo, hFee: hFee,
+      kOther: other, kBad: num("kBad"), trA: x, trCrop: c.id, trExp: expPct,
+      savedAt: new Date().toISOString()
+    });
+    firstRun = false;
+  }
+
+  /* ---------- イベント配線 ---------- */
+  ["aN", "aH", "aK", "kTimes", "tokudo", "trA"].forEach(function (id) {
+    CORE.bindRange($(id), recalc);
+  });
+  ["yN", "yH", "yK", "kDec", "hFee", "kOther", "kBad", "trExp"].forEach(function (id) {
+    $(id).addEventListener("input", recalc);
+  });
+  CORE.bindSeg($("regSeg"), function (v) {
+    S.region = v;
+    var f = REGION_FACTOR[v] || 1;
+    setVal("yN", Math.round(BASE_YIELD.natsu * f / 10) * 10);
+    setVal("yH", Math.round(BASE_YIELD.haru * f / 10) * 10);
+    setVal("yK", Math.round(BASE_YIELD.kabudashi * f / 10) * 10);
+    recalc();
+  });
+  cropSel.addEventListener("change", function () {
+    setVal("trExp", cropExpDefault(cropById(cropSel.value)));
+    recalc();
+  });
+  $("printBtn").addEventListener("click", function () { window.print(); });
+  $("resetBtn").addEventListener("click", function () {
+    CORE.store.remove("kibiSettings");
+    location.reload();
+  });
+
+  recalc();
+})();
+</script>
+</body>
+</html>

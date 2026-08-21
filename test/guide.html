@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全体の見取り図｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="assets/img/mf_logo.png">
+<script>document.documentElement.classList.add("light");</script>
+<link rel="stylesheet" href="assets/css/app.css">
+<style>
+  /* カードの見た目は index.html と同じ語彙（変更するときは両方を直す） */
+  .t-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px; }
+  .t-card { display:block; border:1px solid var(--hairline); border-radius:12px; padding:15px 17px; text-decoration:none; color:inherit; }
+  .t-card:hover { border-color:var(--accent-2); }
+  .t-card b { display:block; font-size:14.5px; margin-bottom:4px; }
+  .t-card span { font-size:12px; opacity:.75; line-height:1.7; display:block; }
+  .path-list { margin:8px 0 0; padding-left:0; list-style:none; counter-reset: pth; }
+  .path-list li { counter-increment: pth; margin-bottom:8px; font-size:13.5px; line-height:1.8; padding-left:34px; position:relative; }
+  .path-list li::before { content: counter(pth); position:absolute; left:0; top:2px; width:24px; height:24px; border-radius:50%;
+    background:var(--accent); color:#fff; font-size:13px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .g-flow { display:grid; gap:10px; }
+  .g-step { border:1px solid rgba(128,128,128,.3); border-radius:12px; padding:13px 16px; }
+  .g-step b { font-size:14.5px; }
+  .g-step .sub { margin-top:3px; }
+  .g-step a { color:var(--accent); font-weight:600; }
+  .p-block { border-top:1px dashed var(--hairline); padding-top:14px; margin-top:14px; }
+  .p-block:first-child { border-top:none; padding-top:0; margin-top:0; }
+  .preset-btn { display:inline-block; margin:6px 8px 0 0; padding:9px 16px; border:1.5px solid var(--accent-2); border-radius:999px; font-size:13px; text-decoration:none; color:inherit; }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="page-head fade-up">
+    <div class="eyebrow">GUIDE</div>
+    <h1>全体の<span class="grad-text">見取り図</span></h1>
+    <p class="lede">どのページで何が決められて、どの順番で使えばよいかを1枚にまとめました。迷ったらこのページに戻ってください。
+      この版は、いま農業をしている方が、自分の記録を自分の見通しに変えるための道具です。</p>
+    <button class="btn ghost sm no-print" id="btnPrintGuide" style="margin-top:8px;">この見取り図をA4で印刷する（説明なしで配るとき用）</button>
+  </div>
+
+  <div class="card fade-up d1">
+    <h3>7つの段</h3>
+    <div class="sub">上から順にたどると、いまの経営が数字になり、なりたい姿に向けた直しどころが出て、
+      最後に窓口へ持っていける計画書になります。途中で止めても構いません。</div>
+    <div class="g-flow" style="margin-top:12px;">
+      <div class="g-step"><b>1. 品目と単価</b>
+        <div class="sub"><a href="tools/hinmoku.html">品目と単価</a> で、いま作っている品目に印を付けて面積を入れます。
+          その場で1年の売上・経費・所得と、年間に働く時間の見込みが出ます。数字は最初、県の平均値です。</div></div>
+      <div class="g-step"><b>2. 記録を入れる</b>
+        <div class="sub"><a href="tools/kiroku.html">記録を入れる</a> で、出荷伝票やノートの写真、記録ツールの書き出し、決算書を送ります。
+          読み取った内容をご本人が確かめると、単価などが自分の数字に変わります。1枚からで構いません。</div></div>
+      <div class="g-step"><b>3. 実績の診断</b>
+        <div class="sub"><a href="tools/checkup.html">実績の診断</a> で、申告書の数字から品目ごとの所得と時給を出します。
+          そのあと「これからの計算の前提にする」を押すと、単収・単価・経費率・労働時間が自分の実績に置き換わります。</div></div>
+      <div class="g-step"><b>4. 計画を作る</b>
+        <div class="sub"><a href="tools/sakutsuke.html">作付けの決定</a> で組み合わせを比べ、
+          <a href="tools/simulator.html">経営シミュレーター</a> で数年先の収支、
+          <a href="tools/shikin.html">資金繰り</a> で月ごとの残高を確かめます。
+          <a href="tools/toushi.html">投資・雇用</a> と <a href="tools/taifu.html">災害への備え</a> も同じ段です。</div></div>
+      <div class="g-step"><b>5. なりたい姿</b>
+        <div class="sub"><a href="tools/nozomi.html">なりたい姿</a> で、何年後にいくらにしたいか、
+          1年にどれくらい働きたいか、手放したくないものはどれかを入れます。</div></div>
+      <div class="g-step"><b>6. 計画の直しどころ</b>
+        <div class="sub"><a href="tools/teian.html">計画の直しどころ</a> で、計画のどこを変えると届くのかが出ます。
+          AIが選ぶのは打ち手だけで、金額はこの道具が計算し直したものです。</div></div>
+      <div class="g-step"><b>7. 計画書にまとめる</b>
+        <div class="sub"><a href="tools/keikaku.html">計画書にまとめる</a> でA4の計画書にして、
+          書きもれと数字の食い違いを読み合わせます。金融機関・市町村・普及指導センターへの相談にそのまま持参できます。</div></div>
+    </div>
+  </div>
+
+
+  <div class="card fade-up d2">
+    <h3>ページ一覧（何が決められるページか）</h3>
+    <div class="t-grid" style="margin-top:12px;" id="toolGrid"></div>
+  </div>
+
+
+  <div class="card fade-up d3" id="yogo">
+    <h3>用語の小辞典（このツールでよく出る言葉）</h3>
+    <div class="sub">授業や演習で分からない言葉が出てきたら、ここで確かめてください。意味はこのツールでの使い方に合わせた説明です。</div>
+    <dl style="margin:12px 0 0;font-size:13px;line-height:1.9;">
+      <dt style="font-weight:700;">10a（1反）</dt><dd style="margin:0 0 8px;">面積の単位。1,000平方メートル。100aで1ha（1町）です。</dd>
+      <dt style="font-weight:700;">単収</dt><dd style="margin:0 0 8px;">10a当たりの収穫量（kg/10aなど）。畑の力と技術で変わります。</dd>
+      <dt style="font-weight:700;">単価</dt><dd style="margin:0 0 8px;">1kg当たりの販売価格。このツールでは「農家が受け取る金額」で入れるのが基本です。店頭の値札の金額とは違います。</dd>
+      <dt style="font-weight:700;">粗収益（売上）</dt><dd style="margin:0 0 8px;">面積×単収×単価。経費を引く前のお金です。</dd>
+      <dt style="font-weight:700;">経費率</dt><dd style="margin:0 0 8px;">売上のうち経費に消える割合。売上100万円で経費率60%なら、経費は60万円、残りは40万円です。</dd>
+      <dt style="font-weight:700;">農業所得</dt><dd style="margin:0 0 8px;">売上から経費を引いた残り。ここから税金・保険料と生活費を払います。</dd>
+      <dt style="font-weight:700;">固定費</dt><dd style="margin:0 0 8px;">作る量に関係なくかかる費用（地代・軽トラの維持費・共済掛金など）。</dd>
+      <dt style="font-weight:700;">減価償却</dt><dd style="margin:0 0 8px;">機械・施設の購入額を、使う年数に分けて毎年の費用にする考え方。買った年に全額の費用になるわけではありません。</dd>
+      <dt style="font-weight:700;">立ち上がり</dt><dd style="margin:0 0 8px;">作り始めの年は、収量・売上が満作の年より少ないこと。果樹は満作まで数年かかります。</dd>
+      <dt style="font-weight:700;">資金繰り</dt><dd style="margin:0 0 8px;">手元のお金の出入りのこと。帳簿が黒字でも、支払いが入金より先に来れば手元のお金は足りなくなります。「もうけ」と「手元のお金」は別ものです。</dd>
+      <dt style="font-weight:700;">据置（すえおき）</dt><dd style="margin:0 0 8px;">借入の返済のうち、最初の数年は利息だけを払い、元本の返済を待ってもらう期間。立ち上がりの資金繰りを楽にします。</dd>
+      <dt style="font-weight:700;">家計へ渡すお金</dt><dd style="margin:0 0 0;">経営のお金から生活費として家計に移す分。税務上は経費になりません（事業主貸）。</dd>
+    </dl>
+  </div>
+
+</main>
+
+<script src="assets/js/packs.js"></script>
+<script src="assets/js/core.js"></script>
+<script>
+(function () {
+  "use strict";
+  CORE.renderTopbar("guide", "");
+
+  /* ページの一言説明は index.html の TOOL_INFO と同じ内容（変更するときは両方を直す） */
+  var TOOL_INFO = {
+    hinmoku:  [CORE.STEP_LABELS.hinmoku, "いま作っている品目と面積を入れると、その場で1年の見通しが出る"],
+    kiroku:   [CORE.STEP_LABELS.kiroku, "伝票・ノートの写真・書き出し・決算書を送ると、単価などが自分の数字になる"],
+    checkup:  [CORE.STEP_LABELS.checkup, "申告書の数字から品目別の所得と時給を出し、そのまま計算の前提にできる"],
+    sakutsuke:[CORE.STEP_LABELS.sakutsuke, "作付け案AとBを所得と月別労働で比べて決める"],
+    simulator:[CORE.STEP_LABELS.simulator, "複数年の収支と資金の動きを試算する（もしも検証つき）"],
+    shikin:   [CORE.STEP_LABELS.shikin, "月ごとの残高を先読みして不足しやすい時期を知る"],
+    toushi:   [CORE.STEP_LABELS.toushi, "機械・施設への投資と雇用の採算を確かめる"],
+    taifu:    [CORE.STEP_LABELS.taifu, "災害の直撃時期と被害を自分の数字で確かめ、保険・共済を比べる"],
+    nozomi:   [CORE.STEP_LABELS.nozomi, "何年後にいくら、どれくらい働きたいか、手放したくないものを決める"],
+    teian:    [CORE.STEP_LABELS.teian, "計画のどこを変えると届くのかを出す（金額は計算し直したもの）"],
+    keikaku:  [CORE.STEP_LABELS.keikaku, "A4の計画書にまとめ、書きもれと食い違いを読み合わせる"],
+    konkyo:   [CORE.STEP_LABELS.konkyo, "計画の数字一つひとつの出どころを確かめ、相談リストを作る"],
+    hanro:    [CORE.STEP_LABELS.hanro, "出荷先ごとの1kg手取りを並べて比べる"],
+    smart:    [CORE.STEP_LABELS.smart, "スマート農業技術活用促進法の計画認定の下書き"],
+    kibi:     [CORE.STEP_LABELS.kibi, "さとうきびの手取りと、園芸への配分を試す"],
+    gyakusan: [CORE.STEP_LABELS.gyakusan, "「いくら稼ぎたいか」から品目ごとの必要な面積と労働時間の目安を出す"]
+  };
+
+
+  /* ページ一覧 */
+  var order = ["hinmoku", "kiroku", "checkup", "sakutsuke", "simulator", "shikin",
+    "toushi", "taifu", "nozomi", "teian", "keikaku", "konkyo", "hanro", "smart", "kibi", "gyakusan"];
+  document.getElementById("toolGrid").innerHTML = order.map(function (t) {
+    var info = TOOL_INFO[t];
+    return '<a class="t-card" href="tools/' + t + '.html"><b>' + info[0] + "</b><span>" + info[1] + "</span></a>";
+  }).join("");
+
+
+  var pb = document.getElementById("btnPrintGuide");
+  if (pb) pb.addEventListener("click", function () { window.print(); });
+})();
+</script>
+</body>
+</html>

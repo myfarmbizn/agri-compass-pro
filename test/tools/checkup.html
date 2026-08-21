@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>実績の診断 ― 品目ごとの収支と時給｜マイファーム農業経営コンパス</title>
+<link rel="icon" type="image/png" href="../assets/img/mf_logo.png">
+<link rel="stylesheet" href="../assets/css/app.css">
+<script>document.documentElement.classList.add("light");</script>
+<style>
+  /* ページ内だけの最小限の追加 */
+  .crop-row { border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 14px 15px; margin-bottom: 12px; background: var(--inset); }
+  .crop-row .cr-head { display: flex; align-items: center; gap: 10px; margin-bottom: 11px; flex-wrap: wrap; }
+  .crop-row .cr-head .cr-name { font-weight: 700; font-size: 14px; }
+  .crop-row .cr-head .cr-note { font-size: 11px; color: var(--ink-4); }
+  .cr-del { margin-left: auto; background: var(--wash); border: 1px solid var(--hairline); color: var(--ink-3); border-radius: 8px; font-size: 11.5px; padding: 4px 10px; cursor: pointer; font-family: var(--font); }
+  .cr-del:hover { color: var(--critical); border-color: rgba(224,82,82,.4); }
+  .crop-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .crop-grid.c5 { grid-template-columns: repeat(5, 1fr); }
+  @media (max-width: 720px) { .crop-grid, .crop-grid.c5 { grid-template-columns: 1fr 1fr; } }
+  .mini-label { display: block; font-size: 11px; font-weight: 650; color: var(--ink-3); margin-bottom: 4px; }
+  .hours-out { font-size: 20px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+  /* 従業員・アルバイト（人別）の行 */
+  .wk-row { border: 1px solid var(--hairline); border-radius: var(--r-md); padding: 12px 14px; margin-top: 10px; background: var(--inset); }
+  .wk-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap: 10px; }
+  @media (max-width: 720px) { .wk-grid { grid-template-columns: 1fr 1fr; } }
+  .mon-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+  .mon-btn { min-width: 40px; padding: 5px 0; font-size: 11.5px; border: 1px solid var(--hairline); background: var(--wash); color: var(--ink-3); border-radius: 8px; cursor: pointer; font-family: var(--font); }
+  .mon-btn.on { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 700; }
+  .wk-out { font-size: 12px; margin-top: 9px; color: var(--ink-3); }
+  .wk-out b { color: var(--accent); font-variant-numeric: tabular-nums; }
+  /* 実績を前提にする表：品目名を折り返さず、横に長いときは表ごと横スクロールさせる */
+  #jissekiTbl td:first-child { white-space: nowrap; }
+  #jissekiTbl thead tr:first-child th { border-bottom: 1px solid var(--hairline); }
+  /* 品目ごとの経費のくわしい入力（折りたたみ） */
+  .cr-detail-toggle { background: none; border: none; color: var(--accent); font-size: 12px; cursor: pointer; padding: 0; margin-top: 10px; font-family: var(--font); text-decoration: underline; }
+  .cr-detail { margin-top: 10px; border-top: 1px dashed var(--hairline); padding-top: 10px; }
+  @media print {
+    .viz, .no-print { display: none !important; }
+    .sec-title h2 { color: #111; }
+  }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="page-head fade-up">
+    <div class="eyebrow">HEALTH CHECK</div>
+    <h1>実績の診断 ― <span class="grad-text">品目ごとの収支と時給</span></h1>
+    <p class="lede">確定申告（収支内訳書）の数字を年1回写すだけで、品目ごとの所得・時給・前年との差を計算します。最初から目安の数字が入っているので、自分と違う所だけ直してください。</p>
+  </div>
+
+  <div class="card fade-up d1 no-print" style="padding:16px 20px">
+    <div class="grid c3">
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">できること</div>
+        <p class="small muted">品目別の所得と時給、費用の内訳、県平均（収量・単価）との比較、前年との差の表示。</p>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">使う場面</div>
+        <p class="small muted">確定申告を終えた2〜3月に年1回。</p>
+      </div>
+      <div>
+        <div class="small" style="color:var(--accent);font-weight:700;margin-bottom:4px">他のページとのつながり</div>
+        <p class="small muted">ここで保存した実績は、作付けの決定ページの単価・収量と、投資・雇用の所得率に自動で使われます。単独でも使えます。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 前年との差分（前年データがあるときだけ表示） -->
+  <section id="prevDiff" class="hide fade-up d1 mt16"></section>
+
+  <div class="sec-title no-print"><h2>1. 入れる年と品目ごとの売上</h2><span class="hint">収支内訳書の「収入金額」から写す</span></div>
+  <div class="card no-print fade-up d1">
+    <div class="field" style="max-width:340px">
+      <label>どの年の数字を入れますか</label>
+      <select id="yearSel"></select>
+    </div>
+    <p class="src" style="margin-top:-4px">ふつうは去年（1〜12月）の確定申告・収支内訳書の数字を入れます。</p>
+    <div id="yearMode"></div>
+    <div id="cropSrcHost"></div>
+    <div id="cropRows"></div>
+
+    <!-- さとうきび（原料代金と交付金を売上と区分して入力） -->
+    <div class="crop-row" id="kibiRow">
+      <div class="cr-head">
+        <span class="cr-name">さとうきび（分蜜糖）</span>
+        <span class="badge accent">原料代金と交付金を分けて入力</span>
+        <button class="cr-del" type="button" id="kibiDel" style="margin-left:auto">使わない（消す）</button>
+      </div>
+      <div class="crop-grid c5">
+        <div><span class="mini-label">面積（a）</span><div class="input-unit"><input type="number" id="kibiArea" min="0" step="1"><span class="u">a</span></div></div>
+        <div><span class="mini-label">収穫量（t）</span><div class="input-unit"><input type="number" id="kibiTons" min="0" step="0.1"><span class="u">t</span></div></div>
+        <div><span class="mini-label">原料代金（円）</span><div class="input-unit"><input type="number" id="kibiGenryo" min="0" step="1000"><span class="u">円</span></div></div>
+        <div><span class="mini-label">交付金（円）</span><div class="input-unit"><input type="number" id="kibiKofukin" min="0" step="1000"><span class="u">円</span></div></div>
+        <div><span class="mini-label">きびだけの経費（円）</span><div class="input-unit"><input type="number" id="kibiDirect" min="0" step="1000"><span class="u">円</span></div></div>
+      </div>
+      <p class="src" id="kibiSrc"></p>
+    </div>
+
+    <div class="flex wrap mt16">
+      <select id="addCropSel" style="max-width:260px"></select>
+      <button class="btn ghost sm" id="addCropBtn">品目の行を足す</button>
+    </div>
+    <p class="src" id="defaultSrc"></p>
+  </div>
+
+  <div class="sec-title no-print"><h2>2. 品目に紐づかない収入</h2><span class="hint">収支内訳書の「家事消費・事業消費」「雑収入」から写す</span></div>
+  <div class="card no-print fade-up d2">
+    <div class="grid c2">
+      <div class="field"><label>家事消費・事業消費</label><div class="input-unit"><input type="number" id="inKaji" min="0" step="1000"><span class="u">円</span></div>
+        <p class="src">自分の家で食べたぶん・贈答したぶん。申告では収入に入ります。</p></div>
+      <div class="field"><label>雑収入</label><div class="input-unit"><input type="number" id="inZatsu" min="0" step="1000"><span class="u">円</span></div>
+        <p class="src">共済金・補助金・作業受託料など、品目の売上に入らない収入。</p></div>
+    </div>
+    <p class="src">この2つは、どの品目のもうけかを決められないため、下の品目別の表には配りません。農業所得（売上 − 経費）の計算にだけ足します。決算書を読み取って入れた場合は、はじめから埋まっています。</p>
+  </div>
+
+  <div class="sec-title no-print"><h2>3. 経費（8分類）</h2><span class="hint">収支内訳書の「経費」欄をまとめて写す</span></div>
+  <div class="card no-print fade-up d2">
+    <div class="grid c4" id="expGrid"></div>
+    <div class="flex wrap" style="margin-top:10px;align-items:center;gap:10px">
+      <button class="btn ghost sm" id="expEstimateBtn" type="button">品目から経費の合計の目安を出す</button>
+      <span class="small muted" id="expEstimateOut"></span>
+    </div>
+    <p class="src">ハーベスタ委託料・賃借料・共済掛金などは「その他」に入れてください。品目ごとにかかったと分かる分は、上の品目の行の「その品目だけの経費」に内数として書くと、品目別のもうけが正確になります。「目安を出す」は、品目の売上×県平均の経費率の合計です。8分類の内訳は県平均が無いので、合計を見比べる目安としてだけ使い、実額は収支内訳書から写してください。</p>
+  </div>
+
+  <div class="sec-title no-print"><h2>4. 労働時間の概算</h2><span class="hint">週何日 × 1日何時間 × 何か月</span></div>
+  <div class="card no-print fade-up d3">
+    <div class="grid c2">
+      <div>
+        <h3>本人</h3>
+        <div class="field"><label>週に何日 <span class="val" id="sdV"></span></label><input type="range" id="sd" min="0" max="7" step="0.5"></div>
+        <div class="field"><label>1日何時間 <span class="val" id="shV"></span></label><input type="range" id="sh" min="0" max="14" step="0.5"></div>
+        <div class="field"><label>年に何か月 <span class="val" id="smV"></span></label><input type="range" id="sm" min="0" max="12" step="0.5"></div>
+        <div>年間 約 <span class="hours-out" id="selfHours">0</span> 時間</div>
+      </div>
+      <div>
+        <h3>家族（手伝う人の合計）</h3>
+        <div class="field"><label>週に何日 <span class="val" id="fdV"></span></label><input type="range" id="fd" min="0" max="7" step="0.5"></div>
+        <div class="field"><label>1日何時間 <span class="val" id="fhV"></span></label><input type="range" id="fh" min="0" max="14" step="0.5"></div>
+        <div class="field"><label>年に何か月 <span class="val" id="fmV"></span></label><input type="range" id="fm" min="0" max="12" step="0.5"></div>
+        <div>年間 約 <span class="hours-out" id="famHours">0</span> 時間</div>
+      </div>
+    </div>
+    <p class="src">年間時間 ＝ 週の日数 × 1日の時間 × か月数 × 4.33（1か月≒4.33週として計算。計算値）。雇った人（従業員・アルバイト）の時間は、下の「従業員・アルバイト（人別）」の区画に人別で入れてください。</p>
+    <div style="border-top:1px dashed var(--hairline); margin-top:14px; padding-top:14px">
+      <h3>従業員・アルバイト（人別）</h3>
+      <p class="sub">雇っている人がいるときだけ、1人1行で入れてください。働く月まで選ぶと、作付けの検討に使えます。</p>
+      <div id="wkRows"></div>
+      <button class="btn ghost sm mt16" id="addWorkerBtn" type="button">＋人を足す</button>
+      <p class="src">雇った人の労賃は経費（雇人費）で数えます。ここで入れた勤務月は、作付けの決定ページの月別労働の上限線に使われます。時給換算（本人＋家族）には、ここで入れた時間は入りません。</p>
+    </div>
+  </div>
+
+  <div class="sec-title"><h2>5. 診断結果</h2>
+    <span class="hint">結果は入力した数字から計算した目安です</span>
+    <button class="btn ghost sm no-print" id="printBtn" style="margin-left:auto">印刷する</button>
+  </div>
+  <p class="src" id="printMeta"></p>
+
+  <div class="grid c4 mt16 fade-up d1">
+    <div class="kpi hero"><div class="k-label">農業所得（売上 − 経費）</div><div class="k-value" id="kpiIncome">―</div><div class="k-delta flat" id="kpiIncomeSub"></div></div>
+    <div class="kpi"><div class="k-label">収入合計</div><div class="k-value" id="kpiSales">―</div><div class="k-delta flat" id="kpiSalesSub"></div></div>
+    <div class="kpi"><div class="k-label">経費合計</div><div class="k-value" id="kpiExp">―</div></div>
+    <div class="kpi"><div class="k-label">時給換算（本人＋家族）</div><div class="k-value" id="kpiWage">―</div><div class="k-delta flat" id="kpiWageSub"></div></div>
+  </div>
+  <div id="warnBox" class="mt16"></div>
+
+  <div class="card mt24 fade-up d2">
+    <h3>品目別のもうけ</h3>
+    <p class="sub">共通経費（品目に割り付けていない経費）の割り方を切り替えられます。割る前の「売上 − その品目だけの経費」も並べています。</p>
+    <div class="seg no-print" id="allocSeg">
+      <button data-v="area" class="on">面積の比で割る</button>
+      <button data-v="sales">売上の比で割る</button>
+    </div>
+    <div class="tbl-wrap mt16"><table class="tbl" id="cropTbl"></table></div>
+    <p class="src">判定の意味 … <span style="color:var(--good)">●上</span>＝経営全体の時給以上／<span style="color:var(--warn)">●下</span>＝時給が全体より低い／<span style="color:var(--critical)">●赤字</span>＝もうけがマイナス。自分の品目どうしの比べ方で、最低賃金など外の基準とは比べていません。労働時間は入力した合計を「品目の標準的な10a当たり労働時間 × 面積」の比で割り付けた計算値です<span id="kibiLaborNote">（園芸品目の多くは（仮））</span>。</p>
+  </div>
+
+  <div class="card mt16 fade-up d3 no-print">
+    <h3>品目の分布（横＝時給、縦＝10a当たりのもうけ）</h3>
+    <p class="sub">右上にある品目ほど、時間当たり・面積当たりの収益が高い品目です。左下の品目は、単価・売り先・作業のどこを変えるかを検討する材料になります。</p>
+    <div class="viz" id="scatterViz"></div>
+    <p class="src" id="scatterNote"></p>
+  </div>
+
+  <div class="card mt16 fade-up d4 no-print">
+    <h3>経費の内訳</h3>
+    <p class="sub">費目ごとの金額を帯グラフで示します。金額の大きい費目から順に見直してください。</p>
+    <div class="viz" id="bandViz"></div>
+  </div>
+
+  <div class="card mt16 fade-up d5">
+    <h3>県平均との比較（単収と単価のみ）</h3>
+    <p class="sub">比べるのは「10a当たりの収量」と「1kg当たりの単価」だけです。県平均より上か下かの事実だけを示します。</p>
+    <div class="tbl-wrap"><table class="tbl" id="compTbl"></table></div>
+    <p class="src">経費の県平均は、比較先にできる公式の指標を確認できていないため出していません（単収と単価だけの比較です）。単価の県平均は卸売市場の平均卸売単価（手数料を引く前）なので、手取り単価より高めに出るのが普通です。</p>
+    <p class="src" id="compSrc"></p>
+  </div>
+
+  <div class="sec-title no-print"><h2>この実績を、これからの計算の前提にする</h2><span class="hint">押すまで書き換えません</span></div>
+  <div class="card mt16 no-print fade-up d6" id="jissekiCard">
+    <p class="sub">上で入れた実績から、品目ごとの単収・単価・経費率・10a当たり労働時間を計算しました。いまの品目一覧に入っている値と横に並べています。押すと、この実績の値が作付けの決定・シミュレーターなど他のページの計算の前提になります。</p>
+    <div class="tbl-wrap"><table class="tbl" id="jissekiTbl"></table></div>
+    <p class="src" id="jissekiNote"></p>
+    <div class="flex wrap mt16">
+      <button class="btn primary sm" id="jissekiApply" type="button">この実績を前提にする</button>
+      <button class="btn ghost sm" id="jissekiUndo" type="button">実績から入れた値を元に戻す</button>
+    </div>
+    <div id="jissekiMsg" class="mt16"></div>
+    <p class="src">実績の値は、この端末の品目一覧（自分の値）に書き込まれます。同じ項目に手で入れた値があるときは、実績の値で置き換わります。「元に戻す」で消えるのは実績から入れた値だけで、手で入れた値と追加した品目は残ります。単収・単価が0のときと、経費率が5%未満または95%を超えるときは、その値だけ書き込みません。</p>
+  </div>
+
+  <div class="card mt16 no-print fade-up d6">
+    <h3>メモと保存</h3>
+    <div class="field"><label>今年のメモ（天候・単価・作業のふり返り）</label><textarea id="noteTa" rows="3" placeholder="例：8月の台風で○○が3割減。JAの単価は良かった。"></textarea></div>
+    <div class="flex wrap">
+      <button class="btn primary sm" id="exportBtn">数字をファイルに書き出す（JSON）</button>
+      <button class="btn ghost sm" id="importBtn">書き出したファイルを読み込む</button>
+      <input type="file" id="importFile" accept=".json,application/json" class="hide">
+    </div>
+    <p class="src">入力は自動でこの端末に保存され、次に開いたとき復元されます。書き出したファイルは控え・別端末への引っ越し用です。</p>
+  </div>
+
+  <p class="src mt24" id="disclaimer"></p>
+</main>
+<script src="../assets/js/packs.js"></script>
+<script src="../assets/js/core.js"></script>
+<script src="../assets/js/data_okinawa.js"></script>
+<script src="../assets/js/data_regions.js"></script>
+<script src="../assets/js/charts.js"></script>
+<script>
+(function () {
+  "use strict";
+  CORE.renderTopbar("checkup", "../");
+  document.getElementById("disclaimer").textContent = DATA.DISCLAIMER;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var fmt = CORE.fmt;
+
+  /* ---------- マスタ参照 ---------- */
+  var CROP_BY_ID = {};
+  DATA.CROPS.forEach(function (c) { CROP_BY_ID[c.id] = c; });
+  /* 単収と単価は、地域によっては収録が無い品目がある（福岡・埼玉・大阪で実測）。
+     無いまま掛け算すると画面ごと落ちるので、無いときは「0で仮」を返す。
+     0を返すと計算には効かず、画面の表では「―（要確認）」になる。 */
+  var KARA = { v: 0, kari: true, nashi: true };
+  function refYield(c) { return (c && (c.yieldKg10a || c.yieldHon10a)) || KARA; }
+  function refPrice(c) { return (c && (c.priceYenKg || c.priceYenHon)) || KARA; }
+  function cropUnit(c) { return c.yieldHon10a ? "本" : "kg"; }
+
+  var EXP_CATS = ["種苗", "肥料", "農薬", "資材", "動力光熱", "出荷運賃手数料", "雇人費", "その他"];
+  // 経費8分類の初期配分（編集前提の入力初期値。事実ではない）
+  var EXP_W = { "種苗": 0.08, "肥料": 0.16, "農薬": 0.10, "資材": 0.12, "動力光熱": 0.10, "出荷運賃手数料": 0.18, "雇人費": 0.06, "その他": 0.20 };
+
+  /* さとうきびの入力・比較は、さとうきびデータのある地域（沖縄）だけ。他地域では KIBI=null で欄ごと隠す */
+  var KIBI = DATA.KIBI || null;
+  var KIBI_YIELD = KIBI ? KIBI.yield.r6kei : null;               // kg/10a（S6）
+  var KIBI_GENRYO_T = KIBI ? KIBI.tedori.breakdown.genryo : null; // 円/t（S8・計算値）
+  var KIBI_KOFU_T = KIBI ? KIBI.tedori.breakdown.kofukin : null;  // 円/t（S8・計算値）
+  var KIBI_TEDORI_T = KIBI ? KIBI.tedori.totalYenT : null;        // 円/t（S8）
+  var KIBI_LABOR = KIBI ? KIBI.seisanhi.laborH : null;            // 36.56 h/10a（S9）
+  var KIBI_COST10A = KIBI ? (KIBI.seisanhi.buzaihi.v + KIBI.seisanhi.koyoRodo.v) : 0; // 物財費＋雇用労働費（S9）
+
+  var WEEKS_PER_MONTH = 4.33; // 1か月≒4.33週（計算用の定数）
+
+  /* ---------- 状態 ---------- */
+  var annual = CORE.store.load("annual", {}) || {};
+  var thisYear = new Date().getFullYear();
+  var S = null;          // 現在編集中の1年分
+  var firstPaint = true; // 数字のカウントアップは初回だけ
+
+  function mkItem(cropId, area10a) {
+    var c = CROP_BY_ID[cropId];
+    if (!c) return { cropId: cropId, area10a: area10a, qty: 0, sales: 0, direct: 0 }; // 地域切替で消えた品目IDでも落とさない
+    var qty = Math.round(refYield(c).v * area10a);
+    return { cropId: cropId, area10a: area10a, qty: qty, sales: Math.round(qty * refPrice(c).v), direct: 0 };
+  }
+  function mkKibi(area10a) {
+    if (!KIBI) return { area10a: 0, tons: 0, genryo: 0, kofukin: 0, direct: 0 };
+    var tons = Math.round(area10a * KIBI_YIELD.v / 100) / 10; // t（小数1桁）
+    return {
+      area10a: area10a, tons: tons,
+      genryo: Math.round(tons * KIBI_GENRYO_T.v),
+      kofukin: Math.round(tons * KIBI_KOFU_T.v),
+      direct: 0,
+    };
+  }
+  function defaultExpenses(items, kibi) {
+    var total = 0;
+    items.forEach(function (it) {
+      var c = CROP_BY_ID[it.cropId];
+      total += it.sales * (c.costRate ? c.costRate.v : 0.5);
+    });
+    total += kibi.area10a * KIBI_COST10A;
+    var ex = {};
+    EXP_CATS.forEach(function (k) { ex[k] = Math.round(total * EXP_W[k] / 100) * 100; });
+    return ex;
+  }
+  function defaultState(year) {
+    var prof = CORE.getProfile();
+    var items, kibiArea;
+    if (prof.crops && prof.crops.length) {
+      items = prof.crops.filter(function (c) { return CROP_BY_ID[c.cropId]; })
+        .map(function (c) { return mkItem(c.cropId, c.area10a || 1); });
+      kibiArea = 0;
+    }
+    if (!items || !items.length) {
+      // プロフィール未登録のときの見本農場（すべて編集前提の初期値・品目は地域の収録一覧の先頭から）
+      if (KIBI) {
+        items = [mkItem("goya_sokusei", 1), mkItem("kabocha", 2)];
+        kibiArea = 10; // 100a
+      } else {
+        items = [];
+        if (DATA.CROPS[0]) items.push(mkItem(DATA.CROPS[0].id, 1));
+        if (DATA.CROPS[1]) items.push(mkItem(DATA.CROPS[1].id, 2));
+        kibiArea = 0;
+      }
+    }
+    var kibi = mkKibi(kibiArea);
+    return {
+      year: year, items: items, kibi: kibi, kibiOff: false,
+      /* 品目に紐づかない収入。目安を置かない（自分で入れるか、決算書から入る） */
+      hoka: { kaji: 0, zatsu: 0 },
+      expenses: defaultExpenses(items, kibi),
+      labor: { sd: 5, sh: 6, sm: 10, fd: 3, fh: 4, fm: 10 },
+      note: "",
+    };
+  }
+
+  /* ---------- annual スキーマとの変換 ---------- */
+  function laborHours(d, h, m) { return Math.round(d * h * m * WEEKS_PER_MONTH); }
+  function laborTotal(st) {
+    return laborHours(st.labor.sd, st.labor.sh, st.labor.sm) + laborHours(st.labor.fd, st.labor.fh, st.labor.fm);
+  }
+  function laborWeights(st) {
+    var ws = st.items.map(function (it) {
+      var c = CROP_BY_ID[it.cropId];
+      return (c.laborH10a ? c.laborH10a.v : 0) * it.area10a;
+    });
+    var wk = (KIBI_LABOR ? KIBI_LABOR.v : 0) * st.kibi.area10a;
+    return { ws: ws, wk: wk, sum: ws.reduce(function (a, b) { return a + b; }, 0) + wk };
+  }
+  function serialize(st) {
+    var lw = laborWeights(st);
+    var total = laborTotal(st);
+    var items = st.items.map(function (it, i) {
+      var c = CROP_BY_ID[it.cropId];
+      var o = {
+        cropId: it.cropId, name: c.name, sales: it.sales, area10a: it.area10a,
+        laborH: lw.sum > 0 ? Math.round(total * lw.ws[i] / lw.sum) : 0,
+        qty: it.qty, direct: it.direct,
+      };
+      if (it.directDetail) o.directDetail = it.directDetail; // 品目ごとの経費のくわしい入力（追記フィールド・後方互換）
+      return o;
+    });
+    if (st.kibi.area10a > 0 || st.kibi.genryo + st.kibi.kofukin > 0) {
+      items.push({
+        cropId: "kibi", name: "さとうきび", sales: st.kibi.genryo + st.kibi.kofukin,
+        area10a: st.kibi.area10a,
+        laborH: lw.sum > 0 ? Math.round(total * lw.wk / lw.sum) : 0,
+        qty: st.kibi.tons, direct: st.kibi.direct,
+        kibiGenryo: st.kibi.genryo, kibiKofukin: st.kibi.kofukin,
+      });
+    }
+    var ex = {};
+    EXP_CATS.forEach(function (k) { ex[k] = st.expenses[k] || 0; });
+    return {
+      items: items, expenses: ex, laborTotalH: total, note: st.note,
+      laborDetail: st.labor, kibiOff: !!st.kibiOff,
+      hinmokuGaiShuunyuu: { kaji: st.hoka.kaji || 0, zatsu: st.hoka.zatsu || 0 },
+      /* 決算書から読み取ったときの控え。この画面では書き換えないが、
+         保存のたびに消えないよう持ち越す */
+      kessanshoKara: st.kessanshoKara || undefined,
+    };
+  }
+  function restore(year, rec) {
+    var st = { year: year, items: [], kibi: mkKibi(0), kibiOff: !!rec.kibiOff, expenses: {}, labor: { sd: 5, sh: 6, sm: 10, fd: 0, fh: 0, fm: 0 }, note: rec.note || "" };
+    var hg = rec.hinmokuGaiShuunyuu || {};
+    st.hoka = { kaji: hg.kaji || 0, zatsu: hg.zatsu || 0 };
+    if (rec.kessanshoKara) st.kessanshoKara = rec.kessanshoKara;
+    (rec.items || []).forEach(function (it) {
+      if (it.cropId === "kibi") {
+        st.kibi = { area10a: it.area10a || 0, tons: it.qty || 0, genryo: it.kibiGenryo || 0, kofukin: it.kibiKofukin || 0, direct: it.direct || 0 };
+      } else if (CROP_BY_ID[it.cropId]) {
+        st.items.push({ cropId: it.cropId, area10a: it.area10a || 0, qty: it.qty || 0, sales: it.sales || 0, direct: it.direct || 0, directDetail: it.directDetail || null });
+      }
+    });
+    EXP_CATS.forEach(function (k) { st.expenses[k] = (rec.expenses && rec.expenses[k]) || 0; });
+    if (rec.laborDetail) st.labor = rec.laborDetail;
+    return st;
+  }
+  function persist() {
+    annual[String(S.year)] = serialize(S);
+    CORE.store.save("annual", annual);
+  }
+
+  /* ---------- 入力①：品目の行 ---------- */
+  function renderItems() {
+    var box = $("cropRows");
+    box.innerHTML = "";
+    S.items.forEach(function (it, idx) {
+      var c = CROP_BY_ID[it.cropId];
+      var u = cropUnit(c);
+      var row = document.createElement("div");
+      row.className = "crop-row";
+      row.innerHTML =
+        '<div class="cr-head"><span class="cr-name">' + c.name + '</span>' +
+        '<span class="cr-note">初期値＝県平均の単収×卸売単価から計算' + DATA.flagLabel(refYield(c)) + '</span>' +
+        '<button class="cr-std" type="button" style="font:inherit;font-size:11.5px;color:var(--accent);background:var(--accent-softer);border:1px solid var(--accent-line);border-radius:6px;padding:3px 9px;cursor:pointer;margin-left:auto">面積から目安を入れる</button>' +
+        '<button class="cr-del" type="button">行を消す</button></div>' +
+        '<div class="crop-grid">' +
+        '<div><span class="mini-label">面積（a）</span><div class="input-unit"><input type="number" min="0" step="1" data-k="area" value="' + (it.area10a * 10) + '"><span class="u">a</span></div></div>' +
+        '<div><span class="mini-label">収穫量（' + u + '）</span><div class="input-unit"><input type="number" min="0" step="1" data-k="qty" value="' + it.qty + '"><span class="u">' + u + '</span></div></div>' +
+        '<div><span class="mini-label">売上（円）</span><div class="input-unit"><input type="number" min="0" step="1000" data-k="sales" value="' + it.sales + '"><span class="u">円</span></div></div>' +
+        '<div><span class="mini-label">その品目だけの経費（円）</span><div class="input-unit"><input type="number" min="0" step="1000" data-k="direct" value="' + it.direct + '"><span class="u">円</span></div></div>' +
+        '</div>' +
+        '<button class="cr-detail-toggle" type="button"></button>' +
+        '<div class="cr-detail hide">' +
+        '<div class="crop-grid">' +
+        EXP_CATS.map(function (k) {
+          var v = (it.directDetail && it.directDetail[k]) || 0;
+          return '<div><span class="mini-label">' + k + '（円）</span><div class="input-unit"><input type="number" min="0" step="1000" data-cat="' + k + '" value="' + v + '"><span class="u">円</span></div></div>';
+        }).join("") +
+        '</div>' +
+        '<p class="src">入れた金額の合計が、上の「その品目だけの経費」欄に自動で入ります。くわしい入力があるとき（合計が0円より大きいとき）は、この合計が優先されます。8分類の並びは「3. 経費（8分類）」と同じで、金額はその内数として入れてください。</p>' +
+        '</div>';
+      var directInp = row.querySelector('input[data-k="direct"]');
+      row.querySelectorAll("input[data-k]").forEach(function (inp) {
+        inp.addEventListener("input", function () {
+          var v = +inp.value || 0;
+          if (inp.dataset.k === "area") it.area10a = v / 10;
+          else it[inp.dataset.k] = v;
+          recompute();
+        });
+      });
+      /* 品目ごとの経費のくわしい入力（折りたたみ・初期は閉じる） */
+      var toggle = row.querySelector(".cr-detail-toggle");
+      var detail = row.querySelector(".cr-detail");
+      function detailSum() {
+        if (!it.directDetail) return 0;
+        return EXP_CATS.reduce(function (a, k) { return a + (it.directDetail[k] || 0); }, 0);
+      }
+      function paintToggle() {
+        var open = !detail.classList.contains("hide");
+        toggle.textContent = "この品目の経費をくわしく入れる（" + (open ? "閉じる" : "開く") + "）" + (detailSum() > 0 ? "・内訳の入力あり" : "");
+      }
+      function applyDetailPriority() {
+        var s = detailSum();
+        if (s > 0) {
+          it.direct = s;
+          directInp.value = s;
+          directInp.readOnly = true;
+        } else {
+          directInp.readOnly = false;
+        }
+      }
+      if (it._detailOpen) detail.classList.remove("hide");
+      toggle.addEventListener("click", function () {
+        detail.classList.toggle("hide");
+        it._detailOpen = !detail.classList.contains("hide");
+        paintToggle();
+      });
+      detail.querySelectorAll("input[data-cat]").forEach(function (inp) {
+        inp.addEventListener("input", function () {
+          if (!it.directDetail) it.directDetail = {};
+          it.directDetail[inp.dataset.cat] = +inp.value || 0;
+          applyDetailPriority();
+          paintToggle();
+          recompute();
+        });
+      });
+      applyDetailPriority();
+      paintToggle();
+      /* 面積から標準の収穫量・売上を入れる（県平均の単収×単価から計算・上書き前提） */
+      var stdBtn = row.querySelector(".cr-std");
+      if (stdBtn) stdBtn.addEventListener("click", function () {
+        if (!c || !refYield(c) || !refPrice(c)) return;
+        it.qty = Math.round(refYield(c).v * it.area10a);
+        it.sales = Math.round(it.qty * refPrice(c).v);
+        renderItems();
+        recompute();
+      });
+      row.querySelector(".cr-del").addEventListener("click", function () {
+        S.items.splice(idx, 1);
+        renderItems();
+        recompute();
+      });
+      box.appendChild(row);
+    });
+  }
+  function ensureKibiReadd() {
+    var kr = document.getElementById("kibiRow");
+    if (!kr || document.getElementById("kibiReadd")) return;
+    var b = document.createElement("button");
+    b.id = "kibiReadd"; b.type = "button"; b.className = "btn ghost sm";
+    b.textContent = "さとうきびの行を入れる";
+    b.style.cssText = "display:none;margin:8px 0";
+    b.addEventListener("click", function () { S.kibiOff = false; renderKibi(); recompute(); persist(); });
+    kr.insertAdjacentElement("afterend", b);
+  }
+  function renderKibi() {
+    if (!KIBI) return;
+    ensureKibiReadd();
+    var kr = document.getElementById("kibiRow");
+    var readd = document.getElementById("kibiReadd");
+    if (S.kibiOff) {
+      if (kr) kr.style.display = "none";
+      if (readd) readd.style.display = "";
+      return;
+    }
+    if (kr) kr.style.display = "";
+    if (readd) readd.style.display = "none";
+    $("kibiArea").value = S.kibi.area10a * 10;
+    $("kibiTons").value = S.kibi.tons;
+    $("kibiGenryo").value = S.kibi.genryo;
+    $("kibiKofukin").value = S.kibi.kofukin;
+    $("kibiDirect").value = S.kibi.direct;
+  }
+  function bindKibi() {
+    [["kibiArea", "area"], ["kibiTons", "tons"], ["kibiGenryo", "genryo"], ["kibiKofukin", "kofukin"], ["kibiDirect", "direct"]].forEach(function (pair) {
+      $(pair[0]).addEventListener("input", function () {
+        var v = +this.value || 0;
+        if (pair[1] === "area") S.kibi.area10a = v / 10;
+        else S.kibi[pair[1]] = v;
+        recompute();
+      });
+    });
+    var kibiDel = document.getElementById("kibiDel");
+    if (kibiDel) kibiDel.addEventListener("click", function () {
+      S.kibiOff = true;
+      S.kibi = mkKibi(0);
+      renderKibi(); recompute(); persist();
+    });
+    if (KIBI) {
+      $("kibiSrc").textContent =
+        "初期値＝令和6年産の県平均単収" + KIBI_YIELD.v.toLocaleString() + "kg/10a と、トン当たり原料代金・交付金" + DATA.flagLabel(KIBI_GENRYO_T) + "から計算。" +
+        "交付金は対象要件（認定農業者等）を満たす場合のみ受け取れます。含蜜糖地域（多良間・小浜など）は単価の仕組みが違うため、この画面では扱いません。" +
+        " 出典: " + DATA.srcLine(KIBI_YIELD) + "／" + DATA.srcLine(KIBI_TEDORI_T);
+    } else {
+      var kr = document.getElementById("kibiRow");
+      if (kr) kr.style.display = "none";
+    }
+  }
+
+  /* ---------- 入力②：経費 ---------- */
+  function renderHoka() {
+    [["inKaji", "kaji"], ["inZatsu", "zatsu"]].forEach(function (x) {
+      var el = $(x[0]);
+      if (!el) return;
+      el.value = S.hoka[x[1]] || 0;
+      el.addEventListener("input", function () {
+        S.hoka[x[1]] = +this.value || 0;
+        recompute();
+        persist();
+      });
+    });
+  }
+
+  function renderExpenses() {
+    var g = $("expGrid");
+    g.innerHTML = "";
+    EXP_CATS.forEach(function (k) {
+      var d = document.createElement("div");
+      d.className = "field";
+      d.innerHTML = '<label>' + k + '</label><div class="input-unit"><input type="number" min="0" step="1000" value="' + (S.expenses[k] || 0) + '"><span class="u">円</span></div>';
+      d.querySelector("input").addEventListener("input", function () {
+        S.expenses[k] = +this.value || 0;
+        recompute();
+      });
+      g.appendChild(d);
+    });
+  }
+
+  /* ---------- 入力③：労働時間 ---------- */
+  var LABOR_KEYS = ["sd", "sh", "sm", "fd", "fh", "fm"];
+  function renderLabor() {
+    LABOR_KEYS.forEach(function (k) { $(k).value = S.labor[k]; });
+    LABOR_KEYS.forEach(function (k) {
+      var inp = $(k);
+      // 塗りを現在値で描き直す（bindRange は初期化時に1回だけ）
+      var min = +inp.min || 0, max = +inp.max || 100;
+      inp.style.setProperty("--fill", ((+inp.value - min) / (max - min)) * 100 + "%");
+    });
+    paintLaborLabels();
+  }
+  function paintLaborLabels() {
+    $("sdV").textContent = S.labor.sd + "日";
+    $("shV").textContent = S.labor.sh + "時間";
+    $("smV").textContent = S.labor.sm + "か月";
+    $("fdV").textContent = S.labor.fd + "日";
+    $("fhV").textContent = S.labor.fh + "時間";
+    $("fmV").textContent = S.labor.fm + "か月";
+    $("selfHours").textContent = laborHours(S.labor.sd, S.labor.sh, S.labor.sm).toLocaleString();
+    $("famHours").textContent = laborHours(S.labor.fd, S.labor.fh, S.labor.fm).toLocaleString();
+  }
+  function bindLabor() {
+    LABOR_KEYS.forEach(function (k) {
+      CORE.bindRange($(k), function (v) {
+        S.labor[k] = v;
+        paintLaborLabels();
+        recompute();
+      });
+    });
+  }
+
+  /* ---------- 入力③-2：従業員・アルバイト（人別・laborForce キー） ----------
+     年をまたいで共通の情報のため annual とは別キー。時給換算（本人＋家族）には入れない。 */
+  var laborForce = CORE.store.load("laborForce", { workers: [] }) || { workers: [] };
+  if (!Array.isArray(laborForce.workers)) laborForce.workers = [];
+  function saveLaborForce() { CORE.store.save("laborForce", laborForce); }
+  function workerMonthly(w) { return (w.daysPerWeek || 0) * (w.hoursPerDay || 0) * WEEKS_PER_MONTH; }
+  function renderWorkers() {
+    var box = $("wkRows");
+    box.innerHTML = "";
+    laborForce.workers.forEach(function (w, idx) {
+      var row = document.createElement("div");
+      row.className = "wk-row";
+      var monBtns = "";
+      for (var m = 1; m <= 12; m++) monBtns += '<button type="button" class="mon-btn" data-m="' + m + '">' + m + "月</button>";
+      row.innerHTML =
+        '<div class="cr-head"><span class="cr-note">働く人 ' + (idx + 1) + '</span><button class="cr-del" type="button">行を消す</button></div>' +
+        '<div class="wk-grid">' +
+        '<div><span class="mini-label">呼び名（自由記入）</span><input type="text" data-w="name" placeholder="例：Aさん"></div>' +
+        '<div><span class="mini-label">区分</span><select data-w="type"><option value="employee">従業員</option><option value="part">アルバイト・パート</option></select></div>' +
+        '<div><span class="mini-label">週の勤務日数</span><div class="input-unit"><input type="number" min="0" max="7" step="0.5" data-w="daysPerWeek"><span class="u">日</span></div></div>' +
+        '<div><span class="mini-label">1日の時間</span><div class="input-unit"><input type="number" min="0" max="14" step="0.5" data-w="hoursPerDay"><span class="u">時間</span></div></div>' +
+        '</div>' +
+        '<div class="mt16"><span class="mini-label">働く月（押して選ぶ・複数可）</span><div class="mon-row">' + monBtns + '</div></div>' +
+        '<div class="wk-out"></div>';
+      row.querySelector('input[data-w="name"]').value = w.name || "";
+      row.querySelector('select[data-w="type"]').value = w.type === "employee" ? "employee" : "part";
+      row.querySelector('input[data-w="daysPerWeek"]').value = w.daysPerWeek || 0;
+      row.querySelector('input[data-w="hoursPerDay"]').value = w.hoursPerDay || 0;
+      var out = row.querySelector(".wk-out");
+      function paintOut() {
+        var monthly = Math.round(workerMonthly(w));
+        var n = (w.months || []).length;
+        if (n > 0) {
+          out.innerHTML = "月あたり 約 <b>" + fmt.num(monthly) + "</b> 時間 × " + n + "か月 ＝ 年間 約 <b>" +
+            fmt.num(Math.round(workerMonthly(w) * n)) + "</b> 時間（週の日数 × 1日の時間 × 4.33 で計算した計算値）";
+        } else {
+          out.innerHTML = "働く月を選ぶと年間時間が出ます（月あたり 約 <b>" + fmt.num(monthly) + "</b> 時間・計算値）";
+        }
+      }
+      row.querySelectorAll(".mon-btn").forEach(function (btn) {
+        var m = +btn.dataset.m;
+        if ((w.months || []).indexOf(m) >= 0) btn.classList.add("on");
+        btn.addEventListener("click", function () {
+          if (!Array.isArray(w.months)) w.months = [];
+          var i = w.months.indexOf(m);
+          if (i >= 0) w.months.splice(i, 1);
+          else { w.months.push(m); w.months.sort(function (a, b) { return a - b; }); }
+          btn.classList.toggle("on", w.months.indexOf(m) >= 0);
+          saveLaborForce();
+          paintOut();
+        });
+      });
+      row.querySelector('input[data-w="name"]').addEventListener("input", function () {
+        w.name = this.value;
+        saveLaborForce();
+      });
+      row.querySelector('select[data-w="type"]').addEventListener("change", function () {
+        w.type = this.value === "employee" ? "employee" : "part";
+        saveLaborForce();
+      });
+      [["daysPerWeek", 7], ["hoursPerDay", 14]].forEach(function (pair) {
+        row.querySelector('input[data-w="' + pair[0] + '"]').addEventListener("input", function () {
+          var v = +this.value || 0;
+          w[pair[0]] = Math.max(0, Math.min(pair[1], v));
+          saveLaborForce();
+          paintOut();
+        });
+      });
+      row.querySelector(".cr-del").addEventListener("click", function () {
+        laborForce.workers.splice(idx, 1);
+        saveLaborForce();
+        renderWorkers();
+      });
+      paintOut();
+      box.appendChild(row);
+    });
+  }
+  function bindWorkers() {
+    $("addWorkerBtn").addEventListener("click", function () {
+      laborForce.workers.push({ name: "", type: "part", daysPerWeek: 2, hoursPerDay: 4, months: [] });
+      saveLaborForce();
+      renderWorkers();
+    });
+    renderWorkers();
+  }
+
+  /* ---------- 計算と描画 ---------- */
+  var alloc = "area"; // 共通経費の割り方: area=面積比 / sales=売上比
+
+  function buildRows() {
+    var lw = laborWeights(S);
+    var total = laborTotal(S);
+    var rows = S.items.map(function (it, i) {
+      var c = CROP_BY_ID[it.cropId];
+      return {
+        name: c.name, cropId: it.cropId, area: it.area10a, sales: it.sales,
+        qty: it.qty, direct: it.direct, unit: cropUnit(c),
+        laborH: lw.sum > 0 ? total * lw.ws[i] / lw.sum : 0,
+      };
+    });
+    if (S.kibi.area10a > 0 || S.kibi.genryo + S.kibi.kofukin > 0) {
+      rows.push({
+        name: "さとうきび", cropId: "kibi", area: S.kibi.area10a,
+        sales: S.kibi.genryo + S.kibi.kofukin, qty: S.kibi.tons, direct: S.kibi.direct, unit: "t",
+        laborH: lw.sum > 0 ? total * lw.wk / lw.sum : 0,
+      });
+    }
+    return rows;
+  }
+
+  function recompute() {
+    var rows = buildRows();
+    var hinmokuSales = rows.reduce(function (a, r) { return a + r.sales; }, 0);
+    /* 品目に紐づかない収入は、品目別の表には配らず、収入の合計にだけ足す。
+       申告では家事消費も雑収入も収入に入るので、落とすと所得が実際より低く出る */
+    var hoka = (S.hoka.kaji || 0) + (S.hoka.zatsu || 0);
+    var totalSales = hinmokuSales + hoka;
+    var totalExp = EXP_CATS.reduce(function (a, k) { return a + (S.expenses[k] || 0); }, 0);
+    var income = totalSales - totalExp;
+    var laborH = laborTotal(S);
+    var wage = laborH > 0 ? income / laborH : null;
+
+    /* KPI */
+    if (firstPaint) {
+      CORE.countUp($("kpiIncome"), income, function (v) { return fmt.manUnit(v); });
+      firstPaint = false;
+    } else {
+      $("kpiIncome").textContent = fmt.manUnit(income);
+    }
+    $("kpiIncomeSub").textContent = S.year + "年" + (DATA.KIBI ? "・売上には原料代金＋交付金を含む" : "");
+    $("kpiSales").textContent = fmt.manUnit(totalSales);
+    var sub = $("kpiSalesSub");
+    if (sub) {
+      sub.textContent = hoka > 0
+        ? "品目の売上 " + fmt.manUnit(hinmokuSales) + " ＋ 品目に紐づかない収入 " + fmt.manUnit(hoka)
+        : "品目の売上の合計";
+    }
+    $("kpiExp").textContent = fmt.manUnit(totalExp);
+    $("kpiWage").textContent = wage == null ? "―" : fmt.num(Math.round(wage)) + "円";
+    $("kpiWageSub").textContent = wage == null ? "労働時間が0のため計算できません" : "農業所得 ÷ 本人・家族の年間" + fmt.num(laborH) + "時間";
+
+    /* 警告 */
+    var warns = [];
+    var sumDirect = rows.reduce(function (a, r) { return a + r.direct; }, 0);
+    var common = totalExp - sumDirect;
+    if (common < 0) {
+      warns.push({ cls: "warn", icon: "！", title: "品目別の経費が8分類の合計を上回っています",
+        body: "「その品目だけの経費」は8分類の合計の内数として入力してください。いまは超過分を0として計算しています。" });
+      common = 0;
+    }
+    if (income < 0) {
+      warns.push({ cls: "critical", icon: "▼", title: "この年は農業所得がマイナスです",
+        body: "経費が売上を " + fmt.manUnit(-income) + " 上回っています。下の帯グラフで大きい費目から、品目別の表で赤字の品目から見てください。" });
+    }
+    $("warnBox").innerHTML = warns.map(function (w) {
+      return '<div class="advice ' + w.cls + '"><div class="a-icon">' + w.icon + '</div><div><div class="a-title">' + w.title + '</div><div class="a-body">' + w.body + '</div></div></div>';
+    }).join("");
+
+    /* 品目別テーブル */
+    var basisSum = rows.reduce(function (a, r) { return a + (alloc === "area" ? r.area : r.sales); }, 0);
+    rows.forEach(function (r) {
+      var basis = alloc === "area" ? r.area : r.sales;
+      r.commonShare = basisSum > 0 ? common * basis / basisSum : 0;
+      r.exp = r.direct + r.commonShare;
+      r.income = r.sales - r.exp;
+      r.preAlloc = r.sales - r.direct;
+      r.per10a = r.area > 0 ? r.income / r.area : null;
+      r.wage = r.laborH > 0 ? r.income / r.laborH : null;
+    });
+    var sorted = rows.slice().sort(function (a, b) {
+      return (b.wage == null ? -1e15 : b.wage) - (a.wage == null ? -1e15 : a.wage);
+    });
+    var html = "<thead><tr><th>品目</th><th class='num'>面積</th><th class='num'>売上</th><th class='num'>売上−直接経費</th><th class='num'>共通経費の配分</th><th class='num'>もうけ</th><th class='num'>10a当たり</th><th class='num'>労働時間</th><th class='num'>時給</th><th>判定</th></tr></thead><tbody>";
+    sorted.forEach(function (r) {
+      var badge;
+      if (r.income < 0) badge = '<span class="badge critical">赤字</span>';
+      else if (r.wage == null) badge = '<span class="badge neutral">―（要確認）</span>';
+      else if (wage != null && r.wage >= wage) badge = '<span class="badge good">全体以上</span>';
+      else badge = '<span class="badge warn">全体より低い</span>';
+      html += "<tr><td>" + r.name + "</td>" +
+        "<td class='num'>" + fmt.num(r.area * 10) + "a</td>" +
+        "<td class='num'>" + fmt.manUnit(r.sales) + "</td>" +
+        "<td class='num'>" + fmt.manUnit(r.preAlloc) + "</td>" +
+        "<td class='num'>" + fmt.manUnit(Math.round(r.commonShare)) + "</td>" +
+        "<td class='num " + (r.income >= 0 ? "pos" : "neg") + "'>" + fmt.manUnit(Math.round(r.income)) + "</td>" +
+        "<td class='num'>" + (r.per10a == null ? "―（要確認）" : fmt.manUnit(Math.round(r.per10a))) + "</td>" +
+        "<td class='num'>" + fmt.num(Math.round(r.laborH)) + "h</td>" +
+        "<td class='num'>" + (r.wage == null ? "―" : fmt.num(Math.round(r.wage)) + "円") + "</td>" +
+        "<td>" + badge + "</td></tr>";
+    });
+    html += "</tbody>";
+    $("cropTbl").innerHTML = html;
+
+    /* 散布図（目玉） */
+    var pts = rows.filter(function (r) { return r.laborH > 0 && r.area > 0; }).map(function (r, i) {
+      return { label: r.name, x: Math.round(r.wage), y: Math.round(r.per10a), color: VIZ.SERIES[i % 8] };
+    });
+    if (pts.length) {
+      VIZ.scatter($("scatterViz"), {
+        points: pts,
+        xLabel: "時給（円）", yLabel: "10a当たりのもうけ",
+        fmtX: function (v) { return fmt.num(v) + "円"; },
+        fmtY: function (v) { return fmt.man(v); },
+      });
+      $("scatterNote").textContent = "労働時間の割り付けは計算値（上の表と同じ按分）。点の位置は入力を直すとその場で動きます。";
+    } else {
+      $("scatterViz").innerHTML = "";
+      $("scatterNote").textContent = "品目の面積と労働時間が入ると、ここに品目の分布図が表示されます。";
+    }
+
+    /* 費用構成の帯 */
+    var parts = EXP_CATS.map(function (k) { return { label: k, value: S.expenses[k] || 0 }; }).filter(function (p) { return p.value > 0; });
+    if (parts.length) VIZ.bandChart($("bandViz"), { parts: parts, fmt: function (v) { return fmt.manUnit(v); } });
+    else $("bandViz").innerHTML = '<p class="src">経費が入力されると、ここに費目の帯が出ます。</p>';
+
+    /* 県平均比較（単収・単価だけ） */
+    renderComparison(rows);
+
+    /* 実績を計算の前提にする節（表示だけ。書き込みはボタンを押したときだけ） */
+    renderJisseki(rows);
+
+    /* 前年との差分 */
+    renderPrevDiff(income, totalSales, wage);
+
+    $("printMeta").textContent = S.year + "年の数字・" + new Date().toLocaleDateString("ja-JP") + " にこの端末で計算（相談先への持参用）";
+    /* 利用者の実操作があるまでは保存しない（開いただけで進行表が「完了」になる誤判定を防ぐ） */
+    if (CORE.userActed && CORE.userActed()) persist();
+  }
+
+  function pctDiff(user, ref) {
+    if (user == null || ref == null || !ref) return null;
+    return (user - ref) / ref;
+  }
+  function diffCell(d) {
+    if (d == null) return "<td class='num'>―（要確認）</td>";
+    var s = (d >= 0 ? "+" : "") + (d * 100).toFixed(0) + "%";
+    return "<td class='num " + (d >= 0 ? "pos" : "neg") + "'>" + s + "</td>";
+  }
+  function renderComparison(rows) {
+    var srcSet = {};
+    var html = "<thead><tr><th>品目</th><th class='num'>単収（あなた）</th><th class='num'>単収（県平均）</th><th class='num'>差</th><th class='num'>単価（あなた）</th><th class='num'>単価（県平均・卸売）</th><th class='num'>差</th></tr></thead><tbody>";
+    rows.forEach(function (r) {
+      if (r.cropId === "kibi") {
+        if (!KIBI) return; // さとうきびデータの無い地域では比較行を出さない
+        var uy = r.area > 0 && r.qty > 0 ? r.qty * 1000 / r.area : null;
+        var up = r.qty > 0 ? r.sales / r.qty : null;
+        html += "<tr><td>さとうきび</td>" +
+          "<td class='num'>" + (uy == null ? "―（要確認）" : fmt.num(Math.round(uy)) + "kg/10a") + "</td>" +
+          "<td class='num'>" + fmt.num(KIBI_YIELD.v) + "kg/10a" + DATA.flagLabel(KIBI_YIELD) + "</td>" +
+          diffCell(pctDiff(uy, KIBI_YIELD.v)) +
+          "<td class='num'>" + (up == null ? "―（要確認）" : fmt.num(Math.round(up)) + "円/t") + "</td>" +
+          "<td class='num'>" + fmt.num(KIBI_TEDORI_T.v) + "円/t" + DATA.flagLabel(KIBI_TEDORI_T) + "</td>" +
+          diffCell(pctDiff(up, KIBI_TEDORI_T.v)) + "</tr>";
+        srcSet[DATA.srcLine(KIBI_YIELD)] = 1;
+        srcSet[DATA.srcLine(KIBI_TEDORI_T)] = 1;
+        return;
+      }
+      var c = CROP_BY_ID[r.cropId];
+      var ry = refYield(c), rp = refPrice(c), u = cropUnit(c);
+      var userY = r.area > 0 && r.qty > 0 ? r.qty / r.area : null;
+      var userP = r.qty > 0 ? r.sales / r.qty : null;
+      html += "<tr><td>" + r.name + "</td>" +
+        "<td class='num'>" + (userY == null ? "―（要確認）" : fmt.num(Math.round(userY)) + u + "/10a") + "</td>" +
+        "<td class='num'>" + fmt.num(ry.v) + u + "/10a" + DATA.flagLabel(ry) + "</td>" +
+        diffCell(pctDiff(userY, ry.v)) +
+        "<td class='num'>" + (userP == null ? "―（要確認）" : fmt.num(Math.round(userP)) + "円/" + u) + "</td>" +
+        "<td class='num'>" + fmt.num(rp.v) + "円/" + u + DATA.flagLabel(rp) + "</td>" +
+        diffCell(pctDiff(userP, rp.v)) + "</tr>";
+      srcSet[DATA.srcLine(ry)] = 1;
+      srcSet[DATA.srcLine(rp)] = 1;
+    });
+    html += "</tbody>";
+    $("compTbl").innerHTML = html;
+    $("compSrc").textContent = "県平均の出典: " + Object.keys(srcSet).filter(Boolean).join("／");
+  }
+
+  /* ---------- 実績を、これからの計算の前提にする（cropCustom への書き込み） ----------
+     ここまでの計算結果（品目ごとの単収・単価・経費率・10a当たり労働時間）を、
+     品目マスタの上書き（localStorage の cropCustom）に書き込む。
+     書き込むのは「この実績を前提にする」を押したときだけ。表示だけでは何も保存しない。 */
+  var jissekiDerived = { list: [], missing: [] };
+
+  function escHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (m) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m];
+    });
+  }
+  function jissekiMsg(kind, text) {
+    var box = $("jissekiMsg");
+    if (!box) return;
+    box.innerHTML = '<div class="advice ' + kind + '"><div class="a-icon">' + (kind === "good" ? "✔" : "！") +
+      '</div><div><div class="a-body">' + escHtml(text) + "</div></div></div>";
+  }
+  /* 品目1つ分の実績値をつくる。ゼロ割り・マイナス・空欄になる値は、その値だけ出さない（行は残す） */
+  function deriveOne(r) {
+    var c = CROP_BY_ID[r.cropId];
+    if (!c) return null;
+    var hon = !!c.yieldHon10a;
+    var d = { cropId: r.cropId, name: c.name, unit: cropUnit(c), hon: hon,
+      yieldKey: hon ? "yieldHon10a" : "yieldKg10a", priceKey: hon ? "priceYenHon" : "priceYenKg", vals: {} };
+    var y = (r.area > 0 && r.qty > 0) ? r.qty / r.area : null;
+    if (y != null && isFinite(y) && y > 0) d.vals[d.yieldKey] = Math.round(y);
+    var p = (r.qty > 0 && r.sales > 0) ? r.sales / r.qty : null;
+    if (p != null && isFinite(p) && p > 0) d.vals[d.priceKey] = Math.round(p);
+    var cr = (r.sales > 0 && r.exp != null && r.exp >= 0) ? r.exp / r.sales : null;
+    if (cr != null && isFinite(cr) && cr >= 0.05 && cr <= 0.95) d.vals.costRate = Math.round(cr * 100) / 100;
+    var lh = (r.area > 0 && r.laborH > 0) ? r.laborH / r.area : null;
+    if (lh != null && isFinite(lh) && lh > 0) d.vals.laborH10a = Math.round(lh);
+    d.n = Object.keys(d.vals).length;
+    return d;
+  }
+  function jCell(v, unit) {
+    return "<td class='num'>" + (v == null ? "―（要確認）" : escHtml(fmt.num(v) + unit)) + "</td>";
+  }
+  function jCellPct(v) {
+    return "<td class='num'>" + (v == null ? "―（要確認）" : escHtml(fmt.pct(v, 0))) + "</td>";
+  }
+  function jRefCell(x, unit) {
+    if (!x || x.v == null || isNaN(x.v)) return "<td class='num'>―（要確認）</td>";
+    return "<td class='num'>" + escHtml(fmt.num(x.v) + unit + DATA.flagLabel(x)) + "</td>";
+  }
+  function jRefCellPct(x) {
+    if (!x || x.v == null || isNaN(x.v)) return "<td class='num'>―（要確認）</td>";
+    return "<td class='num'>" + escHtml(fmt.pct(x.v, 0) + DATA.flagLabel(x)) + "</td>";
+  }
+  function renderJisseki(rows) {
+    if (!$("jissekiTbl")) return;
+    var list = [], missing = [];
+    rows.forEach(function (r) {
+      var d = deriveOne(r);
+      if (d) list.push(d);
+      else missing.push(r.name);
+    });
+    jissekiDerived = { list: list, missing: missing };
+    var html = "<thead>" +
+      "<tr><th rowspan='2'>品目</th><th class='num' colspan='2'>単収</th><th class='num' colspan='2'>単価</th>" +
+      "<th class='num' colspan='2'>経費率</th><th class='num' colspan='2'>10a当たり労働時間</th></tr>" +
+      "<tr>" + "<th class='num'>実績</th><th class='num'>いまの県の値</th>".repeat(4) + "</tr>" +
+      "</thead><tbody>";
+    list.forEach(function (d) {
+      var c = CROP_BY_ID[d.cropId];
+      html += "<tr><td>" + escHtml(d.name) + "</td>" +
+        jCell(d.vals[d.yieldKey] == null ? null : d.vals[d.yieldKey], d.unit + "/10a") +
+        jRefCell(c[d.yieldKey], d.unit + "/10a") +
+        jCell(d.vals[d.priceKey] == null ? null : d.vals[d.priceKey], "円/" + d.unit) +
+        jRefCell(c[d.priceKey], "円/" + d.unit) +
+        jCellPct(d.vals.costRate == null ? null : d.vals.costRate) +
+        jRefCellPct(c.costRate) +
+        jCell(d.vals.laborH10a == null ? null : d.vals.laborH10a, "時間") +
+        jRefCell(c.laborH10a, "時間") +
+        "</tr>";
+    });
+    if (!list.length) {
+      html += "<tr><td colspan='9'>品目の面積・収穫量・売上を入れると、ここに実績の値が出ます。</td></tr>";
+    }
+    html += "</tbody>";
+    $("jissekiTbl").innerHTML = html;
+    var notes = [];
+    notes.push("単収＝収穫量÷（面積÷10）、単価＝売上÷収穫量、経費率＝（その品目だけの経費＋配分した共通経費）÷売上、10a当たり労働時間＝割り付けた労働時間÷（面積÷10）で計算した値です（" + S.year + "年）。");
+    notes.push("共通経費の配分は、上の「品目別のもうけ」で選んでいる割り方（" + (alloc === "area" ? "面積の比" : "売上の比") + "）と同じです。");
+    if (missing.length) notes.push("対応する品目が一覧にありません：" + missing.join("・"));
+    $("jissekiNote").textContent = notes.join(" ");
+  }
+  function loadCropCustom() {
+    var cc = CORE.store.load("cropCustom", null);
+    if (!cc || typeof cc !== "object" || Array.isArray(cc)) cc = {};
+    if (!cc.overrides || typeof cc.overrides !== "object" || Array.isArray(cc.overrides)) cc.overrides = {};
+    if (!Array.isArray(cc.custom)) cc.custom = [];
+    return cc;
+  }
+  function applyJisseki() {
+    var cc = loadCropCustom();
+    var nCrop = 0, nVal = 0;
+    jissekiDerived.list.forEach(function (d) {
+      if (!d.n) return;
+      var o = cc.overrides[d.cropId];
+      if (!o || typeof o !== "object" || Array.isArray(o)) { o = {}; cc.overrides[d.cropId] = o; }
+      Object.keys(d.vals).forEach(function (k) {
+        o[k] = { v: d.vals[k], jisseki: true, nen: S.year };
+        nVal++;
+      });
+      nCrop++;
+    });
+    if (!nCrop) {
+      jissekiMsg("critical", "前提にできる値がありません。品目の面積・収穫量・売上を入れてから、もう一度押してください。");
+      return;
+    }
+    if (!CORE.store.save("cropCustom", cc)) {
+      jissekiMsg("critical", "保存できませんでした。ブラウザの保存領域がいっぱいか、保存が禁止されている可能性があります。");
+      return;
+    }
+    jissekiMsg("good", nCrop + "件の品目を前提にしました（書き込んだ値は" + nVal + "個・" + S.year + "年の実績）。この画面を開き直したときと、作付けの決定・シミュレーターなど他のページで使われます。");
+  }
+  function undoJisseki() {
+    var cc = loadCropCustom();
+    var nCrop = 0, nVal = 0;
+    Object.keys(cc.overrides).forEach(function (id) {
+      var o = cc.overrides[id];
+      if (!o || typeof o !== "object" || Array.isArray(o)) return;
+      var hit = 0;
+      Object.keys(o).forEach(function (k) {
+        var raw = o[k];
+        if (raw && typeof raw === "object" && !Array.isArray(raw) && raw.jisseki === true) { delete o[k]; hit++; }
+      });
+      if (hit) { nCrop++; nVal += hit; }
+      if (!Object.keys(o).length) delete cc.overrides[id];
+    });
+    if (!nVal) {
+      jissekiMsg("warn", "実績から入れた値は入っていません。手で入れた値と追加した品目はそのままです。");
+      return;
+    }
+    if (!CORE.store.save("cropCustom", cc)) {
+      jissekiMsg("critical", "保存できませんでした。ブラウザの保存領域がいっぱいか、保存が禁止されている可能性があります。");
+      return;
+    }
+    jissekiMsg("good", nCrop + "件の品目から、実績の値" + nVal + "個を消しました。手で入れた値と追加した品目は残しています。");
+  }
+
+  function renderPrevDiff(income, sales, wage) {
+    var prev = annual[String(S.year - 1)];
+    var box = $("prevDiff");
+    if (!prev || !prev.items) { box.classList.add("hide"); return; }
+    var pSales = prev.items.reduce(function (a, it) { return a + (it.sales || 0); }, 0);
+    var pExp = 0;
+    if (prev.expenses) { for (var k in prev.expenses) pExp += prev.expenses[k] || 0; }
+    var pIncome = pSales - pExp;
+    var pWage = prev.laborTotalH > 0 ? pIncome / prev.laborTotalH : null;
+    function delta(now, before, f) {
+      if (before == null || now == null) return '<div class="k-delta flat">前年 ―（要確認）</div>';
+      var d = now - before;
+      var cls = d > 0 ? "up" : d < 0 ? "down" : "flat";
+      var arrow = d > 0 ? "▲" : d < 0 ? "▼" : "→";
+      return '<div class="k-delta ' + cls + '">' + arrow + " " + f(d) + "（前年 " + f(before).replace(/^\+/, "") + "）</div>";
+    }
+    box.innerHTML =
+      '<div class="card"><h3>前年との比較（' + (S.year - 1) + '年の保存データ）</h3>' +
+      '<div class="grid c3 mt16">' +
+      '<div class="kpi"><div class="k-label">農業所得</div><div class="k-value">' + fmt.manUnit(income) + '</div>' + delta(income, pIncome, fmt.signMan) + '</div>' +
+      '<div class="kpi"><div class="k-label">売上合計</div><div class="k-value">' + fmt.manUnit(sales) + '</div>' + delta(sales, pSales, fmt.signMan) + '</div>' +
+      '<div class="kpi"><div class="k-label">時給換算</div><div class="k-value">' + (wage == null ? "―" : fmt.num(Math.round(wage)) + "円") + '</div>' +
+      delta(wage == null ? null : Math.round(wage), pWage == null ? null : Math.round(pWage), function (v) { return (v >= 0 ? "+" : "") + fmt.num(Math.round(v)) + "円"; }) + '</div>' +
+      '</div></div>';
+    box.classList.remove("hide");
+  }
+
+  /* ---------- 年度切替 ---------- */
+  var srcBadge = null; // 「品目と単価から反映」の出所バッジ（品目行の直上）
+  function updateSrcBadge(hasSaved) {
+    if (!srcBadge) return;
+    var prof = CORE.getProfile();
+    var fromProfile = !hasSaved && prof && prof.crops && prof.crops.length && S.items.length;
+    srcBadge.style.display = fromProfile ? "" : "none";
+  }
+  function renderYearMode(hasSaved) {
+    var box = $("yearMode");
+    if (!box) return;
+    box.innerHTML = "";
+    if (!hasSaved) return;
+    var p = document.createElement("p");
+    p.className = "src";
+    p.textContent = S.year + "年の数字はこの端末に入力済みです。下にはその保存済みの数字が出ています（そのまま続きから直せます）。最初からやり直すときは右のボタンを押してください。";
+    var btn = document.createElement("button");
+    btn.className = "btn ghost sm";
+    btn.type = "button";
+    btn.textContent = "保存をやめて新しく入れ直す";
+    btn.addEventListener("click", function () {
+      if (!confirm(S.year + "年の保存された数字を消して、初期値から入れ直します。よろしいですか？")) return;
+      delete annual[String(S.year)];
+      CORE.store.save("annual", annual);
+      loadYear(S.year);
+    });
+    box.appendChild(p);
+    box.appendChild(btn);
+  }
+  function loadYear(year) {
+    var rec = annual[String(year)];
+    S = rec ? restore(year, rec) : defaultState(year);
+    renderYearMode(!!rec);
+    updateSrcBadge(!!rec);
+    renderItems();
+    renderKibi();
+    renderHoka();
+    renderExpenses();
+    renderLabor();
+    $("noteTa").value = S.note || "";
+    recompute();
+  }
+  function initYearSel() {
+    var sel = $("yearSel");
+    for (var y = thisYear; y >= thisYear - 6; y--) {
+      var o = document.createElement("option");
+      o.value = y;
+      o.textContent = y + "年の数字" + (y === thisYear - 1 ? "（去年）" : "") + (annual[String(y)] ? "・この端末に入力済み" : "");
+      sel.appendChild(o);
+    }
+    sel.value = thisYear - 1; // 既定＝去年
+    sel.addEventListener("change", function () { loadYear(+sel.value); });
+  }
+
+  /* ---------- JSON 書き出し・読み込み ---------- */
+  function bindIo() {
+    $("exportBtn").addEventListener("click", function () {
+      persist();
+      CORE.nextHint($("exportBtn"), [
+        { label: "→ 作付けの決定へ。いま保存した単価が反映されます", href: "sakutsuke.html", page: "sakutsuke" }
+      ], "実績を保存しました");
+      var blob = new Blob([JSON.stringify(annual, null, 2)], { type: "application/json" });
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "実績の診断_保存データ.json";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+    $("importBtn").addEventListener("click", function () { $("importFile").click(); });
+    $("importFile").addEventListener("change", function () {
+      var f = this.files && this.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var obj = JSON.parse(reader.result);
+          if (!obj || typeof obj !== "object" || Array.isArray(obj)) throw new Error("bad");
+          for (var y in obj) { if (obj[y] && obj[y].items) annual[y] = obj[y]; }
+          CORE.store.save("annual", annual);
+          loadYear(S.year);
+          alert("読み込みました。年ごとのデータを上書きしています。");
+        } catch (e) {
+          alert("読み込めませんでした。このツールで書き出したJSONファイルを選んでください。");
+        }
+      };
+      reader.readAsText(f);
+      this.value = "";
+    });
+  }
+
+  /* ---------- 初期化 ---------- */
+  function initDefaults() {
+    var sel = $("addCropSel");
+    DATA.CROPS.forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = c.id;
+      o.textContent = c.name;
+      sel.appendChild(o);
+    });
+    $("addCropBtn").addEventListener("click", function () {
+      S.items.push(mkItem(sel.value, 1));
+      renderItems();
+      recompute();
+    });
+    /* 品目の売上×県平均の経費率の合計＝経費の合計の目安（8分類の分割は出典が無いので合計だけ・目安） */
+    $("expEstimateBtn").addEventListener("click", function () {
+      var total = 0, n = 0;
+      S.items.forEach(function (it) {
+        var c = CROP_BY_ID[it.cropId];
+        if (!c || !(it.sales > 0)) return;
+        var cr = c.costRate ? c.costRate.v
+          : (c.cost10a && refYield(c) && refPrice(c) && refYield(c).v * refPrice(c).v > 0 ? c.cost10a.v / (refYield(c).v * refPrice(c).v) : null);
+        if (cr == null) return;
+        total += it.sales * cr; n++;
+      });
+      if (!n) { $("expEstimateOut").textContent = "品目の売上が入っていないため、目安を出せません。"; return; }
+      $("expEstimateOut").textContent = "県平均の経費率から、経費の合計の目安はおよそ " + Math.round(total).toLocaleString() + " 円です（" + n + "品目分・8分類の合計と見比べる目安。さとうきびは含みません）。";
+    });
+    CORE.bindSeg($("allocSeg"), function (v) { alloc = v; recompute(); });
+    $("jissekiApply").addEventListener("click", applyJisseki);
+    $("jissekiUndo").addEventListener("click", undoJisseki);
+    $("printBtn").addEventListener("click", function () { window.print(); });
+    $("noteTa").addEventListener("input", function () { S.note = this.value; persist(); });
+    if (KIBI_LABOR) {
+      $("kibiLaborNote").textContent = "（きびは10a当たり36.56時間＝" + DATA.srcLine(KIBI_LABOR) + "、園芸品目の多くは（仮））";
+    }
+    $("defaultSrc").textContent =
+      "行の初期値は県平均の単収 × 平均単価から計算した目安（計算値・編集前提）。" +
+      "品目ごとの出典は下の県平均比較に表示します。";
+    srcBadge = CORE.sourceBadge($("cropSrcHost"), "この品目と面積は、段1「品目と単価」から反映しています。", [{ label: "→ 品目と単価で直す", href: "hinmoku.html?back=checkup" }]);
+    if (srcBadge) srcBadge.style.display = "none";
+    CORE.cropAddLink($("cropRows").parentElement, "checkup");
+    bindKibi();
+    bindLabor();
+    bindWorkers();
+    bindIo();
+    initYearSel();
+    loadYear(thisYear - 1);
+  }
+  initDefaults();
+})();
+</script>
+</body>
+</html>
