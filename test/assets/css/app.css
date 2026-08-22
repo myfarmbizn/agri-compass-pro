@@ -912,6 +912,13 @@ body::before { background: none; }                 /* 隅から差す光をや�
 .page-head { max-width: 820px; margin: 0 auto; text-align: center; padding-top: clamp(34px, 5vw, 58px); }
 .page-head h1 { font-size: clamp(26px, 3.6vw, 38px); font-weight: 700; letter-spacing: .004em; line-height: 1.24; }
 .page-head .lede { max-width: 700px; margin-left: auto; margin-right: auto; font-size: 15px; line-height: 1.95; }
+/* 中央寄せにするのは見出しだけ。3行以上ある日本語の本文を中央に寄せると、
+   行の頭がそろわず読みにくい（電話の幅で特にひどい）。本文は左そろえに戻す */
+.page-head .lede,
+.page-head .jny-card,
+.page-head .fromq-band,
+.page-head .advice { text-align: left; }
+.jny-card { border-radius: var(--r-lg); }
 .sec-title { display: block; text-align: center; margin: clamp(40px, 6vw, 62px) 0 16px; }
 .sec-title h2 { font-size: clamp(19px, 2.4vw, 24px); font-weight: 700; letter-spacing: 0; }
 .sec-title .hint { display: block; margin-top: 5px; font-size: 13px; line-height: 1.85; }
